@@ -3,8 +3,8 @@
  * player whose turn it is and the prompt line are inverse too.
  *
  *  row  0  title bar ......................... region: CONNECTED (or NO SIGNAL)
- *  row  1    ABCDEFGHIJKL HIVES SYNDICATES
- *  rows 2-10 0 ..+GG.3....    G   GHOST//MODEM     12   (one per syndicate)
+ *  row  1    ABCDEFGHIJKL HIVES    SYNDICATES
+ *  rows 2-10 0 ..+GG.3....    G 12  GHOST//MODEM   (one per syndicate)
  *                         LAST: C4
  *  1-6 = an empty node that exploit in your kit can run on (when hints are on)
  *  row 11  blank
@@ -37,9 +37,8 @@
 
 #define ROW_BOARD   2
 #define COL_BOARD   2
-#define COL_PANEL   15                  /* 25 columns: HIVES letter, gap, name (15), size */
-#define COL_NAME    21
-#define NAME_W      16                  /* 15 + a space before the size */
+#define COL_PANEL   15                  /* 25 columns: HIVES letter and size, gap, name (15) */
+#define COL_NAME    24                  /* or, while buying, price and crypto left */
 #define ROW_SEATS   13
 #define ROW_LOG     19
 #define LOG_ROWS    3
@@ -238,7 +237,8 @@ void display_node(unsigned char node)
 void display_hives(void)
 {
     at(1, COL_PANEL);
-    text(T_HIVE_P " ");
+    text(T_HIVE_P);
+    spaces(COL_NAME - COL_PANEL - (sizeof T_HIVE_P - 1));
     text(pr_kind == 'B' ? "PRICE LEFT" : "SYNDICATES");
     spaces(40 - COL_NAME - 10);
     for (j = 0; j < NSYN; ++j) {
@@ -247,7 +247,15 @@ void display_hives(void)
         inv = INV;
         put(syn_letter[j]);
         inv = 0;
-        spaces(3);
+        n = hive_size[j];               /* then its size, next to it */
+        if (n) {
+            inv = n >= RULE_SAFESIZE ? INV : 0;     /* Black ICE */
+            number(n, 3, 0);
+            inv = 0;
+        } else {
+            text("  -");
+        }
+        spaces(COL_NAME - COL_PANEL - 6);
         if (pr_kind == 'B') {           /* pr: timeout, cash[2], flags, price[7], supply[7] */
             n = pr[4 + j];
             if (n) {
@@ -264,15 +272,7 @@ void display_hives(void)
         }
         n = strlen(syn_name[j]);
         text(syn_name[j]);
-        spaces(NAME_W - n);
-        n = hive_size[j];
-        if (n) {
-            inv = n >= RULE_SAFESIZE ? INV : 0;     /* Black ICE */
-            number(n, 3, 0);
-            inv = 0;
-        } else {
-            text("  -");
-        }
+        spaces(40 - COL_NAME - n);
     }
 }
 

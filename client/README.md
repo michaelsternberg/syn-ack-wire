@@ -82,11 +82,12 @@ prompt line is the seconds left before your seat's bot answers for you.
 ### Screen
 ```
  SYN-ACK WIRE   NEO-KANSAI-1: CONNECTED    title bar (inverse); NO SIGNAL after 20 s of silence
-  ABCDEFGHIJKL HIVES SYNDICATES
-0 .ggg..ggg.dd   g   GHOST//MODEM     11   hives: inverse letters; + spike; . empty
-2 rr...g.2....   d   HOLY DAEMON       2   1-6 = that exploit in your kit can run here (move hints)
+  ABCDEFGHIJKL HIVES    SYNDICATES
+0 .ggg..ggg.dd   g 11   GHOST//MODEM       hives: inverse letters; + spike; . empty
+2 rr...g.2....   d  2   HOLY DAEMON        1-6 = that exploit in your kit can run here (move hints)
 ...                                        the last move: its highlight flipped
-8 6oo..l4l...+ LAST: D6                    during a buy: HIVES PRICE LEFT
+8 6oo..l4l...+ LAST: D6                    each hive's size by its letter; inverse = Black ICE
+                                           during a buy: HIVES    PRICE LEFT
 
  COWBOY          ¥  g  r  d  i  b  l  o
 >ATARI        3100  4  1  .  2  2  3  2    > you; inverse name = whose turn; * bot; ? away
@@ -180,8 +181,8 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9888 | whole file; loads at $2000, the 1K font sits at $4C00 |
-| `display_text.c` | 3027 | + 615 rodata (mostly screen words), 70 bss, 1K font |
+| `synack.xex` | 9886 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `display_text.c` | 3026 | + 615 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2673 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 743 | + 167 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
