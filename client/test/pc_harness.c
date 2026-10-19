@@ -93,6 +93,7 @@ void display_prompt(void)
 void display_clock(unsigned char secs) { (void)secs; }
 void display_message(const char *s) { fprintf(stderr, "[msg] %s\n", s); }
 void display_game_over(void) { fprintf(stderr, "[game over] winners %02x\n", winners); if (turn == NONE && pr_kind == 0) exit(0); }
+void help_show(unsigned char (*key)(void)) { while (key() != K_ESC) ; }
 void display_link(void) { fprintf(stderr, "[link] %s\n", link_up ? "CONNECTED" : "NO SIGNAL"); }
 
 int harness_args(int argc, char **argv)

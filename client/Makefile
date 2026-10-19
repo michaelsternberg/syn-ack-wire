@@ -2,6 +2,7 @@
 #   make                      build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server
 #   make FANCY=1              use the hand-made screens instead of the text ones
+#   make atr                  build/synack.atr: DOS 2.5, the game as AUTORUN.SYS, the help pages
 #   make bakeoff              fujinet-lib size comparison (needs cc65 newer than 2.19)
 #   make clean
 CC65    ?=
@@ -16,11 +17,13 @@ HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),)
 B       = build
 FNLIB   = vendor/fujinet-lib-5.0.0
+DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
+HELP    = $(sort $(wildcard help/HELP*.TXT))
 
 NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
 
-GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o
+GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/cio.o
 HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h
 
 all: $(B)/synack.xex $(B)/wiremon.xex $(B)/wiremon-auto.xex
@@ -55,6 +58,20 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 	$(LD) -t $(TARGET) -m $(B)/$*.map -o $@ $^ $(TARGET).lib
 	@echo "$@: $$(stat -c %s $@) bytes"
 
+# --- the game disk: boots DOS 2.5, which runs AUTORUN.SYS. DOS.SYS comes from your own
+# DOS 2.5 disk image (DOS25=...), extracted with `atr`; dir2atr writes the image.
+$(B)/dos.sys: | $(B)
+	atr "$(DOS25)" get dos.sys $@
+$(B)/%.atr: $(B)/%.xex $(B)/dos.sys $(HELP) tools/check_help.py
+	python3 tools/check_help.py $(HELP)
+	rm -rf $(B)/disk-$* && mkdir $(B)/disk-$*
+	cp $(B)/dos.sys $(B)/disk-$*/DOS.SYS
+	cp $< $(B)/disk-$*/AUTORUN.SYS
+	cp $(HELP) $(B)/disk-$*/
+	dir2atr -b Dos25 $@ $(B)/disk-$* >/dev/null
+	@echo "$@: $$(ls $(B)/disk-$* | wc -l) files"
+atr: $(B)/synack.atr
+
 # --- size bake-off: raw SIO vs fujinet-lib (fujinet-lib v5 needs cc65 newer than 2.19)
 $(B)/bakeoff.s: test/bakeoff.c | $(B)
 	$(CC) $(CFLAGS) -o $@ $<
@@ -85,5 +102,5 @@ pc: $(HDRS) | $(B)
 clean:
 	rm -rf $(B)
 
-.PHONY: all bakeoff test pc clean
+.PHONY: all atr bakeoff test pc clean
 .PRECIOUS: $(B)/%.s $(B)/%.o

@@ -7,6 +7,9 @@
 /* FANCY_TITLE */
 void display_title_screen(void);        /* title, server, the handle typed so far (edit[]) */
 
+/* the instruction pages, from the title screen; reads keys with `key` until Esc */
+void help_show(unsigned char (*key)(void));
+
 /* FANCY_PLAYFIELD */
 void display_playfield(void);           /* full redraw from the game state */
 void display_node(unsigned char node);  /* one Grid node changed */

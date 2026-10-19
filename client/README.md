@@ -33,6 +33,7 @@ make URL=N:TCP://192.168.1.20:6502/      # aim them at another server
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/synack-auto.xex: plays by itself, for the emulator
+make atr                                 # build/synack.atr: the game disk (DOS 2.5 + game + help pages)
 make pc                                  # build/pc-client: the common code on this PC
 make bakeoff
 ```
@@ -64,7 +65,8 @@ start; bots take any seats beyond the humans. Both must join before the host sta
 ### Keys
 | Prompt | Keys |
 |---|---|
-| Title | type a handle, **Return**. **OPTION** turns move hints on or off |
+| Title | type a handle, **Return**. **OPTION** turns move hints on or off. **HELP** shows the instructions |
+| Instructions | **>** or **→** next page, **<** or **←** previous, **Esc** (or Return, or HELP) back to the title |
 | Any time | **OPTION** turns move hints on or off |
 | Host in the lobby | **2–6**: start with that many seats; bots fill the empty ones |
 | Your turn | **1–6**: run that exploit from your kit. Inverse = can't run now; pressing it says why |
@@ -95,6 +97,25 @@ prompt line is the seconds left before your seat's bot answers for you.
 (In this sketch lowercase marks an inverse letter.) Every word on screen that names a game thing comes from
 `theme.toml` through `theme_tab.h`, as do the glyphs (`.` `+`). The panel shows each syndicate's `screen` name,
 or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of a RAM copy of the ROM font.
+
+### Instructions (help pages)
+The pages are `help/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
+they are the source (nothing generates them). On the Atari they're read from the game disk through DOS, so they
+need `make atr`; the bare `.xex` says "NO HELP DISK IN D1".
+- **One file is one screen:** at most 23 lines of at most 40 characters, each ended by EOL ($9B). Row 24 is the
+  page bar (`<PREV  PAGE 2 OF 7  ESC:EXIT  NEXT>`), drawn by the game.
+- **Every byte except EOL shows as its glyph:** graphics characters (boxes, lines, the grid's `.` `+`) and inverse
+  video appear exactly as typed. `\` shows as the yen sign, because the game's font replaces it.
+- **Numbering:** 01, 02... with no gaps. The game counts pages by opening them in turn, so adding `HELP08.TXT`
+  needs no code change. `make atr` runs `tools/check_help.py`, which refuses a page that is too long or too
+  wide, or a gap in the numbers.
+- **Names are typed in:** unlike the rest of the client, these pages don't read `theme.toml`. Renaming a
+  syndicate or a term means editing the pages too.
+
+`make atr` takes `DOS.SYS` from your own DOS 2.5 disk image (`DOS25=path`, default
+`~/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr`) with `atr`, and writes the
+image with `dir2atr -b Dos25`. DOS 2.5 runs `AUTORUN.SYS` at boot. `tools/run-test.sh build/synack.atr` boots the
+disk from FujiNet-PC's D1, the way the lobby will.
 
 ### Fancy screens
 `display.h` is the whole interface. `display_title_screen()` is switched by `FANCY_TITLE`; everything else by
@@ -146,13 +167,15 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9167 | whole file; loads at $2000, the 1K font sits at $4400 |
-| `display_text.c` | 2738 | + 534 rodata (mostly screen words), 70 bss, 1K font |
-| `game.c` | 2414 | + 282 rodata, 279 bss (the game state) |
-| `main.c` | 572 | + 143 rodata |
+| `synack.xex` | 10466 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `display_text.c` | 3012 | + 615 rodata (mostly screen words), 70 bss, 1K font |
+| `game.c` | 2665 | + 382 rodata, 281 bss (the game state) |
+| `main.c` | 743 | + 167 rodata |
+| `help.c` | 721 | + 65 rodata/data, 12 bss: the instruction pages |
+| `cio.s` | 58 | open, get byte, close on IOCB #1 |
 | `net_sio.s` | 299 | + 10 rodata, 25 bss. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
-| `input.c` | 47 | + 64-byte key table |
+| `input.c` | 106 | + 64-byte key table |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |

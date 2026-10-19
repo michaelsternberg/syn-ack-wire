@@ -11,9 +11,11 @@
 #define DUMP_TICKS 240             /* 0: no screen dumps */
 #endif
 
-static unsigned char seed = 0x5A, last, prev, shown = 0xFF, typed;  /* 0xFF: dump the title too */
+static unsigned char seed = 0x5A, last, prev, shown = 0xFF, typed, paged;  /* 0xFF: dump the title too */
 static unsigned elapsed;
 static const char name[] = "ATARI\r";
+/* first, the help pages: open, page to the end (extra presses are ignored), back one, leave */
+static const unsigned char paging[] = { K_HELP, '>', '>', '>', '>', '>', '>', '>', '>', '<', K_ESC, 0 };
 
 static unsigned char rnd(void)
 {
@@ -38,6 +40,15 @@ unsigned char auto_key(void)
     if ((unsigned char)(t - last) < 20)             /* a third of a second between keys */
         return 0;
     last = t;
+    if (paging[paged]) {                            /* a dump before each key shows each page */
+#ifdef __CC65__
+        if (DUMP_TICKS) {
+            __asm__ ("brk");
+            __asm__ ("nop");
+        }
+#endif
+        return paging[paged++];
+    }
     if (name[typed])                                /* title: the handle, then Return */
         return name[typed++];
     r = rnd();

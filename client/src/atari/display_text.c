@@ -186,6 +186,11 @@ void display_title_screen(void)
     text(hints ? "ON" : "OFF");
     inv = 0;
     put(' ');
+    at(17, 4);
+    inv = INV;
+    text("HELP");                       /* the HELP key: instruction pages */
+    inv = 0;
+    text("    INSTRUCTIONS");
     at(20, 4);
     text("TYPE A HANDLE, THEN RETURN");
 }

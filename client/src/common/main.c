@@ -38,7 +38,9 @@ static void title(void)
         c = in_key();
         if (c == K_RETURN && edit_len)
             return;
-        if (c == K_OPTION)
+        if (c == K_HELP)
+            help_show(in_key);
+        else if (c == K_OPTION)
             hints ^= 1;
         else if (c == K_DELETE && edit_len)
             --edit_len;

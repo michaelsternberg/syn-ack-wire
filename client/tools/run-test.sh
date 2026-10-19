@@ -9,6 +9,8 @@
 #   DUMPDIR=/tmp/shots tools/run-test.sh build/synack-auto.xex
 #       headless; every BRK the program executes saves the text screen to
 #       DUMPDIR/scrNNN.bin (tools/screen2txt.py shows them)
+#   tools/run-test.sh build/synack.atr               boot a disk image from FujiNet D1,
+#       as the lobby would (works with HEADLESS and DUMPDIR too)
 #   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
@@ -28,6 +30,14 @@ awk -v netsio=$NETSIO '/^\[/ { skip = /^\[Mount[0-9]+\]/; boip = /^\[BOIP\]/ }
      /^boot_mode=/ { $0 = "boot_mode=0" }
      boip && /^port=/ { $0 = "port=" netsio }
      !skip' "$FUJINET_DIR/fnconfig.ini" > "$WORK/fnconfig.ini"
+case "$XEX" in
+*.atr|*.ATR)
+    # D1 = the image, from host slot 1 (the SD folder; hostslot counts from 1); the Atari boots from it
+    cp "$XEX" "$WORK/sd/boot.atr"
+    printf '\n[Host1]\ntype=SD\nname=SD\n\n[Mount1]\nhostslot=1\npath=/boot.atr\nmode=r\n' >> "$WORK/fnconfig.ini"
+    RUN= ;;
+*)  RUN="-run $XEX" ;;
+esac
 
 # Exit code 75 means "restart me" (the emulator resets FujiNet when it connects), as in run-fujinet.
 (cd "$FUJINET_DIR" && while :; do
@@ -47,10 +57,10 @@ if [ -n "$DUMPDIR" ]; then
         printf 'WRITE BC40 BFFF %s/scr%03d.bin\nCONT\n' "$DUMPDIR" $i
         i=$((i + 1))
     done > "$WORK/monitor.txt"
-    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound -bbrk -run "$XEX" \
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound -bbrk $RUN \
         < "$WORK/monitor.txt" > "$WORK/atari800.log" 2>&1
 elif [ -n "$HEADLESS" ]; then
-    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound -run "$XEX" > "$WORK/atari800.log" 2>&1
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound $RUN > "$WORK/atari800.log" 2>&1
 else
-    "$ATARI800" $OPTS -run "$XEX"
+    "$ATARI800" $OPTS $RUN
 fi
