@@ -102,7 +102,8 @@ or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of 
 The pages are `help/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
 they are the source (nothing generates them). `make atr` turns each into 960 bytes of screen codes and writes it to
 raw sectors on the game disk, which the game reads straight onto the screen with SIO: no DOS, no files, no
-conversion on the Atari. So they need `make atr`; the bare `.xex` with no game disk in D1 says "NO HELP DISK IN D1".
+conversion on the Atari. So they need `make atr`; the bare `.xex` with no game disk in D1 says
+"NO HELP DISK IN D1. ESC:EXIT".
 - **One file is one screen:** at most 24 lines of at most 40 characters, each ended by EOL ($9B). The page bar
   (`<PREV  ESC:EXIT  NEXT>`, row 24) is part of the page: leave `<PREV` off page 1 and `NEXT>` off the last.
 - **Every byte except EOL shows as its glyph:** graphics characters (boxes, lines, the grid's `.` `+`) and inverse
@@ -179,11 +180,11 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9855 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 9865 | whole file; loads at $2000, the 1K font sits at $4C00 |
 | `display_text.c` | 3012 | + 615 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2665 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 743 | + 167 rodata |
-| `help.s` | 250 | + 34 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
+| `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 299 | + 10 rodata, 25 bss. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 106 | + 64-byte key table |

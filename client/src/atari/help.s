@@ -36,7 +36,7 @@ buf:    .res 128        ; a page's first sector
         .rodata
 dcb:    .byte $31, 1, 'R', $40, 0, 0, 7, 0, 128, 0   ; D1: read 128 bytes, 7 s timeout
 sig:    .byte "SYNACK"
-        .define NODISK "NO HELP DISK IN D1"
+        .define NODISK "NO HELP DISK IN D1. ESC:EXIT"
 nodisk: .repeat .strlen(NODISK), i
         .byte .strat(NODISK, i) - $20 + $80             ; inverse screen codes
         .endrepeat
