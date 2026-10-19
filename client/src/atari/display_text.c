@@ -351,11 +351,15 @@ void display_prompt(void)
     at(ROW_INFO, 1);
     switch (pr_kind) {
     case 0:
-        clear_row(ROW_ASK);
         if (turn < SEATS && turn != me) {
+            inv = INV;
+            clear_row(ROW_ASK);
             at(ROW_ASK, 1);
             text("WAITING FOR ");
             textn((const unsigned char *)seat_name[turn], 8);
+            inv = 0;
+        } else {
+            clear_row(ROW_ASK);
         }
         return;
     case 'S':

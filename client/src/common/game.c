@@ -144,6 +144,8 @@ void game_frame(void)
         display_seat(turn);
         if (turn != me && pr_kind && pr_kind != 'S')
             game_clear_prompt();             /* our bot answered for us */
+        else if (!pr_kind)
+            display_prompt();                /* WAITING FOR, or clear it on our turn */
         break;
     case 'x':                           /* len, val, nodes... */
         v = msg[2];
