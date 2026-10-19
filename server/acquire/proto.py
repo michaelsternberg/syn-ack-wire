@@ -1,10 +1,10 @@
-"""Wire protocol v1 (docs/protocol.md): frame encoding and decoding.
+"""Wire protocol v2 (docs/protocol.md): frame encoding and decoding.
 
 Server -> client types are lowercase; client -> server types are UPPERCASE and fixed length.
 """
 from . import rules
 
-VERSION = 1
+VERSION = 2
 SEATS = 6                                   # snapshot and seat messages always cover 6 seats
 NONE_SYN = 7
 
@@ -13,7 +13,7 @@ CLIENT_LEN = {b"H": 14, b"S": 1, b"P": 1, b"F": 1, b"K": 1, b"D": 2, b"B": 3, b"
 # server -> client: variable-length types carry a length byte; the rest are fixed
 SERVER_VAR = frozenset(b"alpx")
 SERVER_LEN = {ord("w"): 5, ord("n"): 10, ord("s"): 116, ord("h"): 6, ord("t"): 1, ord("r"): 2, ord("z"): 2,
-              ord("m"): 3, ord("k"): 3, ord("e"): 1, ord("f"): 1}
+              ord("m"): 3, ord("k"): 3, ord("e"): 1, ord("f"): 1, ord("u"): 0}
 
 # seat kinds (n message)
 EMPTY, HUMAN, AWAY, BOT = 0, 1, 2, 3
@@ -60,6 +60,10 @@ def mask(ids):
 
 
 # ------------------------------------------------------------------ server messages
+
+def keepalive():
+    return frame("u")
+
 
 def welcome(seat, token):
     return frame("w", bytes([seat]) + token)

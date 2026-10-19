@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SYN-ACK WIRE TCP server.
 
-    python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0] [--trace]
+    python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0] [--keepalive 10] [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
@@ -16,10 +16,11 @@ log = logging.getLogger("synack")
 
 
 class Server:
-    def __init__(self, timeout=60.0, bot_delay=1.0, seed=None):
+    def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0):
         self.theme = theme.load()
         self.timeout = timeout
         self.bot_delay = bot_delay
+        self.keepalive = keepalive
         self.seed = seed
         self.tables = {}
 
@@ -31,7 +32,7 @@ class Server:
     async def handle(self, reader, writer):
         peer = writer.get_extra_info("peername")
         conn = Conn(writer)
-        seat = table = None
+        seat = table = beat = None
         try:
             t = await reader.readexactly(1)
             if t != b"H":
@@ -47,6 +48,7 @@ class Server:
                 seat = None
                 return
             log.info("%s joined table %d as %s", peer, tid, seat.name)
+            beat = asyncio.create_task(self.heartbeat(conn))
             while True:
                 t = await reader.readexactly(1)
                 n = proto.CLIENT_LEN.get(t)
@@ -60,10 +62,18 @@ class Server:
         except (asyncio.IncompleteReadError, ConnectionError):
             pass
         finally:
+            if beat:
+                beat.cancel()
             if seat is not None:
                 log.info("%s (%s) disconnected", peer, seat.name)
                 table.disconnect(seat, conn)
             conn.close()
+
+    async def heartbeat(self, conn):
+        """A `u` frame every few seconds, so a client can tell a quiet table from a dead link."""
+        while conn.alive:
+            await asyncio.sleep(self.keepalive)
+            conn.send(proto.keepalive())
 
     async def serve(self, host, port):
         srv = await asyncio.start_server(self.handle, host, port)
@@ -77,11 +87,12 @@ async def main():
     ap.add_argument("--port", type=int, default=6502)
     ap.add_argument("--timeout", type=float, default=60.0, help="seconds per decision before the bot answers")
     ap.add_argument("--bot-delay", type=float, default=1.0, help="seconds a bot waits before acting")
+    ap.add_argument("--keepalive", type=float, default=10.0, help="seconds between keepalive frames")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
     logging.getLogger("asyncio").setLevel(logging.WARNING)
-    srv = await Server(a.timeout, a.bot_delay).serve(a.host, a.port)
+    srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 

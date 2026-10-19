@@ -25,6 +25,7 @@ void net_close(void);
 /* ------------------------------------------------------------------ input, time */
 #define K_RETURN '\r'
 #define K_DELETE '\b'
+#define K_OPTION 0x01                   /* toggles move hints (Atari: the OPTION key) */
 #define TICKS_PER_SEC 60                /* PAL machines tick at 50: clocks run 20% slow */
 
 unsigned char in_key(void);             /* next key as uppercase ASCII, or 0 if none */

@@ -29,7 +29,7 @@ maxplayers  = 6
 [glyphs]
 empty  = "."
 spike  = "+"
-target = "*"      # client: an empty node one of your exploits can run on (toggle with the * key)
+target = "*"      # PC test client: an empty node one of your exploits can run on (the Atari shows the exploit's 1-6)
 
 [terms]
 playertitle     = { s = "Access Cowboy" }
@@ -142,7 +142,7 @@ flavor = "Data smugglers in the maintenance tunnels. Carry stolen drives in thei
 
 [[syndicate]]
 name   = "Church of the Holy Daemon"
-screen = "Holy Daemon"          # optional: the client's hive panel fits 20 chars; longer names need this
+screen = "Holy Daemon"          # optional: the client's hive panel fits 15 chars; longer names need this
 short  = "DAEMON"
 letter = "D"
 coin   = "SOUL"

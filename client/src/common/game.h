@@ -26,6 +26,7 @@ extern unsigned char me, turn, last_node, winners;
 extern unsigned char kit[RULE_KITSIZE];         /* node, bit 7 = can't run now; NONE = empty */
 extern unsigned char region[12], region_len;
 extern unsigned char hints;                     /* show where the kit can run */
+extern unsigned char link_up;                   /* 0 = no frame from the server for a while */
 
 /* the open prompt: kind letter (0 = none) and its params, see docs/protocol.md */
 extern unsigned char pr_kind, pr[18];
@@ -36,6 +37,6 @@ extern const char *complaint;
 void game_frame(void);                  /* apply the frame in msg[] */
 void game_key(unsigned char c);         /* a key while a prompt is open */
 void game_clear_prompt(void);           /* answered, or the clock ran out */
-void game_toggle_hints(void);           /* the * key */
+void game_toggle_hints(void);           /* K_OPTION */
 
 #endif

@@ -11,8 +11,8 @@
 #define FANCY_PLAYFIELD 0
 #endif
 
-/* Mark empty nodes your exploits can run on (theme glyph `target`). The player
- * can flip it on the title screen and with the * key during the game. */
+/* Show, on each empty node an exploit in your kit can run on, that exploit's
+ * key (1-6). The player can flip it with OPTION on the title screen and in the game. */
 #ifndef HINTS
 #define HINTS 1
 #endif

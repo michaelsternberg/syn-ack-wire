@@ -17,5 +17,6 @@ void display_prompt(void);              /* the open prompt (or the kit when none
 void display_clock(unsigned char secs); /* seconds left to answer */
 void display_message(const char *s);    /* one-line notice: connecting, faults... */
 void display_game_over(void);           /* winners are in `winners` */
+void display_link(void);                /* region and link_up, in the title bar */
 
 #endif

@@ -7,7 +7,7 @@ Python 3.11+, standard library only.
 | `acquire/theme.py` | Loads `../theme/theme.toml`: syndicates, rule numbers, log wording |
 | `acquire/rules.py` | Rules engine. Pure: actions in, events out. No I/O, no clocks |
 | `acquire/bots.py` | `RandomBot` (any legal move) and `HeuristicBot` (plays sensibly) |
-| `acquire/proto.py` | Wire protocol v1 (`docs/protocol.md`): frame encode/decode |
+| `acquire/proto.py` | Wire protocol v2 (`docs/protocol.md`): frame encode/decode |
 | `acquire/table.py` | A table: seats, tokens, lobby, shot clock, bot takeover, game loop |
 | `serve.py` | The asyncio TCP server |
 | `testclient.py` | Protocol client for a modern PC: interactive, or `--auto` random play from wire data only |
@@ -16,7 +16,7 @@ Python 3.11+, standard library only.
 | `sim.py` | Bot-vs-bot soak test with invariant checks after every action |
 
 ```sh
-python3 serve.py                              # port 6502; --timeout 60 --bot-delay 1.0
+python3 serve.py                              # port 6502; --timeout 60 --bot-delay 1.0 --keepalive 10
 python3 serve.py --trace                      # also log every frame clients send
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly

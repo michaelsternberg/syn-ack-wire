@@ -1,5 +1,7 @@
 /* The client's main loop: title, connect, then frames in, keys out, forever.
- * A dropped link reconnects with the seat token; the server resends everything. */
+ * A dropped link reconnects with the seat token; the server resends everything.
+ * The server sends a keepalive every 10 s, so silence means a dead link even
+ * when the FujiNet still thinks it's connected: NO SIGNAL, then redial. */
 #include "../config.h"
 #include "../platform.h"
 #include "../display.h"
@@ -10,7 +12,10 @@
 unsigned char token[4];
 static unsigned char handle[8];
 
-static unsigned char c, e, t0, secs;
+static unsigned char c, e, t0, secs, q0, quiet;
+
+#define NO_SIGNAL   20                  /* seconds without a frame: say so */
+#define REDIAL      30                  /* ...and hang up and dial again */
 
 #ifdef AUTOPLAY
 unsigned char auto_key(void);           /* test/autoplay.c */
@@ -33,7 +38,7 @@ static void title(void)
         c = in_key();
         if (c == K_RETURN && edit_len)
             return;
-        if (c == '*')
+        if (c == K_OPTION)
             hints ^= 1;
         else if (c == K_DELETE && edit_len)
             --edit_len;
@@ -57,6 +62,12 @@ static void hello(void)
     net_send(1 + CLEN_H);
 }
 
+static void link(unsigned char up)
+{
+    link_up = up;
+    display_link();
+}
+
 static void connect(void)
 {
     display_message("DIALING " URL);
@@ -66,6 +77,17 @@ static void connect(void)
         wait_ticks(2 * TICKS_PER_SEC);
     }
     hello();
+    quiet = 0;
+    q0 = ticks();
+}
+
+static void redial(const char *why)
+{
+    link(0);
+    display_message(why);
+    net_close();
+    wait_ticks(2 * TICKS_PER_SEC);
+    connect();
 }
 
 void main(void)
@@ -76,13 +98,14 @@ void main(void)
     connect();
     for (;;) {
         if ((e = net_poll()) != 0) {
-            display_message("CARRIER LOST. REDIALING...");
-            net_close();
-            wait_ticks(2 * TICKS_PER_SEC);
-            connect();
+            redial("CARRIER LOST. REDIALING...");
             continue;
         }
         while ((c = proto_next()) != 0) {
+            quiet = 0;
+            q0 = ticks();
+            if (!link_up)
+                link(1);
             if (c == PROTO_BAD) {       /* lost our place in the stream */
                 tx[0] = 'R';
                 net_send(1);
@@ -111,8 +134,18 @@ void main(void)
                 t0 = ticks();
             }
         }
+        if ((unsigned char)(ticks() - q0) >= TICKS_PER_SEC) {
+            q0 += TICKS_PER_SEC;
+            ++quiet;
+            if (quiet == NO_SIGNAL)
+                link(0);
+            else if (quiet == REDIAL) {
+                redial("NO SIGNAL. REDIALING...");
+                continue;
+            }
+        }
         c = in_key();                   /* always read, so no stale key answers the next prompt */
-        if (c == '*') {
+        if (c == K_OPTION) {
             game_toggle_hints();
             c = 0;
         }

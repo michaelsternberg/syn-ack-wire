@@ -12,7 +12,7 @@ from pathlib import Path
 
 THEME = Path(__file__).resolve().parent.parent / "theme" / "theme.toml"
 TIERS = ("low", "mid", "high")
-SCREEN_NAME = 20        # client hive panel width for a syndicate name
+SCREEN_NAME = 15        # client hive panel width for a syndicate name
 
 
 def load():

@@ -2,14 +2,15 @@
  * straight to screen memory. Hives are inverse letters; the last move, the
  * player whose turn it is and the prompt line are inverse too.
  *
- *  row  0  title bar ...................................... region
- *  row  1    ABCDEFGHIJKL   HIVES
- *  rows 2-10 0 ..+GG.*....  G GHOST//MODEM        12   (one per syndicate)
- *                           LAST C4
- *  * = an empty node one of your exploits can run on (when hints are on)
- *  row 11  COWBOY          \  G  R  D  I  B  L  O
- *  rows 12-17 >NAME    ?  \6000  3  .  .  1  .  .  .    (one per seat)
- *  rows 18-21 log
+ *  row  0  title bar ......................... region: CONNECTED (or NO SIGNAL)
+ *  row  1    ABCDEFGHIJKL HIVES SYNDICATES
+ *  rows 2-10 0 ..+GG.3....    G   GHOST//MODEM     12   (one per syndicate)
+ *                         LAST: C4
+ *  1-6 = an empty node that exploit in your kit can run on (when hints are on)
+ *  row 11  blank
+ *  row 12  COWBOY          \  G  R  D  I  B  L  O
+ *  rows 13-18 >NAME    ?  \6000  3  .  .  1  .  .  .    (one per seat)
+ *  rows 19-21 log
  *  row 22  kit, or what the open prompt is about
  *  row 23  the question, and seconds left
  *
@@ -36,11 +37,12 @@
 
 #define ROW_BOARD   2
 #define COL_BOARD   2
-#define COL_PANEL   15                  /* 25 columns: letter, name (20), size */
-#define NAME_W      20
-#define ROW_SEATS   12
-#define ROW_LOG     18
-#define LOG_ROWS    4
+#define COL_PANEL   15                  /* 25 columns: HIVES letter, gap, name (15), size */
+#define COL_NAME    21
+#define NAME_W      16                  /* 15 + a space before the size */
+#define ROW_SEATS   13
+#define ROW_LOG     19
+#define LOG_ROWS    3
 #define ROW_INFO    22
 #define ROW_ASK     23
 
@@ -176,8 +178,14 @@ void display_title_screen(void)
     inv = 0;
     spaces(8 - edit_len);
     at(16, 4);
-    text("*       MOVE HINTS ");          /* the * key flips it */
-    text(hints ? "ON " : "OFF");
+    inv = INV;
+    text("OPTION");                     /* the OPTION key flips it */
+    inv = 0;
+    text("  MOVE HINTS ");
+    inv = INV;
+    text(hints ? "ON" : "OFF");
+    inv = 0;
+    put(' ');
     at(20, 4);
     text("TYPE A HANDLE, THEN RETURN");
 }
@@ -186,14 +194,14 @@ void display_title_screen(void)
 #if !FANCY_PLAYFIELD
 /* ---------------------------------------------------------------- playfield */
 
-/* Is `node` one my kit can run on right now? */
+/* The key ('1'-'6') of the exploit in my kit that can run on `node` now, or 0. */
 static unsigned char target(unsigned char node)
 {
     if (!hints)
         return 0;
     for (n = 0; n < RULE_KITSIZE; ++n)
         if (kit[n] == node)             /* bit 7 set = can't run: never equal */
-            return 1;
+            return '1' + n;
     return 0;
 }
 
@@ -204,8 +212,10 @@ void display_node(unsigned char node)
         c -= RULE_COLS;
     at(ROW_BOARD + r, COL_BOARD + c);
     v = board[node];
-    if (v == CELL_EMPTY)
-        v = (target(node) ? GLYPH_TARGET : GLYPH_EMPTY) - 0x20;
+    if (v == CELL_EMPTY) {
+        v = target(node);
+        v = (v ? v : GLYPH_EMPTY) - 0x20;
+    }
     else if (v == CELL_SPIKE)
         v = GLYPH_SPIKE - 0x20;
     else
@@ -213,7 +223,7 @@ void display_node(unsigned char node)
     if (node == last_node) {
         v ^= INV;
         at(ROW_BOARD + 7 + 1, COL_PANEL);
-        text("LAST ");
+        text("LAST: ");
         node_name(node);
         at(ROW_BOARD + r, COL_BOARD + c);
     }
@@ -223,19 +233,16 @@ void display_node(unsigned char node)
 void display_hives(void)
 {
     at(1, COL_PANEL);
-    if (pr_kind == 'B') {
-        text("  PRICE LEFT");
-        spaces(25 - 12);
-    } else {
-        text(T_HIVE_P);
-        spaces(25 - (sizeof T_HIVE_P - 1));
-    }
+    text(T_HIVE_P " ");
+    text(pr_kind == 'B' ? "PRICE LEFT" : "SYNDICATES");
+    spaces(40 - COL_NAME - 10);
     for (j = 0; j < NSYN; ++j) {
         at(ROW_BOARD + j, COL_PANEL);
+        spaces(2);                      /* the letter sits under the middle of the header */
         inv = INV;
         put(syn_letter[j]);
         inv = 0;
-        put(' ');
+        spaces(3);
         if (pr_kind == 'B') {           /* pr: timeout, cash[2], flags, price[7], supply[7] */
             n = pr[4 + j];
             if (n) {
@@ -243,10 +250,10 @@ void display_hives(void)
                     put(' ');
                 put('\\');
                 number(n, 0, 1);
-                number(pr[11 + j], 4, 0);
-                spaces(25 - 11);
+                number(pr[11 + j], 5, 0);
+                spaces(40 - COL_NAME - 10);
             } else {
-                spaces(25 - 2);
+                spaces(40 - COL_NAME);
             }
             continue;
         }
@@ -421,6 +428,17 @@ void display_game_over(void)
         }
 }
 
+void display_link(void)
+{
+    if (!region_len)                    /* no playfield yet */
+        return;
+    inv = INV;
+    at(0, 39 - 11 - region_len);
+    textn(region, region_len);
+    text(link_up ? ": CONNECTED" : ": NO SIGNAL");
+    inv = 0;
+}
+
 void display_playfield(void)
 {
     setup();
@@ -429,9 +447,8 @@ void display_playfield(void)
     clear_row(0);
     at(0, 1);
     text(TH_TITLE);
-    at(0, 39 - region_len);
-    textn(region, region_len);
     inv = 0;
+    display_link();
     at(1, COL_BOARD);
     for (j = 0; j < RULE_COLS; ++j)
         put('A' + j);

@@ -52,11 +52,20 @@ PROCEED needs atari800 7.2.1 or newer (installed in `/usr/local/bin`); `ATARI800
 
 A table that already has a game running refuses newcomers ("TABLE FULL"). Restart the server or wait for the game to end.
 
+**Two Ataris at one table:** give each emulator its own instance number, so each gets its own FujiNet-PC ports.
+```sh
+cd ../server && python3 serve.py                              # terminal 1
+cd ../client && tools/run-test.sh build/synack.xex            # terminal 2: the first to connect hosts
+cd ../client && INSTANCE=1 tools/run-test.sh build/synack.xex # terminal 3
+```
+Type a handle and press Return on both. Once the host's screen lists both players, the host presses **2**–**6** to
+start; bots take any seats beyond the humans. Both must join before the host starts.
+
 ### Keys
 | Prompt | Keys |
 |---|---|
-| Title | type a handle, **Return**. **\*** turns move hints on or off |
-| Any time | **\*** turns move hints on or off |
+| Title | type a handle, **Return**. **OPTION** turns move hints on or off |
+| Any time | **OPTION** turns move hints on or off |
 | Host in the lobby | **2–6**: start with that many seats; bots fill the empty ones |
 | Your turn | **1–6**: run that exploit from your kit. Inverse = can't run now; pressing it says why |
 | Infiltration | the **letter** of the syndicate to broker the new hive to |
@@ -70,21 +79,22 @@ prompt line is the seconds left before your seat's bot answers for you.
 
 ### Screen
 ```
- SYN-ACK WIRE              NEO-KANSAI-1    title bar (inverse)
-  ABCDEFGHIJKL HIVES
-0 .ggg..ggg.dd g GHOST//MODEM         11   hives: inverse letters; + spike; . empty
-2 rr...g.*.... d HOLY DAEMON           2   * = your kit can run here (move hints)
+ SYN-ACK WIRE   NEO-KANSAI-1: CONNECTED    title bar (inverse); NO SIGNAL after 20 s of silence
+  ABCDEFGHIJKL HIVES SYNDICATES
+0 .ggg..ggg.dd   g   GHOST//MODEM     11   hives: inverse letters; + spike; . empty
+2 rr...g.2....   d   HOLY DAEMON       2   1-6 = that exploit in your kit can run here (move hints)
 ...                                        the last move: its highlight flipped
-8 *oo..l*l...+ LAST D6                     during a buy the panel shows price and supply
+8 6oo..l4l...+ LAST: D6                    during a buy: HIVES PRICE LEFT
+
  COWBOY          ¥  g  r  d  i  b  l  o
 >ATARI        3100  4  1  .  2  2  3  2    > you; inverse name = whose turn; * bot; ? away
- [$] ROOT K1LLSWCH +¥7000                  4 log lines
+ [$] ROOT K1LLSWCH +¥7000                  3 log lines
  EXPLOITS 1:H2 2:C5 3:H6 4:A8 5:G8 6:D6    your kit, or what the open prompt is about
  RUN WHICH EXPLOIT? PRESS 1-6          20  the question, seconds left
 ```
 (In this sketch lowercase marks an inverse letter.) Every word on screen that names a game thing comes from
-`theme.toml` through `theme_tab.h`, as do the glyphs (`.` `+` `*`). The panel shows each syndicate's `screen` name,
-or its `name` when that fits in 20 characters. The yen sign is the `\` glyph of a RAM copy of the ROM font.
+`theme.toml` through `theme_tab.h`, as do the glyphs (`.` `+`). The panel shows each syndicate's `screen` name,
+or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of a RAM copy of the ROM font.
 
 ### Fancy screens
 `display.h` is the whole interface. `display_title_screen()` is switched by `FANCY_TITLE`; everything else by

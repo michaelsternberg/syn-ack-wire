@@ -11,7 +11,7 @@
 #define DUMP_TICKS 240             /* 0: no screen dumps */
 #endif
 
-static unsigned char seed = 0x5A, last, prev, shown, typed;
+static unsigned char seed = 0x5A, last, prev, shown = 0xFF, typed;  /* 0xFF: dump the title too */
 static unsigned elapsed;
 static const char name[] = "ATARI\r";
 

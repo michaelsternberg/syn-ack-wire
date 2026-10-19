@@ -24,6 +24,7 @@ unsigned char me, turn = NONE, last_node = NONE, winners;
 unsigned char kit[RULE_KITSIZE] = { NONE, NONE, NONE, NONE, NONE, NONE };
 unsigned char region[12], region_len;
 unsigned char hints = HINTS;
+unsigned char link_up;
 
 unsigned char pr_kind, pr[18];
 unsigned char step, edit[9], edit_len;
@@ -62,7 +63,7 @@ static void unpack_snapshot(void)
 
 static unsigned char old;
 
-/* Redraw the nodes the kit points at (their target marks). */
+/* Redraw the nodes the kit points at (their hint numbers). */
 static void redraw_kit(void)
 {
     for (j = 0; j < RULE_KITSIZE; ++j) {

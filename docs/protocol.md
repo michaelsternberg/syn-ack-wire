@@ -1,4 +1,4 @@
-# SYN-ACK WIRE — Wire Protocol (v1, draft)
+# SYN-ACK WIRE — Wire Protocol (v2, draft)
 
 Binary protocol between the 8-bit client (via FujiNet `N:TCP://host:port/`) and the Python server.
 Goals, in order: **tiny client code**, **few bytes on the wire**, **few SIO transactions**.
@@ -103,6 +103,7 @@ it needs no mapping table.
 | `a` | len, text… | 2+n | all | Region name, e.g. `NEO-KANSAI-1`. |
 | `e` | winners | 2 | all | Game over. `winners` = bitmask of seats tied for first. Final cash arrives as `m` messages before this. |
 | `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows). |
+| `u` | — | 1 | you | Keepalive, every 10 s (`serve.py --keepalive`). Means nothing beyond "the link is up". |
 
 ### Snapshot `s` (116-byte payload)
 | Offset | Size | Field |
@@ -168,8 +169,11 @@ also carries `e` with the last game's winners.
 - `Q` → the seat becomes `kind 3` (bot) for the rest of the game.
 - A seat change is announced to everyone with `n`.
 
-There is no keepalive message. The server finds dead connections when a write fails, and the prompt timeout covers the
-case where it never writes to that client.
+The server sends `u` every 10 seconds. A link can die without either end being told: the server's machine loses
+power, or a router drops the session, and FujiNet still reports the connection as open. So the client counts silence
+instead: after 20 seconds with no frame of any kind it shows NO SIGNAL, and at 30 it hangs up and reconnects with its
+token. The server finds dead connections when a write fails (the keepalives make sure it keeps trying), and the prompt
+timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1.
 
 ### Kit management (server-side, no protocol impact)
 - A **patched out** exploit (it could only join two black-ICE hives) is shown with bit 7 set in `h`.

@@ -9,6 +9,8 @@
 #   DUMPDIR=/tmp/shots tools/run-test.sh build/synack-auto.xex
 #       headless; every BRK the program executes saves the text screen to
 #       DUMPDIR/scrNNN.bin (tools/screen2txt.py shows them)
+#   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
+#       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
 # Start the server first:  cd ../server && python3 serve.py --trace
 # Closing the emulator (or Ctrl-C) stops FujiNet-PC as well.
@@ -16,23 +18,27 @@ set -e
 XEX=$(realpath "$1")
 ATARI800=${ATARI800:-atari800}
 FUJINET_DIR=${FUJINET_DIR:-$HOME/Nextcloud/Projects/computers/atari8/Source/FujiNetWIFI/fujinet-firmware/build/dist}
+INSTANCE=${INSTANCE:-0}
+NETSIO=$((9997 + INSTANCE))
+WEB=$((8000 + INSTANCE))
 WORK=$(mktemp -d "${TMPDIR:-/tmp}/synack-run.XXXXXX")
 mkdir "$WORK/sd"
-awk '/^\[/ { skip = /^\[Mount[0-9]+\]/ }
+awk -v netsio=$NETSIO '/^\[/ { skip = /^\[Mount[0-9]+\]/; boip = /^\[BOIP\]/ }
      /^configenabled=/ { $0 = "configenabled=0" }
      /^boot_mode=/ { $0 = "boot_mode=0" }
+     boip && /^port=/ { $0 = "port=" netsio }
      !skip' "$FUJINET_DIR/fnconfig.ini" > "$WORK/fnconfig.ini"
 
 # Exit code 75 means "restart me" (the emulator resets FujiNet when it connects), as in run-fujinet.
 (cd "$FUJINET_DIR" && while :; do
     rc=0
-    stdbuf -oL ./fujinet -c "$WORK/fnconfig.ini" -s "$WORK/sd" || rc=$?
+    stdbuf -oL ./fujinet -c "$WORK/fnconfig.ini" -s "$WORK/sd" -u "http://0.0.0.0:$WEB" || rc=$?
     [ $rc -eq 75 ] || break
 done) > "$WORK/fujinet.log" 2>&1 &
 FN=$!
 trap 'pkill -P $FN 2>/dev/null; kill $FN 2>/dev/null; echo "logs: $WORK"' EXIT INT TERM
 
-OPTS="-xl -nobasic -netsio"
+OPTS="-xl -nobasic -netsio $NETSIO"
 if [ -n "$DUMPDIR" ]; then
     # GR.0 screen memory with no BASIC: $BC40-$BFFF
     mkdir -p "$DUMPDIR"
