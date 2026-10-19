@@ -110,7 +110,7 @@ conversion on the Atari. So they need `make atr`; the bare `.xex` with no game d
   video appear exactly as typed. `\` shows as the yen sign, because the game's font replaces it.
 - **Numbering:** 01, 02... with no gaps. If a heading ends in `n/m`, `n` must be the page number and `m` the page
   count. The game doesn't count pages: `>` reads the next page's sectors and stays put if they aren't a page, so
-  adding `HELP08.TXT` needs only `make atr`, not a new `.xex`.
+  adding `HELP09.TXT` needs only `make atr`, not a new `.xex`.
 - **`tools/help_disk.py`** checks the pages (too long, too wide, a gap in the numbers, a wrong `n/m`) and writes
   them. Page n is 8 sectors from `HELP_SECTOR + 8*(n-1)` (`HELP_SECTOR=600`, room for 15 pages up to sector 719).
   The first holds the page's last 64 bytes and the signature `SYNACK`, the other 7 its first 896. The sectors are
