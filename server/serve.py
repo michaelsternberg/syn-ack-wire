@@ -84,7 +84,7 @@ class Server:
 
 
 def think_time(text):
-    """"MEAN,JITTER" in seconds, e.g. "20,10" for 10 to 30, most often near 20."""
+    """"MEAN,JITTER" in seconds, e.g. "20,10" for anywhere from 10 to 30, all equally likely."""
     try:
         mean, jitter = (float(x) for x in text.split(","))
     except ValueError:

@@ -46,8 +46,7 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 - A prompt that times out is answered by that seat's bot; the seat stays human. A dropped connection marks the seat
   away and its bot plays until the token comes back. `Q` hands the seat to the bot for good.
 - Bots, and away seats, wait `--bot-delay` before each decision. `--think-exploit` and `--think-buy` give them a
-  thinking time instead before running an exploit and before buying: `MEAN,JITTER` in seconds, drawn from a
-  triangular distribution (never outside MEAN±JITTER, most often near MEAN). A prompt that timed out is answered
-  at once.
+  thinking time instead before running an exploit and before buying: `MEAN,JITTER` in seconds, drawn evenly
+  from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.
 - After a game the table returns to the lobby. Bot and away seats stay visible until a new player needs the chair,
   and a reconnecting player is sent the result (`e`) of the last game.

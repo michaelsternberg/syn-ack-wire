@@ -223,7 +223,7 @@ class Table:
         if kind not in self.think:
             return self.bot_delay
         mean, jitter = self.think[kind]
-        return max(0.0, self.rng.triangular(mean - jitter, mean + jitter, mean))
+        return max(0.0, self.rng.uniform(mean - jitter, mean + jitter))
 
     def _game_over(self):
         self.lobby = True

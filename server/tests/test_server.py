@@ -163,7 +163,7 @@ class ThinkTimeTest(unittest.TestCase):
         self.assertTrue(all(10.0 <= t <= 30.0 for t in exploit))
         self.assertTrue(all(7.0 <= t <= 17.0 for t in buy))
         near = sum(1 for t in exploit if 15.0 <= t <= 25.0) / len(exploit)
-        self.assertGreater(near, 0.65)            # triangular: 75% within half the jitter
+        self.assertLess(abs(near - 0.5), 0.05)    # even: half within half the jitter
         for kind in "FKD":                         # the small choices stay quick
             self.assertEqual(table._bot_wait(kind), 0.5)
         self.assertEqual(Server(bot_delay=0.5).table(0)._bot_wait("P"), 0.5)
