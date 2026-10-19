@@ -1,0 +1,146 @@
+"""End-to-end: real TCP server, protocol clients, bots.  Run from server/:  python3 -m unittest -v"""
+import asyncio
+import random
+import unittest
+
+import testclient
+from acquire import proto
+from serve import Server
+
+HOST = "127.0.0.1"
+
+
+class ServerTest(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        self.server = Server(timeout=5.0, bot_delay=0, seed=42)
+        self.srv = await self.server.serve(HOST, 0)
+        self.port = self.srv.sockets[0].getsockname()[1]
+
+    async def asyncTearDown(self):
+        self.srv.close()
+        self.srv.close_clients()
+        await self.srv.wait_closed()
+
+    def client(self, name, **kw):
+        kw.setdefault("auto", True)
+        kw.setdefault("quiet", True)
+        kw.setdefault("rng", random.Random(name))
+        return testclient.run(HOST, self.port, kw.pop("table", 0), name, **kw)
+
+    async def raw(self, table=0, token=bytes(4), name="RAW", ver=proto.VERSION):
+        reader, writer = await asyncio.open_connection(HOST, self.port)
+        writer.write(b"H" + bytes([ver, table]) + token + proto.handle(name))
+        return reader, writer
+
+    async def test_two_humans_two_bots_full_game(self):
+        host = asyncio.create_task(self.client("ALICE", start=4, need_humans=2))
+        await asyncio.sleep(0.05)
+        guest = asyncio.create_task(self.client("BOB"))
+        a, b = await asyncio.wait_for(asyncio.gather(host, guest), 30)
+        self.assertIsNotNone(a.winners)
+        self.assertEqual(a.winners, b.winners)
+        self.assertEqual(a.board, b.board)                  # both clients tracked the same Grid
+        self.assertEqual(a.cash, b.cash)
+        self.assertEqual([k for k, _ in a.seats[:4]], [1, 1, 3, 3])
+        self.assertEqual(a.faults + b.faults, [])
+        self.assertTrue(any("TOP COWBOY" in line for line in a.logs))
+
+    async def test_reconnect_after_game_shows_result(self):
+        c = await asyncio.wait_for(self.client("SOLO", start=2), 30)
+        again = testclient.Client()
+        r, w = await self.raw(token=c.token, name="SOLO")
+        while again.winners is None:
+            data = await asyncio.wait_for(r.read(4096), 5)
+            self.assertTrue(data, f"connection closed; faults {again.faults}")
+            again.feed(data)
+        self.assertEqual(again.winners, c.winners)
+        w.close()
+
+    async def test_silent_human_is_covered_by_bot(self):
+        self.server.timeout = 0.05
+        t = self.server.table(0)
+        t.timeout = 0.05
+        reader, writer = await self.raw(name="AFK")
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await reader.read(4096))
+        self.assertEqual(c.prompt[0], "S")
+        writer.write(b"S\x03")                             # start, then never answer again
+        while c.winners is None:
+            data = await asyncio.wait_for(reader.read(4096), 30)
+            self.assertTrue(data)
+            c.feed(data)
+        self.assertEqual(c.seats[c.seat][0], proto.HUMAN)   # timeouts don't take the seat away
+        writer.close()
+
+    async def test_drop_and_reconnect(self):
+        self.server.bot_delay = 0.01                        # keep the game running while we're away
+        reader, writer = await self.raw(name="FLAKY")
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await reader.read(4096))
+        token, seat = c.token, c.seat
+        writer.write(b"S\x02")
+        while c.turn is None:
+            c.feed(await reader.read(4096))
+        writer.close()                                      # drop mid-game; the bot plays the seat
+        await asyncio.sleep(0.05)
+        t = self.server.table(0)
+        self.assertEqual(t.seats[seat].kind, proto.AWAY)
+        self.assertFalse(t.lobby)
+        back = await asyncio.wait_for(self.client("FLAKY", token=token), 30)
+        self.assertEqual(back.seat, seat)
+        self.assertEqual(back.token, token)
+        self.assertIsNotNone(back.winners)
+
+    async def test_faults(self):
+        r, w = await self.raw(ver=99)
+        self.assertEqual(await r.read(10), proto.fault(proto.F_VERSION))
+        w.close()
+        r, w = await self.raw(token=b"\x01\x02\x03\x04")
+        self.assertEqual(await r.read(10), proto.fault(proto.F_TOKEN))
+        w.close()
+        # an answer when no prompt is open
+        r, w = await self.raw(name="EAGER")
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await r.read(4096))
+        w.write(b"P\x05")
+        while not c.faults:
+            c.feed(await r.read(4096))
+        self.assertEqual(c.faults, [proto.F_ILLEGAL])
+        self.assertIn("NO DECISION", c.logs[-1])          # the reason arrives first
+        w.close()
+
+    async def test_illegal_move_gets_reason_and_same_prompt(self):
+        r, w = await self.raw(name="CLUMSY")
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await r.read(4096))
+        w.write(b"S\x02")
+        while c.prompt is None or c.prompt[0] != "P":
+            c.prompt = None if c.prompt and c.prompt[0] == "S" else c.prompt
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        kit = {n & 0x7F for n in c.hand if n != 0xFF}
+        bad = next(n for n in range(108) if n not in kit and c.board[n] == 0)
+        c.prompt = None
+        w.write(b"P" + bytes([bad]))
+        while c.prompt is None:
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        self.assertEqual(c.faults, [proto.F_ILLEGAL])
+        self.assertIn("IS NOT IN YOUR KIT", c.logs[-1])
+        self.assertEqual(c.prompt[0], "P")                  # asked again
+        w.close()
+
+    async def test_table_full_once_started(self):
+        self.server.bot_delay = 0.01
+        host = asyncio.create_task(self.client("HOST", start=2, table=7))
+        await asyncio.sleep(0.05)
+        r, w = await self.raw(table=7, name="LATE")
+        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        w.close()
+        await asyncio.wait_for(host, 30)
+
+
+if __name__ == "__main__":
+    unittest.main()

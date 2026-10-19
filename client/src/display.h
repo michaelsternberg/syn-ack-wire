@@ -1,0 +1,21 @@
+/* Everything the game shows goes through these calls. Game logic (common/) never
+ * draws. Each platform has a text version (Claude's) and may have a fancy one;
+ * config.h picks per screen. The display reads the game state in game.h. */
+#ifndef DISPLAY_H
+#define DISPLAY_H
+
+/* FANCY_TITLE */
+void display_title_screen(void);        /* title, server, the handle typed so far (edit[]) */
+
+/* FANCY_PLAYFIELD */
+void display_playfield(void);           /* full redraw from the game state */
+void display_node(unsigned char node);  /* one Grid node changed */
+void display_hives(void);               /* hive sizes; buy prices while prompt B is open */
+void display_seat(unsigned char seat);  /* one seat's name, cash and crypto */
+void display_log(void);                 /* msg[] holds an 'l' frame: show its text */
+void display_prompt(void);              /* the open prompt (or the kit when none) */
+void display_clock(unsigned char secs); /* seconds left to answer */
+void display_message(const char *s);    /* one-line notice: connecting, faults... */
+void display_game_over(void);           /* winners are in `winners` */
+
+#endif

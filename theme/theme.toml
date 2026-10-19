@@ -1,0 +1,192 @@
+# SYN-ACK WIRE -- canonical names, vocabulary and rule numbers.
+#
+# This is the ONE place to rename things. Generated from it:
+#   docs/rulebook/theme.tex      (make -C docs/rulebook)
+#   later: server code reads this file directly; client headers/includes are generated.
+#
+# Terms: `s` = singular, `p` = plural (defaults to s + "s"). Capitalized forms are generated.
+# Keys must be letters only (they become LaTeX macro names).
+
+[game]
+title       = "SYN-ACK WIRE"
+endshout    = "UNJACK!"
+region      = "NEO-KANSAI-1"          # example region used in docs (keep region IDs <= 12 chars)
+currency    = "¥"
+
+[rules]
+startcash   = 6000    # in currency units
+kitsize     = 6       # exploits in hand
+maxbuy      = 3       # coins bought per turn
+coinsupply  = 25      # coins per syndicate
+safesize    = 11      # Black ICE at this many nodes
+endsize     = 41      # Total Compromise at this many nodes
+rows        = 9       # labelled 0..8
+cols        = 12      # labelled A..L
+minplayers  = 2
+maxplayers  = 6
+
+# Board glyphs. Syndicate glyphs are their `letter` below.
+[glyphs]
+empty  = "."
+spike  = "+"
+target = "*"      # client: an empty node one of your exploits can run on (toggle with the * key)
+
+[terms]
+playertitle     = { s = "Access Cowboy" }
+player          = { s = "cowboy" }
+grid            = { s = "Grid" }
+node            = { s = "node" }
+exploit         = { s = "exploit" }
+kit             = { s = "exploit kit" }
+spike           = { s = "spike" }
+hive            = { s = "hive" }
+hivejack        = { s = "hivejack" }
+infiltration    = { s = "infiltration" }
+broker          = { s = "broker" }
+finderscut      = { s = "finder's cut" }
+spread          = { s = "spread" }
+safe            = { s = "Black ICE", p = "Black ICE" }
+patched         = { s = "patched out", p = "patched out" }
+burnkit         = { s = "burn the kit", p = "burn the kit" }
+coin            = { s = "crypto", p = "crypto" }
+money           = { s = "new yen", p = "new yen" }
+root            = { s = "ROOT", p = "ROOT" }
+sudo            = { s = "SUDO", p = "SUDO" }
+cashout         = { s = "cash out", p = "cash out" }
+swap            = { s = "swap" }
+hodl            = { s = "HODL", p = "HODL" }
+flatlined       = { s = "flatlined", p = "flatlined" }
+revived         = { s = "back from the flatline", p = "back from the flatline" }
+bank            = { s = "Darkpool" }
+nullroute       = { s = "null-route" }
+totalcompromise = { s = "Total Compromise", p = "Total Compromise" }
+lockdown        = { s = "Lockdown", p = "Lockdown" }
+stall           = { s = "Grid Stall", p = "Grid Stall" }
+absorber        = { s = "absorber" }
+absorbed        = { s = "absorbed", p = "absorbed" }
+
+# Handles given to bot seats (<= 8 chars, ASCII uppercase/digits/punctuation).
+[bots]
+names = ["NULLPTR", "WIREWOLF", "R00TKIT", "SEGFAULT", "ZER0DAY", "GL1TCH", "K1LLSWCH", "BYTEME"]
+
+# Log lines sent to clients (keep <= 38 chars after substitution; ASCII + currency symbol only).
+# Placeholders: {player} handle, {node} e.g. C4, {syn} syndicate short name, {coin} its coin ticker
+# (coin lines name the syndicate, not the ticker, so players can tell who is who),
+# {absorber}/{absorbed} short names, {size}, {amount} formatted money, {n} count,
+# {region}, {shout}.
+[log]
+spike      = "[+] {player} SPIKES {node}"
+found      = "[*] INFILTRATION! {syn} HIVE UP"
+finderscut = "[$] {player} FINDER'S CUT 1 {syn}"
+spread     = "[*] {syn} HIVE SPREADS: {size} NODES"
+safe       = "[#] {syn} HIVE WRAPPED IN BLACK ICE"
+hivejack   = "[!] HIVEJACK: {absorber} SEIZES {absorbed}"
+root       = "[$] ROOT {player} +{amount}"
+sudo       = "[$] SUDO {player} +{amount}"
+cashout    = "[$] {player} CASHES OUT {n} {syn}"
+swap       = "[$] {player} SWAPS {n} {syn}"
+hodl       = "[*] {player} HODLS {n} {syn}"
+flatlined  = "[-] {syn} CRYPTO FLATLINED"
+buy        = "[$] {player} BUYS {n} {syn}"
+burnkit    = "[-] {player} BURNS THE KIT"
+noplay     = "[-] {player} HAS NO EXPLOIT TO RUN"
+patched    = "[-] EXPLOIT {node} PATCHED OUT"
+callend    = "[!] {player} CALLS THE NULL-ROUTE"
+nullroute  = "[!] NULL-ROUTE {region}: {shout}"
+quarantine = "[!] GRID STALLED: {region} SEALED"
+final      = "[$] {player} FINAL {amount}"
+winner     = "[!] TOP COWBOY: {player}"
+
+# Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
+# Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.
+[errors]
+nodecision  = "[-] NO DECISION IS WAITING"
+notyours    = "[-] NOT YOUR DECISION"
+late        = "[-] TOO LATE: YOUR BOT ANSWERED"
+notinkit    = "[-] {node} IS NOT IN YOUR KIT"
+cantrun     = "[-] {node} CAN'T BE RUN NOW"
+hasahive    = "[-] {syn} ALREADY HAS A HIVE"
+notoffered  = "[-] PICK ONE OF THE OFFERED HIVES"
+oddswap     = "[-] SWAP AN EVEN AMOUNT OF CRYPTO"
+toomany     = "[-] YOU ONLY HOLD {n} CRYPTO"
+swapsupply  = "[-] DARKPOOL HAS ONLY {n} {syn} LEFT"
+maxbuy      = "[-] MAX {n} CRYPTO PER TURN"
+nohive      = "[-] THAT SYNDICATE HAS NO HIVE"
+soldout     = "[-] DARKPOOL IS OUT OF {syn}"
+nocash      = "[-] NOT ENOUGH YEN"
+cantend     = "[-] NULL-ROUTE CAN'T BE CALLED YET"
+seats       = "[-] START WITH {lo}-{hi} SEATS"
+
+# Syndicates, in id order (protocol syndicate id = position, 0..6).
+# letter: one char on the board, must be unique.  short: <= 8 chars.  coin: <= 4 chars.
+# tier: low | mid | high.   color: print/illustration color only (platform colors live in platform code).
+[[syndicate]]
+name   = "Ghost//Modem"
+short  = "GHOSTMDM"
+letter = "G"
+coin   = "BAUD"
+tier   = "low"
+color  = "4FB3BF"
+alias  = "STATIC SPIDER"
+flavor = "Old-school phreakers squatting in dead telco switches. Still whistle 2600 Hz for fun."
+
+[[syndicate]]
+name   = "Rat King Cartel"
+short  = "RATKING"
+letter = "R"
+coin   = "SQK"
+tier   = "low"
+color  = "8D6E4F"
+alias  = "SEWER SPIDER"
+flavor = "Data smugglers in the maintenance tunnels. Carry stolen drives in their mouths. Metaphorically. Mostly."
+
+[[syndicate]]
+name   = "Church of the Holy Daemon"
+screen = "Holy Daemon"          # optional: the client's hive panel fits 20 chars; longer names need this
+short  = "DAEMON"
+letter = "D"
+coin   = "SOUL"
+tier   = "mid"
+color  = "8E5BC4"
+alias  = "(unattributed)"
+flavor = "Believe a background process achieved godhood in '99. Pray in cron. Tithes are recurring."
+
+[[syndicate]]
+name   = "Iron Vector"
+short  = "IRONVEC"
+letter = "I"
+coin   = "AMMO"
+tier   = "mid"
+color  = "6E7F3A"
+alias  = "RUST JACKAL"
+flavor = "Paramilitary arms brokers. Drone swarms for hire, invoices in triplicate, refunds never."
+
+[[syndicate]]
+name   = "Bratva 404"
+short  = "BRATVA"
+letter = "B"
+coin   = "RUBL"
+tier   = "mid"
+color  = "C4373A"
+alias  = "FROZEN BEAR"
+flavor = "Eastern-bloc mob. People who cross them become \"not found.\""
+
+[[syndicate]]
+name   = "Lotus-12 Triad"
+short  = "LOTUS-12"
+letter = "L"
+coin   = "LTS"
+tier   = "high"
+color  = "2E9E6B"
+alias  = "JADE PANDA"
+flavor = "Has kept its debts in spreadsheets since the 1980s. Every favor is a cell; every cell has a formula."
+
+[[syndicate]]
+name   = "Obsidian Ledger"
+short  = "OBSIDIAN"
+letter = "O"
+coin   = "LDGR"
+tier   = "high"
+color  = "C9A227"
+alias  = "(none known)"
+flavor = "Faceless cabal of former central bankers. They run the Darkpool."

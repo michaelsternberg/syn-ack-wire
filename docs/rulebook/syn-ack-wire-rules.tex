@@ -1,0 +1,556 @@
+% SYN-ACK WIRE -- Rule Book
+% Build: make            (regenerates theme.tex from theme/theme.toml, then runs pdflatex twice)
+%
+% All names, vocabulary and rule numbers come from theme/theme.toml via theme.tex:
+%   \Game{key}  [game] value          \Rule{key}  [rules] number (formatted)
+%   \V{key}     term, singular        \Vp{key}    plural
+%   \VC{key}    Capitalized           \VCp{key}   Capitalized plural
+%   \Syn{i}{field}  syndicate i (0-6): name short letter coin tier alias flavor; color "syn<i>"
+%   \Glyph{key} board glyph (empty, spike)
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[sfdefault,book,lining,tabular]{FiraSans}
+\usepackage[scale=0.88]{FiraMono}
+\usepackage{textcomp}
+\usepackage[margin=0.85in,top=0.9in,bottom=0.9in]{geometry}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{colortbl}
+\usepackage{enumitem}
+\usepackage{multicol}
+\usepackage{needspace}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage[most]{tcolorbox}
+\usepackage[hidelinks]{hyperref}
+
+% ------------------------------------------------------------------
+% Theme lookup
+% ------------------------------------------------------------------
+\makeatletter
+\newcommand{\th@get}[1]{\ifcsname #1\endcsname\csname #1\endcsname\else
+  \PackageError{theme}{Unknown theme key '#1'}{Check theme/theme.toml}\fi}
+\newcommand{\Game}[1]{\th@get{th@game@#1}}
+\newcommand{\Rule}[1]{\th@get{th@rule@#1}}
+\newcommand{\Glyph}[1]{\th@get{th@glyph@#1}}
+\newcommand{\V}[1]{\th@get{th@v@#1}}
+\newcommand{\Vp}[1]{\th@get{th@vp@#1}}
+\newcommand{\VC}[1]{\th@get{th@vc@#1}}
+\newcommand{\VCp}[1]{\th@get{th@vcp@#1}}
+\newcommand{\Syn}[2]{\th@get{th@syn@#1@#2}}
+\newcommand{\TierCoins}[1]{\th@get{th@tiercoins@#1}}
+\makeatother
+\input{theme.tex}
+
+% ------------------------------------------------------------------
+% Colors
+% ------------------------------------------------------------------
+\definecolor{ink}{HTML}{1B1F2A}
+\definecolor{neon}{HTML}{00A6C8}
+\definecolor{hot}{HTML}{D6246E}
+\definecolor{paper}{HTML}{F3F6F9}
+\definecolor{rule}{HTML}{B8C2CC}
+\definecolor{spike}{HTML}{9AA5B1}
+
+\color{ink}
+
+% ------------------------------------------------------------------
+% Macros
+% ------------------------------------------------------------------
+\newcommand{\Y}[1]{\Game{currency}#1}
+\newcommand{\node}[1]{\texttt{#1}}
+\newcommand{\term}[1]{\textbf{\color{hot}#1}}
+\newcommand{\game}{\Game{title}}
+
+\setlist{itemsep=2pt,topsep=4pt}
+
+\titleformat{\section}{\Needspace{8\baselineskip}\Large\bfseries\color{neon}}{\texttt{\thesection}}{0.6em}{}[{\color{rule}\titlerule}]
+\titleformat{\subsection}{\large\bfseries\color{ink}}{}{0em}{}
+\titlespacing*{\section}{0pt}{16pt}{8pt}
+\titlespacing*{\subsection}{0pt}{12pt}{4pt}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0pt}
+\fancyfoot[L]{\small\color{spike}\texttt{\Game{title} // RULE BOOK}}
+\fancyfoot[R]{\small\color{spike}\texttt{[\thepage]}}
+
+\newtcolorbox{example}[1][]{enhanced,breakable,colback=paper,colframe=neon,
+  boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries\small,coltitle=white,title={EXAMPLE#1}}
+\newtcolorbox{note}[1]{enhanced,breakable,colback=white,colframe=hot,
+  boxrule=0.6pt,arc=2pt,left=8pt,right=8pt,top=6pt,bottom=6pt,
+  fonttitle=\bfseries\small,coltitle=white,title={#1}}
+\newtcolorbox{terminal}{enhanced,colback=ink,colframe=ink,arc=2pt,
+  left=8pt,right=8pt,top=6pt,bottom=6pt,fontupper=\ttfamily\small\color{neon}}
+
+% ------------------------------------------------------------------
+% Grid drawing (TikZ). Columns A-L left to right, rows 0-8 top to bottom.
+% The board shows each syndicate as its letter; color is a bonus where the platform allows.
+%   \hive{col}{row}{syndicate id}   \spk{col}{row}   \target{col}{row}{marker}
+% ------------------------------------------------------------------
+\newcommand{\gridframe}{%
+  \foreach \c [count=\i from 0] in {A,B,C,D,E,F,G,H,I,J,K,L}
+    \node[font=\ttfamily\small,color=spike] at (\i+0.5,0.45) {\c};
+  \foreach \r in {0,...,8}
+    \node[font=\ttfamily\small,color=spike] at (-0.45,-\r-0.5) {\r};
+  \foreach \c in {0,...,11} \foreach \r in {0,...,8}
+    \draw[rule,fill=white] (\c+0.06,-\r-0.06) rectangle (\c+0.94,-\r-0.94);
+}
+\newcommand{\hive}[3]{%
+  \draw[ink,line width=0.4pt,fill=syn#3] (#1+0.06,-#2-0.06) rectangle (#1+0.94,-#2-0.94);
+  \node[font=\ttfamily\small\bfseries,color=white] at (#1+0.5,-#2-0.5) {\Syn{#3}{letter}};
+}
+\newcommand{\spk}[2]{%
+  \draw[ink,line width=0.4pt,fill=spike] (#1+0.06,-#2-0.06) rectangle (#1+0.94,-#2-0.94);
+  \node[font=\ttfamily\small\bfseries,color=white] at (#1+0.5,-#2-0.5) {\Glyph{spike}};
+}
+\newcommand{\target}[3]{%
+  \draw[hot,line width=1.2pt,dashed] (#1+0.06,-#2-0.06) rectangle (#1+0.94,-#2-0.94);
+  \node[font=\ttfamily\small\bfseries,color=hot] at (#1+0.5,-#2-0.5) {#3};
+}
+
+% ==================================================================
+\begin{document}
+
+% ------------------------------------------------------------------
+% Cover
+% ------------------------------------------------------------------
+\begin{titlepage}
+\pagecolor{ink}\color{white}
+\centering
+\vspace*{1.2in}
+{\fontsize{46}{50}\selectfont\bfseries\ttfamily\color{neon} \Game{title}\par}
+\vspace{0.25in}
+{\Large\color{hot}\ttfamily [ RULE BOOK ]\par}
+\vspace{0.5in}
+\begin{tikzpicture}[scale=0.42]
+  \foreach \c in {0,...,11} \foreach \r in {0,...,8}
+    \draw[spike!40!ink,fill=ink] (\c+0.08,-\r-0.08) rectangle (\c+0.92,-\r-0.92);
+  \foreach \c/\r in {2/1,3/1,3/2,4/2} \fill[syn5] (\c+0.08,-\r-0.08) rectangle (\c+0.92,-\r-0.92);
+  \foreach \c/\r in {7/3,8/3,8/4,9/4,9/5} \fill[syn4] (\c+0.08,-\r-0.08) rectangle (\c+0.92,-\r-0.92);
+  \foreach \c/\r in {1/6,2/6,2/7} \fill[syn2] (\c+0.08,-\r-0.08) rectangle (\c+0.92,-\r-0.92);
+  \foreach \c/\r in {5/5,10/1,6/7} \fill[spike] (\c+0.08,-\r-0.08) rectangle (\c+0.92,-\r-0.92);
+  \draw[hot,line width=1.4pt] (5+0.08,-2-0.08) rectangle (5+0.92,-2-0.92);
+\end{tikzpicture}
+\vspace{0.5in}
+
+{\large Seven syndicates. One region. Every \V{node} for sale.\par}
+\vspace{0.15in}
+{\color{spike} \Rule{minplayers}--\Rule{maxplayers} \VCp{playertitle} \quad//\quad networked play with bots\par}
+\vfill
+{\small\color{spike} An unofficial cyberpunk re-skin of \emph{Acquire} by Sid Sackson.\par}
+\end{titlepage}
+\nopagecolor\color{ink}
+
+% ------------------------------------------------------------------
+\section{The Wire}
+% ------------------------------------------------------------------
+The region's network used to belong to someone. Now it belongs to everyone: hospitals, traffic control,
+corporate tenants, vending kiosks and city utilities, all crammed onto the same racks and the same fiber.
+Nobody owns the region as a whole. A consortium of backbone carriers keeps the packets moving and asks no
+questions.
+
+You are an \term{\V{playertitle}}. You break into \Vp{node}, plant persistent \term{\Vp{spike}}, and when two of your
+footholds touch, you have something worth selling: a \term{\V{hive}}. You \V{broker} it to one of seven crime syndicates,
+take your cut in their \V{coin}, and watch the price climb as their \V{hive} spreads across the \V{grid}.
+
+Syndicates do not share. When two \Vp{hive} collide, the bigger one \term{\Vp{hivejack}} the smaller and the people
+holding the loser's \V{coin} get paid out, or wiped out. Sooner or later the carriers lose patience and
+\term{\V{nullroute}} the whole region. When the routes go dark, the \V{player} holding the most \Game{currency} wins.
+
+\subsection{Object of the game}
+Have the most \V{money} (\Game{currency}) when the region is \V{nullroute}d.
+
+% ------------------------------------------------------------------
+\section{What's in the Game}
+% ------------------------------------------------------------------
+\game\ is played on a computer; the game server keeps track of everything below.
+
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[The \V{grid}] 108 \Vp{node} in \Rule{rows} rows (\node{0}--\node{8}) and \Rule{cols} columns (\node{A}--\node{L}).
+    A \V{node} is named column first, then row: \node{A0} is the top-left corner, \node{L8} the bottom-right.
+  \item[\VCp{exploit}] 108 of them, one for each \V{node}. An \V{exploit} can only be run against the \V{node} it is written for.
+    Each \V{player} holds \Rule{kitsize} \Vp{exploit}, called their \term{\V{kit}}. Your \V{kit} is secret.
+  \item[Syndicates] Seven crime syndicates, each with its own \V{coin}. Only one \V{hive} per syndicate can be on
+    the \V{grid} at a time.
+  \item[\VCp{coin}] \Rule{coinsupply} of each syndicate's \V{coin}. Whatever no \V{player} owns is held by the \V{bank}.
+  \item[The \V{bank}] The bank. It sells \V{coin}, buys it back, and pays out bonuses. It never lends.
+  \item[\VC{money}] Each \V{player} starts with \Y{\Rule{startcash}}.
+\end{description}
+
+\subsection{Reading the \V{grid}}
+\begin{center}
+\begin{tikzpicture}[scale=0.55]
+  \gridframe
+  \spk{5}{4}
+  \hive{2}{1}{5}\hive{3}{1}{5}\hive{3}{2}{5}
+  \hive{8}{6}{3}\hive{9}{6}{3}
+\end{tikzpicture}
+\end{center}
+{\small Each syndicate is shown by its letter. \texttt{\Glyph{spike}}: a lone \term{\V{spike}} (\node{F4}).
+\texttt{\Syn{5}{letter}}: \Syn{5}{name}, a \V{hive} of 3 \Vp{node} (\node{C1}, \node{D1}, \node{D2}).
+\texttt{\Syn{3}{letter}}: \Syn{3}{name}, a \V{hive} of 2 \Vp{node} (\node{I6}, \node{J6}).
+Only up, down, left and right count as touching; diagonals never do.}
+
+% ------------------------------------------------------------------
+\section{The Seven Syndicates}
+% ------------------------------------------------------------------
+Every syndicate's \V{coin} follows the same rules. What differs is the \term{tier}: how much its \V{coin} is worth
+for a \V{hive} of a given size. Low-tier crews are cheap to buy into; high-tier powers are expensive but pay big.
+The letter is how the syndicate appears on the \V{grid}.
+
+\medskip
+\renewcommand{\arraystretch}{1.25}
+\noindent\begin{tabularx}{\linewidth}{@{}c l l >{\raggedright\arraybackslash}X@{}}
+\toprule
+ & \textbf{Syndicate} & \textbf{Tier} & \textbf{Word on the wire} \\
+\midrule
+\SynTableRows
+\bottomrule
+\end{tabularx}
+
+% ------------------------------------------------------------------
+\section{Setup}
+% ------------------------------------------------------------------
+\begin{enumerate}
+  \item Every \V{player} gets \Y{\Rule{startcash}}. The \V{bank} holds all the \V{coin} at the start.
+  \item \textbf{Turn order.} Each \V{player} is dealt one \V{exploit}, and it is \V{spike}d onto the \V{grid} at once. The \V{player}
+    whose \V{spike} is in the lowest-numbered row goes first; if two share a row, the one closer to column \node{A} wins the tie.
+    Play then continues around the table in seat order. These opening \Vp{spike} stay on the \V{grid} and do not form \Vp{hive},
+    even if they happen to touch.
+  \item Each \V{player} is dealt \Rule{kitsize} \Vp{exploit} into their \V{kit}.
+\end{enumerate}
+
+% ------------------------------------------------------------------
+\section{Playing a Turn}
+% ------------------------------------------------------------------
+On your turn, do these three things in order:
+
+\begin{enumerate}
+  \item \textbf{\VC{spike} a \V{node}.} Run one \V{exploit} from your \V{kit} and place a \V{spike} on its \V{node}.
+  \item \textbf{Buy \V{coin}.} Buy up to \Rule{maxbuy} \Vp{coin} from the \V{bank} (optional).
+  \item \textbf{Pick up a fresh \V{exploit}.} Draw a new \V{exploit} to bring your \V{kit} back to \Rule{kitsize}.
+\end{enumerate}
+
+\subsection{1. \VC{spike} a \V{node}}
+Where your \V{spike} lands decides what happens. It will do exactly one of these:
+
+\begin{center}
+\begin{tikzpicture}[scale=0.55]
+  \gridframe
+  \spk{1}{6}
+  \spk{10}{0}
+  \hive{3}{2}{5}\hive{4}{2}{5}\hive{5}{2}{5}\hive{5}{3}{5}
+  \hive{7}{3}{3}\hive{7}{4}{3}\hive{8}{4}{3}
+  \target{10}{8}{1}
+  \target{2}{6}{2}
+  \target{4}{1}{3}
+  \target{6}{3}{4}
+\end{tikzpicture}
+\end{center}
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=1.6em]
+  \item \textbf{Nothing.} \node{K8} touches nothing. The \V{spike} just sits there.
+  \item \textbf{\VC{infiltration}.} \node{C6} touches the lone \V{spike} on \node{B6}. A new \V{hive} is born.
+  \item \textbf{\VC{spread}.} \node{E1} touches the \Syn{5}{name} \V{hive}. It grows to 5 \Vp{node}.
+  \item \textbf{\VC{hivejack}.} \node{G3} touches both \Syn{5}{name} (4 \Vp{node}) and \Syn{3}{name} (3 \Vp{node}).
+    \Syn{5}{name} absorbs \Syn{3}{name}.
+\end{enumerate}
+
+\subsection{\VC{infiltration}: founding a \V{hive}}
+If your \V{spike} touches one or more lone \Vp{spike}, and no \V{hive}, you have founded a new \term{\V{hive}}.
+Choose any syndicate that does not have a \V{hive} on the \V{grid} and \term{\V{broker}} the \V{hive} to it. Your \V{spike} and every lone
+\V{spike} connected to it become that syndicate's \V{hive}.
+
+As your \term{\V{finderscut}}, take 1 \V{coin} of that syndicate from the \V{bank} for free. If the \V{bank} has none left,
+you get nothing.
+
+\begin{note}{BLOCKED \MakeUppercase{\Vp{exploit}}}
+If all seven syndicates already have \Vp{hive} on the \V{grid}, an \V{exploit} that would found an eighth \V{hive} cannot be run.
+It stays in your \V{kit} until a syndicate leaves the \V{grid}. The game marks these for you.
+\end{note}
+
+\subsection{\VC{spread}: growing a \V{hive}}
+If your \V{spike} touches exactly one \V{hive}, it joins that \V{hive}. Any lone \Vp{spike} connected to your \V{spike} join too.
+The \V{hive} is now bigger, and its \V{coin} is worth more.
+
+\subsection{\VC{hivejack}: merging \Vp{hive}}
+If your \V{spike} touches two or more different \Vp{hive}, they collide and the biggest one \term{\Vp{hivejack}} the
+others. Your new \V{spike} does not count toward any \V{hive}'s size while deciding this. Work through these steps:
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=1.6em]
+  \item \textbf{Who absorbs whom.} The \V{hive} with more \Vp{node} is the \term{\V{absorber}}; the smaller is \term{\V{absorbed}}.
+    If they are the same size, you choose which syndicate survives.
+  \item \textbf{Find the \V{root} and \V{sudo}.} Look at who holds the \V{absorbed} syndicate's \V{coin}. The \V{player} with the most is
+    \term{\V{root}}; the one with the second most is \term{\V{sudo}}.
+  \item \textbf{Payouts.} The \V{bank} pays the \V{root} and \V{sudo} bonuses from the reference chart, using the \V{absorbed} \V{hive}'s
+    size just before the \V{hivejack}. See \emph{Splitting payouts} below for ties.
+  \item \textbf{\VC{coin} decisions.} Starting with you and going around the table, every \V{player} holding the \V{absorbed}
+    syndicate's \V{coin} chooses what to do with it, in any mix:
+    \begin{itemize}
+      \item \term{\VC{cashout}}: sell \Vp{coin} to the \V{bank} at the \V{absorbed} syndicate's price (its size before the \V{hivejack}).
+      \item \term{\VC{swap}}: trade 2 \V{absorbed} \Vp{coin} for 1 \V{coin} of the \V{absorber}, as long as the \V{bank} has \V{absorber} \V{coin} left.
+      \item \term{\V{hodl}}: keep the \V{coin}. It is now \term{\V{flatlined}} and worthless, unless that syndicate is brokered a new
+        \V{hive} later, when it comes \term{\V{revived}}.
+    \end{itemize}
+  \item \textbf{Clean up.} The \V{absorbed} \V{hive}'s \Vp{node}, your \V{spike}, and any connected lone \Vp{spike} all join the \V{absorber}.
+    The \V{absorbed} syndicate leaves the \V{grid} and can be brokered again later.
+\end{enumerate}
+
+\begin{example}[: A TIED \V{root}]
+\Syn{3}{name} (3 \Vp{node}, mid tier) is \V{hivejack}ed. At 3 \Vp{node}, mid-tier \V{coin} is \Y{400}, so the \V{root} bonus is
+\Y{4,000} and \V{sudo} is \Y{2,000}. NEON\_MAMBA and ZER0COOL each hold 4 \Syn{3}{name} \V{coin}; RAZORGRL holds 2.
+
+NEON\_MAMBA and ZER0COOL tie for \V{root}, so they share \V{root} + \V{sudo}: \Y{6,000} split two ways, \Y{3,000} each.
+Nobody is paid \V{sudo}, so RAZORGRL gets nothing.
+
+Then, in turn order, NEON\_MAMBA chooses to \V{cashout} 2 of them for \Y{800} and \V{swap} the other 2 for
+1 \Syn{5}{name} \V{coin}.
+\end{example}
+
+\subsection{Splitting payouts}
+\begin{itemize}
+  \item \textbf{Tie for \V{root}:} add the \V{root} and \V{sudo} bonuses together and split them evenly among the tied \Vp{player},
+    rounding each share \emph{up} to the next \Y{100}. No \V{sudo} bonus is paid.
+  \item \textbf{Tie for \V{sudo}:} split the \V{sudo} bonus evenly among the tied \Vp{player}, rounding each share up to the next \Y{100}.
+  \item \textbf{One \V{player} is the only holder:} they collect both \V{root} and \V{sudo}.
+  \item \textbf{Nobody holds the \V{coin}:} nothing is paid.
+\end{itemize}
+
+\begin{example}[: ROUNDING UP]
+A 2-\V{node} mid-tier \V{hive} is \V{absorbed} (\V{root} \Y{3,000}, \V{sudo} \Y{1,500}). Two \Vp{player} tie for \V{root}:
+\Y{4,500} split two ways is \Y{2,250}, rounded up to \Y{2,300} each.
+\end{example}
+
+\subsection{\V{safe}: safe \Vp{hive}}
+Once a \V{hive} reaches \textbf{\Rule{safesize} or more \Vp{node}}, its syndicate wraps it in \term{\V{safe}}. A \V{safe} \V{hive}
+can never be \V{absorbed}. It can still absorb smaller \Vp{hive} that are not \V{safe}.
+
+An \V{exploit} that would join two \V{safe} \Vp{hive} can never be run. It is \term{\V{patched}}. The game marks it for you.
+
+\subsection{Multi-way \Vp{hivejack}}
+If your \V{spike} touches three or four \Vp{hive} at once, resolve them one at a time. The largest \V{hive} absorbs the second
+largest (do all five steps), then the now-bigger \V{absorber} takes on the next largest, and so on. If two of the smaller
+\Vp{hive} are tied in size, you choose which is \V{absorbed} first. If the two largest are tied, you choose the \V{absorber}.
+
+\subsection{2. Buy \V{coin}}
+After placing your \V{spike}, you may buy up to \Rule{maxbuy} \Vp{coin} from the \V{bank}, in any mix of syndicates. You can only buy
+\V{coin} of syndicates that have a \V{hive} on the \V{grid}. The price is set by the \V{hive}'s current size (see the reference
+chart), so a \V{spread} or \V{hivejack} you just caused changes the price before you buy.
+
+You cannot buy more than the \V{bank} has, and you cannot spend money you do not have. There are no loans.
+
+\subsection{3. Pick up a fresh \V{exploit}}
+Draw one \V{exploit} so your \V{kit} is back to \Rule{kitsize}. If no \Vp{exploit} are left to draw, skip this step.
+
+\begin{note}{\MakeUppercase{\V{burnkit}}}
+If, at the start of your turn, none of the \Vp{exploit} in your \V{kit} can be run, reveal your \V{kit}, discard it, and draw
+\Rule{kitsize} new \Vp{exploit}. Then take your turn as normal. The game does this automatically.
+\end{note}
+
+% ------------------------------------------------------------------
+\section{Ending the Game}
+% ------------------------------------------------------------------
+After placing your \V{spike}, if either of these is true, you may \term{call the \V{nullroute}}:
+
+\begin{itemize}
+  \item \term{\V{totalcompromise}}: any \V{hive} has \Rule{endsize} or more \Vp{node}.
+  \item \term{\V{lockdown}}: every \V{hive} on the \V{grid} is \V{safe}.
+\end{itemize}
+
+Calling it is your choice; you may keep playing instead. If you call it, finish your turn (you may still buy \V{coin}).
+Then the carriers \V{nullroute} the region and the game ends.
+
+\begin{terminal}
+[!] NULL-ROUTE \Game{region}: \Game{endshout}
+\end{terminal}
+
+\begin{note}{\MakeUppercase{\V{stall}}}
+If a full round goes by in which no \V{player} can run an \V{exploit} (every \V{kit} is empty or holds only blocked or
+\V{patched} \Vp{exploit}), the \V{grid} can never change again. The carriers seal the region and the game ends
+at once, without anyone calling it. Go straight to the final \V{cashout}.
+\end{note}
+
+\subsection{The final \V{cashout}}
+\begin{enumerate}
+  \item Pay \V{root} and \V{sudo} bonuses for every \V{hive} still on the \V{grid}, exactly as in a \V{hivejack}.
+  \item Every \V{player} sells all their \V{coin} to the \V{bank} at its current price, starting with the smallest \V{hive}.
+  \item \VC{flatlined} \V{coin} (from syndicates not on the \V{grid}) is worth nothing.
+\end{enumerate}
+The \V{player} with the most \Game{currency} wins. Ties share the win.
+
+% ------------------------------------------------------------------
+\section{Network Play}
+% ------------------------------------------------------------------
+\game\ is played over the network, with each \V{player} at their own machine.
+\begin{itemize}
+  \item \textbf{Bots fill empty seats.} Start a game with as many humans as you have; bots take the rest.
+  \item \textbf{Shot clock.} Every decision has a time limit. If yours runs out, your bot makes that one decision for you.
+  \item \textbf{Dropped connection.} If you drop off the network, your bot plays your seat until you reconnect, then hands
+    it back. Your \V{kit}, \Vp{coin} and \Game{currency} are waiting for you.
+\end{itemize}
+
+% ------------------------------------------------------------------
+\section{Frequently Asked Questions}
+% ------------------------------------------------------------------
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[What if I run out of \V{money}?] Keep running \Vp{exploit}. You just can't buy \V{coin} until a payout or \V{cashout}
+    puts \Game{currency} back in your account.
+  \item[Can I see other \Vp{player}' \Vp{coin}?] Yes. \VC{coin} holdings are public. \VCp{kit} are secret.
+  \item[Does my free \V{finderscut} count toward \V{root} and \V{sudo}?] Yes. It counts like any other \V{coin} you hold.
+  \item[Can a \V{flatlined} syndicate come back?] Yes. Once a syndicate leaves the \V{grid} it can be brokered a new \V{hive}.
+    Any \V{coin} you \V{hodl}ed is worth its price again.
+  \item[Do I have to call the \V{nullroute}?] No. If you are behind, keep playing and hope to catch up.
+\end{description}
+
+% ------------------------------------------------------------------
+\section{Tips}
+% ------------------------------------------------------------------
+None of this is a rule. It is what experienced \Vp{player} tend to know.
+
+\subsection{Early: get \Vp{hive} on the \V{grid}}
+\begin{itemize}
+  \item \textbf{Found \Vp{hive} whenever you can.} The \V{finderscut} is a free \V{coin}, and you can buy \Rule{maxbuy} more on the same
+    turn, while the price is at its lowest. That is a head start on \V{root} that nobody else gets.
+  \item \textbf{Small \Vp{hive} pay too.} A \V{hive} that gets \V{hivejack}ed early still pays its \V{root} and \V{sudo}.
+    Don't ignore a \V{hive} just because it will never be big.
+  \item \textbf{Don't stretch yourself thin.} With only \Rule{maxbuy} \Vp{coin} a turn, being \V{root} of one syndicate is usually worth
+    more than being third in three.
+\end{itemize}
+
+\begin{example}[: A QUICK FLIP]
+You found a low-tier \V{hive} of 2 \Vp{node}, take your \V{finderscut}, and buy 3 more \V{coin} at \Y{200} each (\Y{600}).
+Nobody else buys in. Next turn it is \V{hivejack}ed while still at 2 \Vp{node}. As the only holder you collect \V{root} and
+\V{sudo} (\Y{3,000}), then \V{cashout} your 4 \V{coin} for \Y{800}. You spent \Y{600} and got \Y{3,800} back.
+\end{example}
+
+\subsection{Middle: pick your moment}
+\begin{itemize}
+  \item \textbf{Look at the holdings.} \VC{coin} holdings are public. Before you \V{broker} a \V{hive} to a syndicate, or set off a
+    \V{hivejack}, check who would be paid. Don't hand a rival a bonus.
+  \item \textbf{One \V{coin} more than the leader takes \V{root}.} A tie for \V{root} splits the money. If you can see you are tied,
+    a single extra \V{coin} takes the whole \V{root} bonus.
+  \item \textbf{Grow it before it's \V{absorbed}.} Payouts and \V{cashout} prices use the \V{absorbed} \V{hive}'s size before the
+    \V{hivejack}. If you hold its \V{coin}, push it up to the next step of the price chart first. Check the chart: a low-tier
+    \V{hive} pays the same at 6 \Vp{node} as at 10, so growing it from 6 to 10 earns you nothing.
+  \item \textbf{Don't grow a rival's \V{hive}.} Every \V{spread} raises the price and moves a \V{hive} toward a \V{hivejack} or
+    \V{safe}. Make sure it is your \V{hive} you are helping.
+  \item \textbf{Keep options in your \V{kit}.} Some \Vp{exploit} touch nothing and just pass the turn quietly. Others found, spread,
+    or \V{hivejack}. Holding a mix lets you choose when things happen instead of being forced.
+  \item \textbf{Count \Vp{exploit}.} There is exactly one \V{exploit} for each \V{node}. If a key \V{node} stays empty turn after turn,
+    someone may be holding its \V{exploit} for the right moment.
+\end{itemize}
+
+\subsection{\VC{hivejack} choices}
+\begin{itemize}
+  \item \textbf{\VC{swap} when the \V{absorbed} \V{coin} was cheap.} A \V{swap} is always 2 for 1, whatever the sizes. Two \Vp{coin}
+    worth \Y{300} each (\Y{600} if you \V{cashout}) for one worth \Y{800} is a good trade, and it might make you \V{root} of the
+    \V{absorber}.
+  \item \textbf{\VC{hodl} if you can bring it back.} If your \V{kit} can found a new \V{hive}, keeping \V{flatlined} \V{coin} and then
+    brokering that syndicate again gives you a head start on \V{root}. Selling now and buying back later costs turns.
+  \item \textbf{Cash early, \V{swap} late.} In the first few \Vp{hivejack}, \V{money} buys you more \V{coin}. Later, one \V{hive} usually
+    gets big enough to last the game. Get into it with a \V{swap} before the end, or make sure you hold \V{root} somewhere else that is big.
+\end{itemize}
+
+\subsection{Late: the \V{nullroute}}
+\begin{itemize}
+  \item \textbf{\VC{safe} \Vp{hive} survive.} At \Rule{safesize} \Vp{node} a \V{hive} can never be \V{absorbed}, so its \V{root} bonus is
+    settled at the final \V{cashout}. A \V{hive} one \V{node} short of \V{safe} is the best target on the \V{grid}, for you or for a rival.
+  \item \textbf{\VC{flatlined} \V{coin} is worth nothing at the end.} \VC{hodl}ing late in the game is a gamble that the syndicate
+    comes back in time.
+  \item \textbf{Only call the \V{nullroute} if you are ahead.} Add up your \Game{currency}, your \V{coin} at current prices, and the bonuses
+    you would collect. If someone else comes out on top, keep playing.
+  \item \textbf{Use the other \Vp{player}' turns.} The shot clock only runs on your decisions, so plan your next \V{spike} while others
+    move. The \texttt{\Glyph{target}} marks show which \Vp{node} your \V{kit} can hit.
+\end{itemize}
+
+{\small\color{spike} Some of these tips are adapted from Robert Crowter-Jones's \emph{Acquire} strategy notes (Elusive Meeple, 2018).\par}
+
+% ------------------------------------------------------------------
+\section{Glossary}
+% ------------------------------------------------------------------
+\begin{multicols}{2}
+\small
+\begin{description}[leftmargin=0pt,labelsep=0.5em,itemsep=1pt]
+  \item[\VC{playertitle}] You, the player.
+  \item[\VC{safe}] A \V{hive} of \Rule{safesize}+ \Vp{node}. Can't be \V{absorbed}.
+  \item[\VC{broker}] Assign a newly founded \V{hive} to a syndicate.
+  \item[\VC{burnkit}] Discard an unusable \V{kit} and draw \Rule{kitsize} new \Vp{exploit}.
+  \item[\VC{cashout}] Sell \V{coin} to the \V{bank}.
+  \item[\VC{bank}] The bank.
+  \item[\VC{exploit}] One card in your \V{kit}, good for one \V{node}.
+  \item[\VC{kit}] Your hand of \Rule{kitsize} \Vp{exploit}.
+  \item[\VC{finderscut}] The free \V{coin} for founding a \V{hive}.
+  \item[\VC{flatlined}] \VC{coin} of a syndicate not on the \V{grid}.
+  \item[\VC{grid}] The board: one region's network.
+  \item[\VC{hive}] A syndicate's connected group of \Vp{node}.
+  \item[\VC{hivejack}] One \V{hive} absorbing another.
+  \item[\VC{hodl}] Keep \V{absorbed} \V{coin} instead of selling or swapping.
+  \item[\VC{infiltration}] Founding a new \V{hive}.
+  \item[\VC{lockdown}] Every \V{hive} is \V{safe}; the game may end.
+  \item[\VC{stall}] A full round with no \V{exploit} run; the game ends.
+  \item[\VC{node}] One square of the \V{grid}.
+  \item[\VC{nullroute}] The end of the game.
+  \item[\VC{patched}] An \V{exploit} that can never be run.
+  \item[\VC{root}] Biggest holder of a syndicate's \V{coin}; gets the big bonus.
+  \item[\VC{spike}] A placed \V{exploit}; a lone \V{spike} belongs to no \V{hive}.
+  \item[\VC{spread}] A \V{hive} growing by one or more \Vp{node}.
+  \item[\VC{sudo}] Second-biggest holder; gets the small bonus.
+  \item[\VC{swap}] Trade 2 \V{absorbed} \Vp{coin} for 1 \V{absorber} \V{coin}.
+  \item[\VC{totalcompromise}] A \V{hive} of \Rule{endsize}+ \Vp{node}; the game may end.
+\end{description}
+\end{multicols}
+
+% ------------------------------------------------------------------
+\clearpage
+\section{Reference Chart}
+% ------------------------------------------------------------------
+Find the \V{hive}'s size in its tier's column, then read across for the \V{coin} price and the payouts.
+
+\medskip
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\large
+\begin{tabular}{ccc|r|rr}
+\toprule
+\multicolumn{3}{c|}{\textbf{\VC{hive} size (\Vp{node})}} & \textbf{\VC{coin}} & \multicolumn{2}{c}{\textbf{Payout}} \\
+\textbf{Low} & \textbf{Mid} & \textbf{High} & \textbf{price} & \textbf{\V{root}} & \textbf{\V{sudo}} \\
+\TierCoins{low} & \TierCoins{mid} & \TierCoins{high} & & & \\
+\midrule
+2     & --    & --    & \Y{200}   & \Y{2,000}  & \Y{1,000} \\
+3     & 2     & --    & \Y{300}   & \Y{3,000}  & \Y{1,500} \\
+4     & 3     & 2     & \Y{400}   & \Y{4,000}  & \Y{2,000} \\
+5     & 4     & 3     & \Y{500}   & \Y{5,000}  & \Y{2,500} \\
+6--10 & 5     & 4     & \Y{600}   & \Y{6,000}  & \Y{3,000} \\
+11--20 & 6--10 & 5    & \Y{700}   & \Y{7,000}  & \Y{3,500} \\
+21--30 & 11--20 & 6--10 & \Y{800} & \Y{8,000}  & \Y{4,000} \\
+31--40 & 21--30 & 11--20 & \Y{900} & \Y{9,000} & \Y{4,500} \\
+41+   & 31--40 & 21--30 & \Y{1,000} & \Y{10,000} & \Y{5,000} \\
+--    & 41+   & 31--40 & \Y{1,100} & \Y{11,000} & \Y{5,500} \\
+--    & --    & 41+   & \Y{1,200} & \Y{12,000} & \Y{6,000} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\begin{center}
+\begin{tabular}{@{}ll@{}}
+\textbf{\Rule{safesize}+ \Vp{node}} & \VC{safe}: the \V{hive} can't be \V{absorbed}. \\
+\textbf{\Rule{endsize}+ \Vp{node}} & \VC{totalcompromise}: the \V{nullroute} may be called. \\
+\textbf{\V{root} bonus} & 10 $\times$ \V{coin} price. \quad \textbf{\V{sudo} bonus}: 5 $\times$ \V{coin} price. \\
+\end{tabular}
+\end{center}
+
+\vfill
+\begin{center}
+\small\color{spike}
+\game\ is an unofficial fan re-skin of \emph{Acquire}, designed by Sid Sackson (1964).\\
+\emph{Acquire} is a trademark of Hasbro, Inc. This project is not affiliated with or endorsed by Hasbro.
+\end{center}
+
+\end{document}
