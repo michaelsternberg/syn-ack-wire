@@ -2,7 +2,8 @@
 #   make                      build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server
 #   make FANCY=1              use the hand-made screens instead of the text ones
-#   make atr                  build/synack.atr: DOS 2.5, the game as AUTORUN.SYS, the help pages
+#   make atr                  build/synack.atr: boots the game with PicoBoot, plus the help pages
+#   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
 #   make bakeoff              fujinet-lib size comparison (needs cc65 newer than 2.19)
 #   make clean
 CC65    ?=
@@ -17,6 +18,8 @@ HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),)
 B       = build
 FNLIB   = vendor/fujinet-lib-5.0.0
+# the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25
+BOOT    ?= PicoBoot406
 DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
 HELP    = $(sort $(wildcard help/HELP*.TXT))
 # the help pages' first sector on the disk, 8 sectors a page (help.s and help_disk.py)
@@ -60,17 +63,23 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 	$(LD) -t $(TARGET) -m $(B)/$*.map -o $@ $^ $(TARGET).lib
 	@echo "$@: $$(stat -c %s $@) bytes"
 
-# --- the game disk: boots DOS 2.5, which runs AUTORUN.SYS. DOS.SYS comes from your own
-# DOS 2.5 disk image (DOS25=...), extracted with `atr`; dir2atr writes the image. Then
-# help_disk.py writes the help pages as raw sectors from HELP_SECTOR (help.s reads them).
+# --- the game disk. PicoBoot406 (MyPicoDos's 3-sector boot, standard-speed SIO) loads the
+# first file on the disk and runs it; no DOS. BOOT=Dos25 boots DOS 2.5 instead, which runs
+# AUTORUN.SYS; DOS.SYS comes from your own DOS 2.5 disk image (DOS25=...), extracted with `atr`.
+# dir2atr writes the image, then help_disk.py writes the help pages as raw sectors from
+# HELP_SECTOR (help.s reads them).
 $(B)/dos.sys: | $(B)
 	atr "$(DOS25)" get dos.sys $@
-$(B)/%.atr: $(B)/%.xex $(B)/dos.sys $(HELP) tools/help_disk.py
+$(B)/%.atr: $(B)/%.xex $(HELP) tools/help_disk.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
 	python3 tools/help_disk.py --check $(HELP)
 	rm -rf $(B)/disk-$* && mkdir $(B)/disk-$*
+ifeq ($(BOOT),Dos25)
 	cp $(B)/dos.sys $(B)/disk-$*/DOS.SYS
 	cp $< $(B)/disk-$*/AUTORUN.SYS
-	dir2atr -b Dos25 $@ $(B)/disk-$* >/dev/null
+else
+	cp $< $(B)/disk-$*/SYNACK.XEX
+endif
+	dir2atr -b $(BOOT) $@ $(B)/disk-$* >/dev/null
 	python3 tools/help_disk.py $@ $(HELP_SECTOR) $(HELP)
 atr: $(B)/synack.atr
 

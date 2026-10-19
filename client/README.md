@@ -33,7 +33,7 @@ make URL=N:TCP://192.168.1.20:6502/      # aim them at another server
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/synack-auto.xex: plays by itself, for the emulator
-make atr                                 # build/synack.atr: the game disk (DOS 2.5 + game, help pages in raw sectors)
+make atr                                 # build/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
 make pc                                  # build/pc-client: the common code on this PC
 make bakeoff
 ```
@@ -118,10 +118,15 @@ conversion on the Atari. So they need `make atr`; the bare `.xex` with no game d
 - **Names are typed in:** unlike the rest of the client, these pages don't read `theme.toml`. Renaming a
   syndicate or a term means editing the pages too.
 
-`make atr` takes `DOS.SYS` from your own DOS 2.5 disk image (`DOS25=path`, default
-`~/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr`) with `atr`, and writes the
-image with `dir2atr -b Dos25`. DOS 2.5 runs `AUTORUN.SYS` at boot. `tools/run-test.sh build/synack.atr` boots the
-disk from FujiNet-PC's D1, the way the lobby will.
+The disk boots with **PicoBoot** (`dir2atr -b PicoBoot406`), the smallest member of the MyPicoDos family: it fits
+in the 3 boot sectors and loads the first file on the disk, `SYNACK.XEX`, at standard SIO speed (it has no
+high-speed code). There is no DOS, and the game needs none. Measured through FujiNet-PC: 87 sectors in 7.2 s,
+against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unless OPTION is held at power-on.
+
+`make clean && make atr BOOT=Dos25` builds the DOS 2.5 disk instead (the game as `AUTORUN.SYS`). It takes `DOS.SYS`
+from your own DOS 2.5 disk image (`DOS25=path`, default
+`~/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr`) with `atr`.
+`tools/run-test.sh build/synack.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
 
 ### Fancy screens
 `display.h` is the whole interface. `display_title_screen()` is switched by `FANCY_TITLE`; everything else by
