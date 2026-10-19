@@ -17,7 +17,7 @@ Python 3.11+, standard library only.
 
 ```sh
 python3 serve.py                              # port 6502; --timeout 60 --bot-delay 1.0 --keepalive 10
-python3 serve.py --trace                      # also log every frame clients send
+python3 serve.py --trace                      # the log shows the game as players see it; --trace adds every frame clients send
 python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to run an exploit, 7-17 s to buy
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly

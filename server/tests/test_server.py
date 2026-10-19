@@ -45,6 +45,14 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(a.faults + b.faults, [])
         self.assertTrue(any("TOP COWBOY" in line for line in a.logs))
 
+    async def test_server_logs_the_game_log(self):
+        with self.assertLogs("synack", "INFO") as cm:
+            c = await asyncio.wait_for(self.client("SOLO", start=3), 30)
+        prefix = "INFO:synack:table 0: "
+        lines = [m[len(prefix):] for m in cm.output if m.startswith(prefix) and "rejected" not in m]
+        self.assertEqual(lines, c.logs)                     # every public line, the bots' and the openings too
+        self.assertEqual(sum("SPIKES" in line for line in lines[:3]), 3)
+
     async def test_reconnect_after_game_shows_result(self):
         c = await asyncio.wait_for(self.client("SOLO", start=2), 30)
         again = testclient.Client()

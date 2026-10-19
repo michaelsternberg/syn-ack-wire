@@ -271,6 +271,7 @@ class Table:
                 self._send(self.seats[ev.seat], proto.hand(ev.tiles))
             else:
                 public.append(proto.event(ev))
+                self._log_line(ev)
         data = b"".join(public)
         for s in self.seats:
             self._send(s, data)
@@ -279,6 +280,13 @@ class Table:
         data = b"".join(proto.event(e) for e in events if isinstance(e, rules.Log))
         for s in self.seats:
             self._send(s, data)
+        for e in events:
+            self._log_line(e)
+
+    def _log_line(self, ev):
+        """The server log gets the game log the players see."""
+        if isinstance(ev, rules.Log):
+            log.info("table %d: %s", self.tid, ev.text)
 
     def _announce(self, seat):
         data = proto.seat_info(self.seats.index(seat), seat.kind, seat.name)
