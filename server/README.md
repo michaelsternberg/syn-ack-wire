@@ -18,6 +18,7 @@ Python 3.11+, standard library only.
 ```sh
 python3 serve.py                              # port 6502; --timeout 60 --bot-delay 1.0 --keepalive 10
 python3 serve.py --trace                      # also log every frame clients send
+python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to run an exploit, 7-17 s to buy
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
 
@@ -44,5 +45,9 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 - Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time.
 - A prompt that times out is answered by that seat's bot; the seat stays human. A dropped connection marks the seat
   away and its bot plays until the token comes back. `Q` hands the seat to the bot for good.
+- Bots, and away seats, wait `--bot-delay` before each decision. `--think-exploit` and `--think-buy` give them a
+  thinking time instead before running an exploit and before buying: `MEAN,JITTER` in seconds, drawn from a
+  triangular distribution (never outside MEAN±JITTER, most often near MEAN). A prompt that timed out is answered
+  at once.
 - After a game the table returns to the lobby. Bot and away seats stay visible until a new player needs the chair,
   and a reconnecting player is sent the result (`e`) of the last game.

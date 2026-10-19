@@ -144,3 +144,18 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ThinkTimeTest(unittest.TestCase):
+    def test_bot_wait_by_decision_kind(self):
+        server = Server(bot_delay=0.5, seed=1, think={"P": (20.0, 10.0), "B": (12.0, 5.0)})
+        table = server.table(0)
+        exploit = [table._bot_wait("P") for _ in range(2000)]
+        buy = [table._bot_wait("B") for _ in range(2000)]
+        self.assertTrue(all(10.0 <= t <= 30.0 for t in exploit))
+        self.assertTrue(all(7.0 <= t <= 17.0 for t in buy))
+        near = sum(1 for t in exploit if 15.0 <= t <= 25.0) / len(exploit)
+        self.assertGreater(near, 0.65)            # triangular: 75% within half the jitter
+        for kind in "FKD":                         # the small choices stay quick
+            self.assertEqual(table._bot_wait(kind), 0.5)
+        self.assertEqual(Server(bot_delay=0.5).table(0)._bot_wait("P"), 0.5)

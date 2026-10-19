@@ -49,11 +49,12 @@ class Seat:
 
 
 class Table:
-    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None):
+    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None):
         self.tid = tid
         self.theme = theme
         self.timeout = timeout
         self.bot_delay = bot_delay
+        self.think = think or {}    # decision kind -> (mean, jitter): a bot's thinking time
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -203,7 +204,7 @@ class Table:
                 finally:
                     self.waiting = None
             else:
-                await asyncio.sleep(self.bot_delay)
+                await asyncio.sleep(self._bot_wait(d.kind))
             by_bot = action is _TAKEOVER
             if by_bot:
                 action = seat.bot.decide(g, d)
@@ -216,6 +217,13 @@ class Table:
                 continue
             self._broadcast(events)
         self._game_over()
+
+    def _bot_wait(self, kind):
+        """Seconds a bot waits before deciding: bot_delay, or a thinking time for `kind`."""
+        if kind not in self.think:
+            return self.bot_delay
+        mean, jitter = self.think[kind]
+        return max(0.0, self.rng.triangular(mean - jitter, mean + jitter, mean))
 
     def _game_over(self):
         self.lobby = True
