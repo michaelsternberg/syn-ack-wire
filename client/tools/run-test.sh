@@ -11,6 +11,8 @@
 #       DUMPDIR/scrNNN.bin (tools/screen2txt.py shows them)
 #   tools/run-test.sh build/synack.atr               boot a disk image from FujiNet D1,
 #       as the lobby would (works with HEADLESS and DUMPDIR too)
+#   BASIC=1 tools/run-test.sh build/synack.atr        boot with the BASIC ROM on, as a real
+#       XL/XE does unless OPTION is held (screen memory moves down to $9C40)
 #   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
@@ -48,13 +50,18 @@ done) > "$WORK/fujinet.log" 2>&1 &
 FN=$!
 trap 'pkill -P $FN 2>/dev/null; kill $FN 2>/dev/null; echo "logs: $WORK"' EXIT INT TERM
 
-OPTS="-xl -nobasic -netsio $NETSIO"
+if [ -n "$BASIC" ]; then
+    OPTS="-xl -basic -netsio $NETSIO"
+    SCREEN="9C40 9FFF"          # GR.0 screen memory under the BASIC ROM
+else
+    OPTS="-xl -nobasic -netsio $NETSIO"
+    SCREEN="BC40 BFFF"          # GR.0 screen memory with no BASIC
+fi
 if [ -n "$DUMPDIR" ]; then
-    # GR.0 screen memory with no BASIC: $BC40-$BFFF
     mkdir -p "$DUMPDIR"
     i=0
     while [ $i -lt 999 ]; do
-        printf 'WRITE BC40 BFFF %s/scr%03d.bin\nCONT\n' "$DUMPDIR" $i
+        printf 'WRITE %s %s/scr%03d.bin\nCONT\n' "$SCREEN" "$DUMPDIR" $i
         i=$((i + 1))
     done > "$WORK/monitor.txt"
     SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound -bbrk $RUN \

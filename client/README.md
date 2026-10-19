@@ -121,7 +121,8 @@ conversion on the Atari. So they need `make atr`; the bare `.xex` with no game d
 The disk boots with **PicoBoot** (`dir2atr -b PicoBoot406`), the smallest member of the MyPicoDos family: it fits
 in the 3 boot sectors and loads the first file on the disk, `SYNACK.XEX`, at standard SIO speed (it has no
 high-speed code). There is no DOS, and the game needs none. Measured through FujiNet-PC: 87 sectors in 7.2 s,
-against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unless OPTION is held at power-on.
+against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unless OPTION is held at power-on; the game runs either way
+(`BASIC=1 tools/run-test.sh build/synack.atr` boots with the BASIC ROM on).
 
 `make clean && make atr BOOT=Dos25` builds the DOS 2.5 disk instead (the game as `AUTORUN.SYS`). It takes `DOS.SYS`
 from your own DOS 2.5 disk image (`DOS25=path`, default
