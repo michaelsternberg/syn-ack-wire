@@ -19,11 +19,13 @@ B       = build
 FNLIB   = vendor/fujinet-lib-5.0.0
 DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
 HELP    = $(sort $(wildcard help/HELP*.TXT))
+# the help pages' first sector on the disk, 8 sectors a page (help.s and help_disk.py)
+HELP_SECTOR ?= 600
 
 NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
 
-GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/cio.o
+GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o
 HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h
 
 all: $(B)/synack.xex $(B)/wiremon.xex $(B)/wiremon-auto.xex
@@ -45,7 +47,7 @@ $(B)/%.s: src/common/%.c $(HDRS) | $(B)
 $(B)/%.s: src/atari/%.c $(HDRS) | $(B)
 	$(CC) $(CFLAGS) $(DEFS) -o $@ $<
 $(B)/%.o: src/atari/%.s | $(B)
-	$(AS) -t $(TARGET) -o $@ $<
+	$(AS) -t $(TARGET) -D HELP_SECTOR=$(HELP_SECTOR) -o $@ $<
 $(B)/%.o: $(B)/%.s
 	$(AS) -t $(TARGET) -o $@ $<
 
@@ -59,17 +61,17 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 	@echo "$@: $$(stat -c %s $@) bytes"
 
 # --- the game disk: boots DOS 2.5, which runs AUTORUN.SYS. DOS.SYS comes from your own
-# DOS 2.5 disk image (DOS25=...), extracted with `atr`; dir2atr writes the image.
+# DOS 2.5 disk image (DOS25=...), extracted with `atr`; dir2atr writes the image. Then
+# help_disk.py writes the help pages as raw sectors from HELP_SECTOR (help.s reads them).
 $(B)/dos.sys: | $(B)
 	atr "$(DOS25)" get dos.sys $@
-$(B)/%.atr: $(B)/%.xex $(B)/dos.sys $(HELP) tools/check_help.py
-	python3 tools/check_help.py $(HELP)
+$(B)/%.atr: $(B)/%.xex $(B)/dos.sys $(HELP) tools/help_disk.py
+	python3 tools/help_disk.py --check $(HELP)
 	rm -rf $(B)/disk-$* && mkdir $(B)/disk-$*
 	cp $(B)/dos.sys $(B)/disk-$*/DOS.SYS
 	cp $< $(B)/disk-$*/AUTORUN.SYS
-	cp $(HELP) $(B)/disk-$*/
 	dir2atr -b Dos25 $@ $(B)/disk-$* >/dev/null
-	@echo "$@: $$(ls $(B)/disk-$* | wc -l) files"
+	python3 tools/help_disk.py $@ $(HELP_SECTOR) $(HELP)
 atr: $(B)/synack.atr
 
 # --- size bake-off: raw SIO vs fujinet-lib (fujinet-lib v5 needs cc65 newer than 2.19)
@@ -104,3 +106,4 @@ clean:
 
 .PHONY: all atr bakeoff test pc clean
 .PRECIOUS: $(B)/%.s $(B)/%.o
+.DELETE_ON_ERROR:

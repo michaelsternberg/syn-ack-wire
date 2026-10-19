@@ -33,7 +33,7 @@ make URL=N:TCP://192.168.1.20:6502/      # aim them at another server
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/synack-auto.xex: plays by itself, for the emulator
-make atr                                 # build/synack.atr: the game disk (DOS 2.5 + game + help pages)
+make atr                                 # build/synack.atr: the game disk (DOS 2.5 + game, help pages in raw sectors)
 make pc                                  # build/pc-client: the common code on this PC
 make bakeoff
 ```
@@ -100,15 +100,21 @@ or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of 
 
 ### Instructions (help pages)
 The pages are `help/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
-they are the source (nothing generates them). On the Atari they're read from the game disk through DOS, so they
-need `make atr`; the bare `.xex` says "NO HELP DISK IN D1".
-- **One file is one screen:** at most 23 lines of at most 40 characters, each ended by EOL ($9B). Row 24 is the
-  page bar (`<PREV  PAGE 2 OF 7  ESC:EXIT  NEXT>`), drawn by the game.
+they are the source (nothing generates them). `make atr` turns each into 960 bytes of screen codes and writes it to
+raw sectors on the game disk, which the game reads straight onto the screen with SIO: no DOS, no files, no
+conversion on the Atari. So they need `make atr`; the bare `.xex` with no game disk in D1 says "NO HELP DISK IN D1".
+- **One file is one screen:** at most 24 lines of at most 40 characters, each ended by EOL ($9B). The page bar
+  (`<PREV  ESC:EXIT  NEXT>`, row 24) is part of the page: leave `<PREV` off page 1 and `NEXT>` off the last.
 - **Every byte except EOL shows as its glyph:** graphics characters (boxes, lines, the grid's `.` `+`) and inverse
   video appear exactly as typed. `\` shows as the yen sign, because the game's font replaces it.
-- **Numbering:** 01, 02... with no gaps. The game counts pages by opening them in turn, so adding `HELP08.TXT`
-  needs no code change. `make atr` runs `tools/check_help.py`, which refuses a page that is too long or too
-  wide, or a gap in the numbers.
+- **Numbering:** 01, 02... with no gaps. If a heading ends in `n/m`, `n` must be the page number and `m` the page
+  count. The game doesn't count pages: `>` reads the next page's sectors and stays put if they aren't a page, so
+  adding `HELP08.TXT` needs only `make atr`, not a new `.xex`.
+- **`tools/help_disk.py`** checks the pages (too long, too wide, a gap in the numbers, a wrong `n/m`) and writes
+  them. Page n is 8 sectors from `HELP_SECTOR + 8*(n-1)` (`HELP_SECTOR=600`, room for 15 pages up to sector 719).
+  The first holds the page's last 64 bytes and the signature `SYNACK`, the other 7 its first 896. The sectors are
+  marked used in the VTOC so DOS won't write over them; they have no directory entry, so DOS can't list or `TYPE`
+  them. `help_disk.py --check help/*.TXT` only checks.
 - **Names are typed in:** unlike the rest of the client, these pages don't read `theme.toml`. Renaming a
   syndicate or a term means editing the pages too.
 
@@ -167,12 +173,11 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10466 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 9855 | whole file; loads at $2000, the 1K font sits at $4C00 |
 | `display_text.c` | 3012 | + 615 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2665 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 743 | + 167 rodata |
-| `help.c` | 721 | + 65 rodata/data, 12 bss: the instruction pages |
-| `cio.s` | 58 | open, get byte, close on IOCB #1 |
+| `help.s` | 250 | + 34 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 299 | + 10 rodata, 25 bss. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 106 | + 64-byte key table |
