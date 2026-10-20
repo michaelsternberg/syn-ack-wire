@@ -2,7 +2,8 @@
 """SYN-ACK WIRE TCP server.
 
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
-                    [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--trace]
+                    [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
+                    [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
@@ -17,18 +18,22 @@ log = logging.getLogger("synack")
 
 
 class Server:
-    def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None):
+    def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
+                 afk=2):
         self.theme = theme.load()
         self.timeout = timeout
         self.bot_delay = bot_delay
         self.think = think
+        self.abandon = abandon
+        self.afk = afk
         self.keepalive = keepalive
         self.seed = seed
         self.tables = {}
 
     def table(self, tid):
         if tid not in self.tables:
-            self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think)
+            self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think,
+                                     self.abandon, self.afk)
         return self.tables[tid]
 
     async def handle(self, reader, writer):
@@ -96,21 +101,39 @@ def think_time(text):
 
 async def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--host", default="0.0.0.0")
-    ap.add_argument("--port", type=int, default=6502)
-    ap.add_argument("--timeout", type=float, default=60.0, help="seconds per decision before the bot answers")
-    ap.add_argument("--bot-delay", type=float, default=1.0, help="seconds a bot waits before acting")
+    ap.add_argument("--host", default="0.0.0.0", metavar="ADDR",
+                    help="address to listen on, e.g. 127.0.0.1 for this machine only (default: %(default)s, all)")
+    ap.add_argument("--port", type=int, default=6502, metavar="N",
+                    help="TCP port, e.g. 6599 for a second server; clients dial N:TCP://host:port/ "
+                         "(default: %(default)s)")
+    ap.add_argument("--timeout", type=float, default=60.0, metavar="SECONDS",
+                    help="seconds a player has per decision before their bot answers, e.g. 90 for a relaxed "
+                         "game; at most 255, the most a prompt can show (default: %(default)g)")
+    ap.add_argument("--bot-delay", type=float, default=1.0, metavar="SECONDS",
+                    help="seconds a bot waits before each decision, e.g. 0.05 for a quick test game "
+                         "(default: %(default)g)")
     ap.add_argument("--think-exploit", type=think_time, metavar="MEAN,JITTER",
-                    help="a bot's thinking time before running an exploit, e.g. 20,10 (instead of --bot-delay)")
+                    help="a bot's thinking time before running an exploit, e.g. 20,10 for 10 to 30 s "
+                         "(instead of --bot-delay)")
     ap.add_argument("--think-buy", type=think_time, metavar="MEAN,JITTER",
-                    help="a bot's thinking time before buying crypto, e.g. 12,5 (instead of --bot-delay)")
-    ap.add_argument("--keepalive", type=float, default=10.0, help="seconds between keepalive frames")
-    ap.add_argument("--trace", action="store_true", help="log every frame a client sends")
+                    help="a bot's thinking time before buying crypto, e.g. 12,5 for 7 to 17 s "
+                         "(instead of --bot-delay)")
+    ap.add_argument("--keepalive", type=float, default=10.0, metavar="SECONDS",
+                    help="seconds between keepalive frames; keep it well under the client's 20 s NO SIGNAL, "
+                         "e.g. 5 (default: %(default)g)")
+    ap.add_argument("--abandon", type=float, default=600.0, metavar="SECONDS",
+                    help="seconds a game waits with no player connected before it is dropped, e.g. 300 for "
+                         "5 minutes; 0 = wait for ever (default: %(default)g)")
+    ap.add_argument("--afk", type=int, default=2, metavar="N",
+                    help="timeouts in a row before a player is on autopilot (the bot's clock, shown away), "
+                         "e.g. 3; 0 = never (default: %(default)s)")
+    ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
-    srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think).serve(a.host, a.port)
+    srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
+                       abandon=a.abandon, afk=a.afk).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 

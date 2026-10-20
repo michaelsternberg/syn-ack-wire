@@ -78,11 +78,38 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
             data = await asyncio.wait_for(reader.read(4096), 30)
             self.assertTrue(data)
             c.feed(data)
-        self.assertEqual(c.seats[c.seat][0], proto.HUMAN)   # timeouts don't take the seat away
+        self.assertEqual(c.seats[c.seat][0], proto.AWAY)    # on autopilot, and everyone can see it
+        self.assertEqual(t.seats[c.seat].kind, proto.HUMAN) # but the seat is still theirs
+        writer.close()
+
+    async def test_autopilot_and_back(self):
+        from acquire import table as tmod
+        old, tmod.AFK_MIN = tmod.AFK_MIN, 0.25
+        self.addCleanup(setattr, tmod, "AFK_MIN", old)
+        self.server.timeout, self.server.bot_delay = 1.0, 0.01
+        reader, writer = await self.raw(name="NAPPER")
+        c = testclient.Client(rng=random.Random(1))
+
+        async def next_prompt():
+            c.prompt = None
+            while c.prompt is None or c.prompt[0] == "S":
+                c.feed(await asyncio.wait_for(reader.read(4096), 5))
+            return c.prompt[1]                              # its clock, whole seconds
+
+        while c.prompt is None:
+            c.feed(await reader.read(4096))
+        writer.write(b"S\x02")
+        self.assertEqual(await next_prompt(), 1)            # the full clock; let it run out
+        self.assertEqual(await next_prompt(), 1)            # twice
+        self.assertEqual(await next_prompt(), 0)            # now the bot's clock
+        self.assertEqual(c.seats[c.seat][0], proto.AWAY)
+        writer.write(c.auto_answer())                       # back at the keyboard
+        self.assertEqual(await next_prompt(), 1)
+        self.assertEqual(c.seats[c.seat][0], proto.HUMAN)
         writer.close()
 
     async def test_drop_and_reconnect(self):
-        self.server.bot_delay = 0.01                        # keep the game running while we're away
+        self.server.bot_delay = 0.01                        # bots take their time while we're away
         reader, writer = await self.raw(name="FLAKY")
         c = testclient.Client()
         while c.prompt is None:
@@ -100,6 +127,64 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(back.seat, seat)
         self.assertEqual(back.token, token)
         self.assertIsNotNone(back.winners)
+
+    async def start_and_drop(self, name):
+        """Start a 2-seat game as the only human, then drop the connection. Returns the token."""
+        reader, writer = await self.raw(name=name)
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await reader.read(4096))
+        writer.write(b"S\x02")
+        while c.turn is None:
+            c.feed(await reader.read(4096))
+        writer.close()
+        await asyncio.sleep(0.05)
+        return c.token
+
+    async def test_game_pauses_with_no_players(self):
+        with self.assertLogs("synack", "INFO") as cm:
+            token = await self.start_and_drop("ALONE")
+            g = self.server.table(0).game
+            board, pending = list(g.board), g.pending
+            await asyncio.sleep(0.2)                        # bots with no delay would finish the game
+            self.assertEqual((list(g.board), g.pending), (board, pending))
+            back = await asyncio.wait_for(self.client("ALONE", token=token), 30)
+        self.assertIsNotNone(back.winners)                  # picked up where it stopped
+        self.assertTrue(any("paused, no players" in m for m in cm.output))
+        self.assertTrue(any("resumed" in m for m in cm.output))
+
+    async def test_reclaim_away_seat_by_handle(self):
+        token = await self.start_and_drop("COMEBACK")       # and the token is lost, as when the Atari is switched off
+        seat = self.server.table(0).seats[0]
+        back = await asyncio.wait_for(self.client("comeback"), 30)   # no token, same handle
+        self.assertEqual(back.seat, 0)
+        self.assertEqual(back.token, token)                 # the client now holds the seat's token again
+        self.assertIsNotNone(back.winners)
+        self.assertIs(self.server.table(0).seats[0], seat)
+
+    async def test_handle_only_reclaims_away_seats(self):
+        self.server.bot_delay = 0.01
+        host = asyncio.create_task(self.client("HOST", start=2))
+        await asyncio.sleep(0.2)                            # the game is on, HOST is connected
+        r, w = await self.raw(name="HOST")
+        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        w.close()
+        await asyncio.wait_for(host, 30)
+
+    async def test_abandoned_game_frees_the_table(self):
+        self.server.abandon = 0.1
+        with self.assertLogs("synack", "INFO") as cm:
+            token = await self.start_and_drop("GONE")
+            await asyncio.sleep(0.3)
+        t = self.server.table(0)
+        self.assertTrue(t.lobby)
+        self.assertIsNone(t.game)
+        self.assertTrue(any("abandoned" in m for m in cm.output))
+        r, w = await self.raw(token=token, name="GONE")     # the old seat is gone
+        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_TOKEN))
+        w.close()
+        c = await asyncio.wait_for(self.client("NEXT", start=2), 30)   # and the table takes a new game
+        self.assertIsNotNone(c.winners)
 
     async def test_faults(self):
         r, w = await self.raw(ver=99)

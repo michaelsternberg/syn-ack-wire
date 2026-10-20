@@ -19,6 +19,8 @@ Python 3.11+, standard library only.
 python3 serve.py                              # port 6502; --timeout 60 --bot-delay 1.0 --keepalive 10
 python3 serve.py --trace                      # the log shows the game as players see it; --trace adds every frame clients send
 python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to run an exploit, 7-17 s to buy
+python3 serve.py --abandon 300                # drop a game after 5 min with no player connected (default 600; 0 = never)
+python3 serve.py --afk 3                      # autopilot after 3 timeouts in a row (default 2; 0 = never)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
 
@@ -42,9 +44,19 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 ## Seats and tables
 - The first frame must be `H`. Its table byte picks the table (created on demand). The first human is host and gets
   prompt `S`; `S n` starts with `n` seats, and bots fill the empty ones.
-- Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time.
-- A prompt that times out is answered by that seat's bot; the seat stays human. A dropped connection marks the seat
-  away and its bot plays until the token comes back. `Q` hands the seat to the bot for good.
+- Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time. Without a token
+  (the Atari was switched off, say), joining under the handle of a seat that is away reclaims it, and `w` hands
+  the client that seat's token. A connected player's seat, or one handed to the bot with `Q`, can't be taken
+  this way.
+- A prompt that times out is answered by that seat's bot; the seat stays human. After `--afk` timeouts in a row
+  (default 2, a whole turn) the player is on autopilot: shown as away (`?`) to everyone, still prompted, but on the
+  bot's clock (its thinking time, at least 10 s, never more than `--timeout`). Answering one in time ends it.
+- A dropped connection marks the seat away and its bot plays until the token comes back. `Q` hands the seat to
+  the bot for good.
+- With no human connected at all, the game pauses instead of the bots playing it out for nobody, and play resumes
+  when someone reconnects (by token or handle). After `--abandon` seconds (default 600) the game is dropped and the
+  table is an empty lobby again, so it doesn't stay full; an old token then gets fault 3 and its client joins as new.
+  The log says `paused`, `resumed` or `abandoned`.
 - Bots, and away seats, wait `--bot-delay` before each decision. `--think-exploit` and `--think-buy` give them a
   thinking time instead before running an exploit and before buying: `MEAN,JITTER` in seconds, drawn evenly
   from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.

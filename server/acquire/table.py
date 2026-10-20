@@ -1,7 +1,11 @@
 """One game table: seats, tokens, lobby, and the asyncio loop that drives the engine.
 
 Every seat has a bot. A human's prompt that times out is answered by that seat's bot (the seat stays human);
-a dropped connection makes the seat AWAY and the bot plays every prompt until the token holder reconnects.
+a dropped connection makes the seat AWAY and the bot plays every prompt until the token holder reconnects
+(or anyone joining without a token under that seat's handle).
+With no human connected at all the game pauses, and after `abandon` seconds it is dropped and the table freed.
+A connected player who lets `afk` prompts in a row time out is on autopilot: shown as away, still prompted, but
+on the bot's clock. Answering one in time brings back the full clock.
 """
 import asyncio
 import logging
@@ -13,6 +17,7 @@ from .bots import HeuristicBot
 from .proto import AWAY, BOT, EMPTY, HUMAN
 
 _TAKEOVER = object()        # resolves a pending answer when the human goes away
+AFK_MIN = 10.0              # seconds an autopilot prompt stays open at least: time to come back
 log = logging.getLogger("synack")
 
 
@@ -49,12 +54,16 @@ class Seat:
 
 
 class Table:
-    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None):
+    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None, abandon=600.0, afk=2):
         self.tid = tid
         self.theme = theme
         self.timeout = timeout
         self.bot_delay = bot_delay
         self.think = think or {}    # decision kind -> (mean, jitter): a bot's thinking time
+        self.abandon = abandon      # seconds a game waits with no human connected; 0 = for ever
+        self.present = asyncio.Event()  # set while a human is connected
+        self.afk = afk              # timeouts in a row that put a seat on autopilot; 0 = never
+        self.misses = {}            # Seat -> prompts in a row its bot answered
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -69,16 +78,25 @@ class Table:
 
     def join(self, conn, token, name):
         """Returns the Seat, or a proto fault code."""
+        name = name.upper()[:8] or "RUNNER"
         if any(token):
             seat = next((s for s in self.seats if s.token == token), None)
             if seat is None:
                 return proto.F_TOKEN
+        else:
+            # no token (the Atari was switched off, say): an away seat with this handle is theirs
+            seat = next((s for s in self.seats if s.kind == AWAY and s.name == name), None)
+        if seat is not None:
             if seat.conn is not None and seat.conn is not conn:
                 seat.conn.close()
             seat.conn = conn
             seat.kind = HUMAN
+            self.misses.pop(seat, None)     # back at the keyboard
+            if self.host is None and self.lobby:
+                self.host = seat            # back after a game nobody stayed for
+            self.present.set()
             self._announce(seat)
-            self.resync(seat)
+            self.resync(seat)               # `w` hands the client the seat's token
             return seat
         if not self.lobby:
             return proto.F_FULL
@@ -88,12 +106,13 @@ class Table:
         if seat is None:
             return proto.F_FULL
         seat.kind = HUMAN
-        seat.name = name.upper()[:8] or "RUNNER"
+        seat.name = name
         seat.token = self._new_token()
         seat.conn = conn
         seat.bot = HeuristicBot(self.rng.random())
         if self.host is None:
             self.host = seat
+        self.present.set()
         self._announce(seat)
         self.resync(seat)
         return seat
@@ -102,6 +121,7 @@ class Table:
         if seat.conn is not conn:
             return                  # an old connection replaced by a reconnect
         seat.conn = None
+        self._check_present()
         if self.lobby and self.game is None:
             self._free(seat)                # left before any game: nothing to come back to
             return
@@ -121,6 +141,7 @@ class Table:
         elif k == "Q":
             conn = seat.conn
             seat.conn = None
+            self._check_present()
             if self.lobby:
                 self._free(seat)
             else:
@@ -166,6 +187,7 @@ class Table:
             b.kind, b.name, b.bot = BOT, free[i % len(free)], HeuristicBot(self.rng.random())
             bots.append(b)
         self.seats = humans + bots + [Seat() for _ in range(proto.SEATS - count)]
+        self.misses.clear()
         self.game = rules.Game([s.name for s in self.seats[:count]], seed=self.rng.random(), theme=self.theme)
         events = self.game.start()
         self.lobby = False
@@ -189,20 +211,29 @@ class Table:
         g = self.game
         loop = asyncio.get_running_loop()
         while not g.over:
+            if not self.present.is_set() and not await self._hold():
+                return
             d = g.pending
             seat = self.seats[d.seat]
             action = _TAKEOVER
             if seat.online:
+                limit = self.timeout
+                if self._autopilot(seat):   # the bot's clock, but never longer than the full one
+                    limit = min(limit, max(AFK_MIN, self._bot_wait(d.kind)))
                 fut = loop.create_future()
-                self.waiting = (seat, fut, loop.time() + self.timeout)
+                self.waiting = (seat, fut, loop.time() + limit)
                 self.timed_out.discard(seat)
-                self._send(seat, proto.prompt(d, self.timeout))
+                self._send(seat, proto.prompt(d, limit))
                 try:
-                    action = await asyncio.wait_for(asyncio.shield(fut), self.timeout)
+                    action = await asyncio.wait_for(asyncio.shield(fut), limit)
                 except TimeoutError:
                     self.timed_out.add(seat)
                 finally:
                     self.waiting = None
+                if action is not _TAKEOVER:
+                    self._missed(seat, False)
+                elif seat.online:
+                    self._missed(seat, True)
             else:
                 await asyncio.sleep(self._bot_wait(d.kind))
             by_bot = action is _TAKEOVER
@@ -217,6 +248,40 @@ class Table:
                 continue
             self._broadcast(events)
         self._game_over()
+
+    def _autopilot(self, seat):
+        return bool(self.afk) and self.misses.get(seat, 0) >= self.afk
+
+    def _missed(self, seat, missed):
+        """Count prompts in a row the seat's bot answered; announce the seat when autopilot starts or ends."""
+        was = self._autopilot(seat)
+        self.misses[seat] = self.misses.get(seat, 0) + 1 if missed else 0
+        if self._autopilot(seat) != was:
+            log.info("table %d: %s %s", self.tid, seat.name, "on autopilot" if not was else "is back")
+            self._announce(seat)
+
+    def _shown_kind(self, seat):
+        """What the players see: a seat on autopilot shows as away."""
+        return AWAY if seat.kind == HUMAN and self._autopilot(seat) else seat.kind
+
+    def _check_present(self):
+        if not any(s.online for s in self.seats):
+            self.present.clear()
+
+    async def _hold(self):
+        """No human is connected: bots playing for nobody is pointless, so wait for one to come back.
+        False if nobody did within `abandon` seconds: the game is dropped and the table is an empty lobby."""
+        log.info("table %d: paused, no players connected", self.tid)
+        try:
+            await asyncio.wait_for(self.present.wait(), self.abandon or None)
+        except TimeoutError:
+            log.info("table %d: abandoned, no players for %g s", self.tid, self.abandon)
+            self.game, self.task, self.lobby, self.host = None, None, True, None
+            self.seats = [Seat() for _ in range(proto.SEATS)]       # old tokens now get fault 3
+            self.timed_out.clear()
+            return False
+        log.info("table %d: resumed", self.tid)
+        return True
 
     def _bot_wait(self, kind):
         """Seconds a bot waits before deciding: bot_delay, or a thinking time for `kind`."""
@@ -247,7 +312,7 @@ class Table:
         g = self.game
         idx = self.seats.index(seat)
         out = [proto.welcome(idx, seat.token), proto.area(self.theme.game["region"])]
-        out += [proto.seat_info(i, s.kind, s.name) for i, s in enumerate(self.seats)]
+        out += [proto.seat_info(i, self._shown_kind(s), s.name) for i, s in enumerate(self.seats)]
         out.append(proto.snapshot(g, None if self.lobby or g is None else g.turn))
         if g is not None and idx < g.n:
             out.append(proto.hand(tuple((t, g.status(t)) for t in g.hands[idx])))
@@ -289,7 +354,7 @@ class Table:
             log.info("table %d: %s", self.tid, ev.text)
 
     def _announce(self, seat):
-        data = proto.seat_info(self.seats.index(seat), seat.kind, seat.name)
+        data = proto.seat_info(self.seats.index(seat), self._shown_kind(seat), seat.name)
         for s in self.seats:
             self._send(s, data)
 

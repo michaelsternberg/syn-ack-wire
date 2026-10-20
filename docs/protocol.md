@@ -69,7 +69,7 @@ arrives. The SIO transaction count matters far more than the byte count.
 
 | Type | Payload | Bytes | Meaning |
 |---|---|---|---|
-| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 1. `token` all zero = new player; otherwise reclaim a seat. Handle is space-padded. |
+| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 2. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. Handle is space-padded. |
 | `S` | seats | 2 | Start the game (lobby only). `seats` = total seats 2–6; empty seats get bots. |
 | `P` | node | 2 | Answer to prompt `P`: run the exploit for this node. |
 | `F` | syn | 2 | Answer to prompt `F`: broker the new hive to this syndicate. |
@@ -159,14 +159,20 @@ S: (host only) p 'S'
 ```
 
 ### Reconnect
-The client sends `H` with its saved token. The server replies `w`, `a`, `n`×6, `s`, `h`, `t`, then the pending `p` if
+The client sends `H` with its saved token, or, having lost it, a zero token and the same handle (that works only
+while the seat is away). The server replies `w`, `a`, `n`×6, `s`, `h`, `t`, then the pending `p` if
 one is waiting for this seat. That is the entire resync; `R` triggers the same burst without reconnecting. After a game has ended, the burst
 also carries `e` with the last game's winners.
 
 ### Bots, timeouts and dropouts
-- Prompt timeout expires → the seat's bot answers *that one prompt*. The seat stays human.
+- Prompt timeout expires → the seat's bot answers *that one prompt*. The seat stays human. After the server's
+  `--afk` timeouts in a row (default 2) the seat is announced as `kind 2` (away) but keeps getting prompts, with a
+  shorter timeout; an answer in time announces it as `kind 1` again. Clients need nothing special: they show the
+  kind they are sent and the clock in each `p`.
 - TCP connection drops → the seat becomes `kind 2` (away) and the bot plays every prompt until the token holder returns.
 - `Q` → the seat becomes `kind 3` (bot) for the rest of the game.
+- No human connected → the game pauses until one reconnects. After the server's `--abandon` time (default 10
+  minutes) the game is dropped and the table returns to an empty lobby; an old token then gets fault 3.
 - A seat change is announced to everyone with `n`.
 
 The server sends `u` every 10 seconds. A link can die without either end being told: the server's machine loses
