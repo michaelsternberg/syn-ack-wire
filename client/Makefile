@@ -21,7 +21,7 @@ FNLIB   = vendor/fujinet-lib-5.0.0
 # the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25
 BOOT    ?= PicoBoot406
 DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
-HELP    = $(sort $(wildcard help/HELP*.TXT))
+HELP    = $(sort $(wildcard help/atari/HELP*.TXT))
 # the help pages' first sector on the disk, 8 sectors a page (help.s and help_disk.py)
 HELP_SECTOR ?= 600
 
