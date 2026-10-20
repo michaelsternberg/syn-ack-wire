@@ -100,7 +100,7 @@ prompt line is the seconds left before your seat's bot answers for you.
 or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of a RAM copy of the ROM font.
 
 ### Instructions (help pages)
-The pages are `help/atari/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
+The pages are `help/atari/screen/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
 they are the source (nothing generates them). `make atr` turns each into 960 bytes of screen codes and writes it to
 raw sectors on the game disk, which the game reads straight onto the screen with SIO: no DOS, no files, no
 conversion on the Atari. So they need `make atr`; the bare `.xex` with no game disk in D1 says
@@ -116,7 +116,7 @@ conversion on the Atari. So they need `make atr`; the bare `.xex` with no game d
   them. Page n is 8 sectors from `HELP_SECTOR + 8*(n-1)` (`HELP_SECTOR=600`, room for 15 pages up to sector 719).
   The first holds the page's last 64 bytes and the signature `SYNACK`, the other 7 its first 896. The sectors are
   marked used in the VTOC so DOS won't write over them; they have no directory entry, so DOS can't list or `TYPE`
-  them. `help_disk.py --check help/atari/*.TXT` only checks.
+  them. `help_disk.py --check help/atari/screen/*.TXT` only checks.
 - **Names are typed in:** unlike the rest of the client, these pages don't read `theme.toml`. Renaming a
   syndicate or a term means editing the pages too.
 

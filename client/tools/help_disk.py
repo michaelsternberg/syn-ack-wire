@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Put the instruction pages on the game disk, as raw sectors the game reads with SIO.
 
-    help_disk.py DISK.ATR FIRST_SECTOR help/atari/HELP01.TXT help/atari/HELP02.TXT ...
-    help_disk.py --check help/atari/HELP01.TXT ...  (only check the pages)
+    help_disk.py DISK.ATR FIRST_SECTOR help/atari/screen/HELP01.TXT help/atari/screen/HELP02.TXT ...
+    help_disk.py --check help/atari/screen/HELP01.TXT ...  (only check the pages)
 
 Each page is one screen of ATASCII: at most 24 lines, each at most 40 characters,
 ended by EOL ($9B). Pages must be numbered from 01 with no gaps. If the first line
