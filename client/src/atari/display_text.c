@@ -3,7 +3,7 @@
  * player whose turn it is and the prompt line are inverse too.
  *
  *  row  0  title bar ......................... region: CONNECTED (or NO SIGNAL)
- *  row  1    ABCDEFGHIJKL HIVES    SYNDICATES
+ *  row  1    ABCDEFGHIJKL   HIVES  SYNDICATES
  *  rows 2-10 0 ..+GG.3....    G 12  GHOST//MODEM   (one per syndicate)
  *                         LAST: C4
  *  1-6 = an empty node that exploit in your kit can run on (when hints are on)
@@ -237,13 +237,14 @@ void display_node(unsigned char node)
 void display_hives(void)
 {
     at(1, COL_PANEL);
+    spaces(2);                          /* over the letters and their sizes */
     text(T_HIVE_P);
-    spaces(COL_NAME - COL_PANEL - (sizeof T_HIVE_P - 1));
+    spaces(COL_NAME - COL_PANEL - 2 - (sizeof T_HIVE_P - 1));
     text(pr_kind == 'B' ? "PRICE LEFT" : "SYNDICATES");
     spaces(40 - COL_NAME - 10);
     for (j = 0; j < NSYN; ++j) {
         at(ROW_BOARD + j, COL_PANEL);
-        spaces(2);                      /* the letter sits under the middle of the header */
+        spaces(2);                      /* the letter sits under the start of the header */
         inv = INV;
         put(syn_letter[j]);
         inv = 0;

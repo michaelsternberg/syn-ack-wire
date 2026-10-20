@@ -82,7 +82,7 @@ prompt line is the seconds left before your seat's bot answers for you.
 ### Screen
 ```
  SYN-ACK WIRE   NEO-KANSAI-1: CONNECTED    title bar (inverse); NO SIGNAL after 20 s of silence
-  ABCDEFGHIJKL HIVES    SYNDICATES
+  ABCDEFGHIJKL   HIVES  SYNDICATES
 0 .ggg..ggg.dd   g 11   GHOST//MODEM       hives: inverse letters; + spike; . empty
 2 rr...g.2....   d  2   HOLY DAEMON        1-6 = that exploit in your kit can run here (move hints)
 ...                                        the last move: its highlight flipped
@@ -181,8 +181,8 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9928 | whole file; loads at $2000, the 1K font sits at $4C00 |
-| `display_text.c` | 3046 | + 636 rodata (mostly screen words), 70 bss, 1K font |
+| `synack.xex` | 9933 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `display_text.c` | 3051 | + 636 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2673 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 743 | + 167 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
