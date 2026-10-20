@@ -1,7 +1,9 @@
 ; sound.s -- chords for board events, from a deferred VBI.
 ; SIO borrows POKEY channels 3 and 4 as its serial clock, and each transfer
-; turns every channel off. The OS skips the deferred VBI while SIO runs (CRITIC),
-; so writing all four channels every frame never disturbs a transfer, and
+; turns every channel off. Chords use channels 1-3 only: a note left on channel
+; 4 made later SIO reads fail (FujiNet saw the same read retried after it had
+; already sent the bytes). The OS skips the deferred VBI while SIO runs
+; (CRITIC), so writing the channels every frame never disturbs a transfer, and
 ; net_sio.s calls snd_put as soon as one ends to put the chord back. The chord
 ; is still silent during the transfer itself, so while a chord sounds net_poll
 ; skips its once-a-second status check and only reads when FujiNet has data.
@@ -47,7 +49,7 @@ _snd_on: .byte 1
 vol     = net_hush      ; 0 = silent: the VBI leaves POKEY alone
 
         .bss
-pitch:  .res 4          ; the chord now sounding: AUDF1-4, 0 = voice off
+pitch:  .res 3          ; the chord now sounding: AUDF1-3
 rate:   .res 1          ;   starting volume << 4 | frames per volume step
 next:   .res 1          ;   the chord after it, or $FF
 tick:   .res 1          ; frames to the next volume step
@@ -55,20 +57,20 @@ prio:   .res 1          ; the chord number play_chord started
 oldvbi: .res 2
 
         .rodata
-; per chord: 4 pitches, starting volume << 4 | frames per volume step, next
-; chord ($FF = none). Four voices at volume 10 stay clear of clipping.
+; per chord: 3 pitches, starting volume << 4 | frames per volume step, next
+; chord ($FF = none).
 ; Entries 0-6 are the chord numbers in platform.h; the rest only follow on.
-chords: .byte D3, F3, A3, 0,   $62, $FF ; 0 a spike: D minor, low, quiet and short
-        .byte C4, E4, G4, 0,   $82, 7   ; 1 buy: C major...
-        .byte C4, E4, G4, 0,   $A4, $FF ; 2 new hive: C major
-        .byte B3, D4, F4, 0,   $A4, $FF ; 3 hivejack: B diminished
-        .byte E3, G3, B3, 0,   $A6, $FF ; 4 Black ICE: E minor, low
-        .byte G3, B3, D4, 0,   $82, 8   ; 5 your turn: G major...
-        .byte F3, A3, C4, 0,   $A3, 9   ; 6 null-route: F major...
-        .byte C4, F4, A4, 0,   $82, $FF ; 7 ...buy: up to F major, C held
-        .byte C4, E4, G4, 0,   $82, $FF ; 8 ...your turn: up to C major
-        .byte C4, E4, G4, 0,   $A3, 10  ; 9 ...null-route: C major...
-        .byte F3, B3, D4, A4,  $AF, $FF ; 10 ...falls to B half-diminished 7th
+chords: .byte D3, F3, A3, $62, $FF    ; 0 a spike: D minor, low, quiet and short
+        .byte C4, E4, G4, $82, 7      ; 1 buy: C major...
+        .byte C4, E4, G4, $A4, $FF    ; 2 new hive: C major
+        .byte B3, D4, F4, $A4, $FF    ; 3 hivejack: B diminished
+        .byte E3, G3, B3, $A6, $FF    ; 4 Black ICE: E minor, low
+        .byte G3, B3, D4, $82, 8      ; 5 your turn: G major...
+        .byte F3, A3, C4, $A3, 9      ; 6 null-route: F major...
+        .byte C4, F4, A4, $82, $FF    ; 7 ...buy: up to F major, C held
+        .byte C4, E4, G4, $82, $FF    ; 8 ...your turn: up to C major
+        .byte C4, E4, G4, $A3, 10     ; 9 ...null-route: C major...
+        .byte B3, F4, A4, $AF, $FF    ; 10 ...falls to B half-diminished (root, 5th, 7th)
 
         .code
 
@@ -111,16 +113,17 @@ _play_chord:
 ; Load chord X and start its envelope. Called with vol = 0, or from the VBI.
 load:   txa
         asl a
-        sta tick
         asl a
-        adc tick                ; 6 bytes a chord
+        sta tick
+        txa
+        adc tick                ; 5 bytes a chord
         tay
         ldx #0
 :       lda chords,y
         sta pitch,x
         iny
         inx
-        cpx #6
+        cpx #5
         bne :-
         lda rate
         lsr a
@@ -152,15 +155,14 @@ vbi:    lda vol
 ; Write the chord to POKEY: the VBI every frame, net_sio.s after each transfer.
 snd_put:
         lda #0
-        sta AUDCTL
-        ldx #3
-        ldy #6
+        sta AUDCTL              ; SIO leaves channel 3 at 1.79 MHz, joined to 4
+        ldx #2
+        ldy #4
 @voice: lda pitch,x
         sta AUDF1,y
-        beq :+                  ; no note: AUDC 0
         lda vol
         ora #PURE
-:       sta AUDC1,y
+        sta AUDC1,y
         dey
         dey
         dex

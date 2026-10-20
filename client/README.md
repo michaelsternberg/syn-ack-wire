@@ -176,10 +176,11 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 - **Link down:** any non-zero return means the link is down: an SIO error (128–255) or `NET_CLOSED`.
   - The client closes, reopens, and sends `H` with its saved token.
   - The server answers with a full resync, so there is no other recovery code.
-- **Sound:** SIO uses POKEY channels 3 and 4 as its serial clock. `sound.s` writes all four channels from the
-  deferred VBI, which the OS skips while SIO runs, so a transfer is never disturbed. Each transfer turns the sound
-  off, so `net_sio.s` puts the chord back as soon as SIO returns, and skips its once-a-second status check while
-  a chord sounds (a read that FujiNet signals with PROCEED still happens at once).
+- **Sound:** SIO uses POKEY channels 3 and 4 as its serial clock. `sound.s` writes channels 1-3 from the
+  deferred VBI, which the OS skips while SIO runs, so a transfer is never disturbed. Never channel 4: a note left
+  there made later SIO reads fail. Each transfer turns the sound off, so `net_sio.s` puts the chord back as soon
+  as SIO returns, and skips its once-a-second status check while a chord sounds (a read that FujiNet signals
+  with PROCEED still happens at once).
   Chords (B Locrian): a short quiet one for every spike, a new hive, a hivejack, Black ICE, two rising ones when
   it's your turn and two more when it's time to buy, and a series for the null-route. Each fades out; a chord
   still sounding is only cut off by a more important one.
@@ -187,7 +188,7 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10310 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 10298 | whole file; loads at $2000, the 1K font sits at $4C00 |
 | `display_text.c` | 3051 | + 636 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2760 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 746 | + 167 rodata |
@@ -195,7 +196,7 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 | `net_sio.s` | 318 | + 10 rodata, 26 bss, 2 data. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 127 | + 64-byte key table |
-| `sound.s` | 178 | + 66 rodata (11 chords), 11 bss/data: chords from the deferred VBI |
+| `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |
