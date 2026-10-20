@@ -150,8 +150,10 @@ void game_frame(void)
     case 'x':                           /* len, val, nodes... */
         v = msg[2];
         n = msg[1] + 1;
-        if (v == CELL_SPIKE && n == 3)  /* a single new spike: the move just made */
+        if (v == CELL_SPIKE && n == 3) {    /* a single new spike: the move just made */
             set_last(msg[3]);
+            play_chord(CHORD_SPIKE);
+        }
         for (i = 3; i <= n; ++i) {
             b = msg[i];
             board[b] = v;
@@ -159,6 +161,7 @@ void game_frame(void)
         }
         break;
     case 'r':                           /* hivejack: every `from` becomes `to` */
+        play_chord(CHORD_JACK);
         v = msg[1];
         b = msg[2];
         for (i = 0; i < NODES; ++i)
@@ -168,7 +171,14 @@ void game_frame(void)
             }
         break;
     case 'z':                           /* syn, size */
-        hive_size[msg[1]] = msg[2];
+        n = msg[1];
+        b = hive_size[n];
+        v = msg[2];
+        hive_size[n] = v;
+        if (b < RULE_SAFESIZE && v >= RULE_SAFESIZE)
+            play_chord(CHORD_ICE);
+        else if (!b && v)
+            play_chord(CHORD_HIVE);
         if (pr_kind != 'B')
             display_hives();
         break;
@@ -190,8 +200,11 @@ void game_frame(void)
         step = 0;
         edit_len = 0;
         complaint = 0;
-        if (pr_kind == 'B')
+        if (pr_kind == 'B') {
             display_hives();            /* names become prices */
+            play_chord(CHORD_BUY);
+        } else if (pr_kind == 'P')
+            play_chord(CHORD_TURN);
         display_prompt();
         display_clock(pr[0]);
         break;
@@ -202,8 +215,10 @@ void game_frame(void)
         winners = msg[1];
         n = turn;
         turn = NONE;                    /* back in the lobby */
-        if (n < SEATS)
+        if (n < SEATS) {                /* not the replay of an old result */
             display_seat(n);
+            play_chord(CHORD_END);
+        }
         game_clear_prompt();
         display_game_over();
         break;

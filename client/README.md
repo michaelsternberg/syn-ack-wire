@@ -67,7 +67,7 @@ start; bots take any seats beyond the humans. Both must join before the host sta
 |---|---|
 | Title | type a handle, **Return**. **OPTION** turns move hints on or off. **HELP** shows the instructions |
 | Instructions | **>** or **→** next page, **<** or **←** previous, **Esc** (or Return, or HELP) back to the title |
-| Any time | **OPTION** turns move hints on or off |
+| Any time | **OPTION** turns move hints on or off. **SELECT** turns sound on or off (a chord says it's on) |
 | Host in the lobby | **2–6**: start with that many seats; bots fill the empty ones |
 | Your turn | **1–6**: run that exploit from your kit. Inverse = can't run now; pressing it says why |
 | Infiltration | the **letter** of the syndicate to broker the new hive to |
@@ -176,19 +176,26 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 - **Link down:** any non-zero return means the link is down: an SIO error (128–255) or `NET_CLOSED`.
   - The client closes, reopens, and sends `H` with its saved token.
   - The server answers with a full resync, so there is no other recovery code.
-- **Sound:** SIO uses POKEY's serial clock, so game sound should use channels 1 and 2.
+- **Sound:** SIO uses POKEY channels 3 and 4 as its serial clock. `sound.s` writes all four channels from the
+  deferred VBI, which the OS skips while SIO runs, so a transfer is never disturbed. Each transfer turns the sound
+  off, so `net_sio.s` puts the chord back as soon as SIO returns, and skips its once-a-second status check while
+  a chord sounds (a read that FujiNet signals with PROCEED still happens at once).
+  Chords (B Locrian): a short quiet one for every spike, a new hive, a hivejack, Black ICE, two rising ones when
+  it's your turn and two more when it's time to buy, and a series for the null-route. Each fades out; a chord
+  still sounding is only cut off by a more important one.
 
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9933 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 10310 | whole file; loads at $2000, the 1K font sits at $4C00 |
 | `display_text.c` | 3051 | + 636 rodata (mostly screen words), 70 bss, 1K font |
-| `game.c` | 2673 | + 382 rodata, 281 bss (the game state) |
-| `main.c` | 743 | + 167 rodata |
+| `game.c` | 2760 | + 382 rodata, 281 bss (the game state) |
+| `main.c` | 746 | + 167 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
-| `net_sio.s` | 299 | + 10 rodata, 25 bss. 222 before PROCEED/SOUNDR |
+| `net_sio.s` | 318 | + 10 rodata, 26 bss, 2 data. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
-| `input.c` | 106 | + 64-byte key table |
+| `input.c` | 127 | + 64-byte key table |
+| `sound.s` | 178 | + 66 rodata (11 chords), 11 bss/data: chords from the deferred VBI |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |

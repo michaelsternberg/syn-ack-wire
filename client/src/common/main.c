@@ -94,6 +94,7 @@ static void redial(const char *why)
 
 void main(void)
 {
+    snd_init();
     title();
     for (c = 0; c < 8; ++c)
         handle[c] = c < edit_len ? edit[c] : ' ';

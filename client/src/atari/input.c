@@ -1,8 +1,9 @@
 /* Keyboard and clock for the Atari. Reads the OS's last-key byte directly: no
  * K: handler, no key click. Shift and Control are ignored, so the arrow keys
- * arrive as + * - =. HELP (XL/XE) comes from the OS's HELPFG. The OPTION console
- * key is read from CONSOL once a frame (which rides out contact bounce), and
- * reported once per press. */
+ * arrive as + * - =. HELP (XL/XE) comes from the OS's HELPFG. The OPTION and
+ * SELECT console keys are read from CONSOL once a frame (which rides out contact
+ * bounce), and act once per press: OPTION is reported, SELECT turns sound on
+ * or off right here, wherever the game is reading keys. */
 #include "../platform.h"
 
 #define CH      (*(volatile unsigned char *)0x2FC)
@@ -19,19 +20,20 @@ static const unsigned char keymap[64] = {
     '9',  0,  '0', '7', K_DELETE, '8', '<', '>', 'F', 'H', 'D', 0,         0,   'G', 'S', 'A',
 };
 
-static unsigned char k, frame, held;
+static unsigned char k, frame, held, pressed;
 
 unsigned char in_key(void)
 {
     if (frame != RTCLOK) {
         frame = RTCLOK;
-        k = ~CONSOL & 4;                /* OPTION */
-        if (k != held) {
-            held = k;
-            if (k) {
-                ATRACT = 0;
-                return K_OPTION;
-            }
+        k = ~CONSOL & 6;                /* OPTION, SELECT */
+        pressed = k & ~held;
+        held = k;
+        if (pressed & 2)
+            snd_toggle();
+        if (pressed & 4) {
+            ATRACT = 0;
+            return K_OPTION;
         }
     }
     if (HELPFG) {

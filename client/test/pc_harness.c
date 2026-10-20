@@ -77,6 +77,10 @@ unsigned char ticks(void)
     return (unsigned char)((tv.tv_sec * 1000000LL + tv.tv_usec) / 16667);
 }
 
+void snd_init(void) {}
+void play_chord(unsigned char n) { (void)n; }
+void snd_toggle(void) {}
+
 /* ---- display: print what changed */
 void display_title_screen(void) {}
 void display_playfield(void) { fprintf(stderr, "[playfield] turn %d me %d\n", turn, me); }

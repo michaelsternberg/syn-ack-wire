@@ -11,6 +11,7 @@
 
         .export _net_open, _net_poll, _net_send, _net_close
         .export _rx_head, _rx_tail, _tx
+        .export net_hush, net_after
         .import _rx_ring
 
 DDEVIC  = $0300
@@ -52,6 +53,12 @@ stat:   .res 4          ; bytes waiting lo/hi, connected, error
 n:      .res 1
 ready:  .res 1          ; non-zero: FujiNet has something, or bytes were left behind
 last:   .res 1          ; RTCLOK at the last status call
+net_hush: .res 1        ; non-zero while a sound plays (sound.s keeps its volume here):
+                        ; skip the safety status call, and call net_after after each
+                        ; transfer, because SIO turns the sound off
+
+        .data
+net_after: .addr done   ; sound.s points it at snd_put
 
         .rodata
 cmd:    .byte 'O', 'S', 'R', 'W', 'C'
@@ -101,11 +108,14 @@ proceed:
 _net_poll:
         lda ready
         bne @go
+        clc
+        lda net_hush            ; a sound playing: the safety check can wait
+        bne @wait               ; (ok is out of reach; carry is clear)
         lda RTCLOK
         sec
         sbc last
         cmp #SAFETY
-        bcc ok
+@wait:  bcc ok
 @go:    lda #0
         sta ready               ; a PROCEED from here on means "poll again"
         lda RTCLOK
@@ -209,9 +219,13 @@ sio:    lda #NDEV
         lda #TIMEOUT
         sta DTIMLO
         jsr SIOV
-        ldx #0
-        tya                     ; Y = SIO status, 1 = OK
+        lda net_hush            ; SIO turned the sound off: put it back
+        beq :+
+        jsr after
+:       ldx #0
+        lda DSTATS              ; SIO status, 1 = OK
         cmp #1
         bne :+
         txa
 :       rts
+after:  jmp (net_after)

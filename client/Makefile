@@ -28,7 +28,7 @@ HELP_SECTOR ?= 600
 NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
 
-GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o
+GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/sound.o
 HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h
 
 all: $(B)/synack.xex $(B)/wiremon.xex $(B)/wiremon-auto.xex
