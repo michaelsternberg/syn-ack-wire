@@ -53,7 +53,7 @@ static unsigned char *row[24];
 static unsigned char *cur;
 static unsigned char inv, ready, i, j, n, v;
 
-static const unsigned char yen[8] = { 0x66, 0x66, 0x3C, 0x7E, 0x18, 0x7E, 0x18, 0x00 };
+static const unsigned char yen[8] = { 0x00, 0x66, 0x66, 0x3C, 0x7E, 0x18, 0x7E, 0x18 };
 
 /* ---------------------------------------------------------------- drawing */
 
