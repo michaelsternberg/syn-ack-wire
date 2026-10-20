@@ -82,7 +82,7 @@ Alternatives considered: Access Cowboy (the first choice), Access Jockey, Wireja
 | Sell stock | **Cash out** | |
 | Trade 2:1 into the absorber | **Swap** (the 2:1 is the *haircut*) | Token swap with slippage |
 | Hold stock | **HODL** | |
-| Bank | **The Laundry House** | |
+| Bank | **The Darkpool** | |
 | Money | **New yen (¥)** — internally stored in units of ¥100 | |
 | Start money ($6,000) | ¥6,000 **(TBD: scale x100 to ¥600,000 for flavor?)** | |
 
@@ -97,7 +97,7 @@ The carriers, not a corporation, end the game by cutting the whole region off: t
 |---|---|
 | A chain of 41+ tiles | **TOTAL COMPROMISE** — carriers declare the region lost and null-route it |
 | All chains safe | **LOCKDOWN** — a black-ICE standoff; carriers quarantine the region |
-| End-game scoring | **The final cash-out** — everything is sold to the Laundry House before the routes go dark |
+| End-game scoring | **The final cash-out** — everything is sold to the Darkpool before the routes go dark |
 | Winner | **(TBD)** e.g. "TOP NETRUNNER", "LAST ONE OUT RICH" |
 
 ### End shout **(TBD — pick one)**
@@ -217,7 +217,7 @@ and appears only on info screens.
 #### Obsidian Ledger
 - **Short:** `OBSIDIAN` · **Coin:** `LDGR` · **Letter:** `O` · **Color:** (TBD)
 - **Alias:** none known — they appear only in other syndicates' accounts
-- **Flavor:** A faceless cabal of former central bankers. They run the Laundry House. Nobody has seen a member's face.
+- **Flavor:** A faceless cabal of former central bankers. They run the Darkpool. Nobody has seen a member's face.
 
 ---
 

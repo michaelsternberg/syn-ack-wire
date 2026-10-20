@@ -129,7 +129,7 @@ with hidden holdings; the format doesn't change.
 | `P` | — | `P node` | Your turn: spike a node from your kit (`h`). |
 | `F` | avail | `F syn` | Your spike founded a hive. `avail` = bitmask of syndicates you may broker to. |
 | `K` | ctx, mask | `K syn` | Choose one from `mask`. `ctx` 0 = which syndicate survives a tied hivejack; 1 = which tied hive gets absorbed next. |
-| `D` | absorbed, absorber, held, supply | `D sell swap` | Dispose of coin from a hivejacked syndicate. `supply` = absorber coins left in the Laundry House (caps swaps at 2×supply). |
+| `D` | absorbed, absorber, held, supply | `D sell swap` | Dispose of coin from a hivejacked syndicate. `supply` = absorber coins left in the Darkpool (caps swaps at 2×supply). |
 | `B` | cash[2], flags, price[7], supply[7] | `B b0 b1 b2` | Buy up to 3 coins. `flags` bit 0 = you may call the null-route (end the game). |
 | `S` | — | `S seats` | Lobby: you are the host; start when ready. |
 
@@ -201,7 +201,7 @@ S→all : k 02 05 01                     finder's cut: seat 2 holds 1 LTS
 S→all : l 1D "[*] HIVE BROKERED TO LOTUS-12"
 S→s2  : p 13 B 3C 3C 00 00             prompt: buy; 60 s; cash ¥6,000; may not end
         00 00 00 00 00 04 00           prices: only LTS on the Grid, ¥400
-        19 19 19 19 19 18 19           Laundry House supply (LTS 24)
+        19 19 19 19 19 18 19           Darkpool supply (LTS 24)
 C     : B 05 05 07                     buy 2 LTS
 S→all : k 02 05 03                     seat 2 holds 3 LTS
 S→all : m 02 34 00                     cash ¥5,200

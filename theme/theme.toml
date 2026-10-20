@@ -57,7 +57,7 @@ swap            = { s = "swap" }
 hodl            = { s = "HODL", p = "HODL" }
 flatlined       = { s = "flatlined", p = "flatlined" }
 revived         = { s = "back from the flatline", p = "back from the flatline" }
-bank            = { s = "Laundry House" }
+bank            = { s = "Darkpool" }
 nullroute       = { s = "null-route" }
 totalcompromise = { s = "Total Compromise", p = "Total Compromise" }
 lockdown        = { s = "Lockdown", p = "Lockdown" }
@@ -109,10 +109,10 @@ hasahive    = "[-] {syn} ALREADY HAS A HIVE"
 notoffered  = "[-] PICK ONE OF THE OFFERED HIVES"
 oddswap     = "[-] SWAP AN EVEN AMOUNT OF CRYPTO"
 toomany     = "[-] YOU ONLY HOLD {n} CRYPTO"
-swapsupply  = "[-] ONLY {n} {syn} LEFT TO SWAP"
+swapsupply  = "[-] DARKPOOL HAS ONLY {n} {syn} LEFT"
 maxbuy      = "[-] MAX {n} CRYPTO PER TURN"
 nohive      = "[-] THAT SYNDICATE HAS NO HIVE"
-soldout     = "[-] LAUNDRY HOUSE IS OUT OF {syn}"
+soldout     = "[-] DARKPOOL IS OUT OF {syn}"
 nocash      = "[-] NOT ENOUGH YEN"
 cantend     = "[-] NULL-ROUTE CAN'T BE CALLED YET"
 seats       = "[-] START WITH {lo}-{hi} SEATS"
@@ -189,4 +189,4 @@ coin   = "LDGR"
 tier   = "high"
 color  = "C9A227"
 alias  = "(none known)"
-flavor = "Faceless cabal of former central bankers. They run the Laundry House."
+flavor = "Faceless cabal of former central bankers. They run the Darkpool."

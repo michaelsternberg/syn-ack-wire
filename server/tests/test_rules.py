@@ -200,7 +200,7 @@ class Hivejack(unittest.TestCase):
     def test_disposal_validation(self):
         g = self.g
         give(g, 0, MID3, 5)
-        give(g, 1, HIGH5, 24)                          # only 1 LTS left in the Laundry House
+        give(g, 1, HIGH5, 24)                          # only 1 LTS left in the Darkpool
         my_turn(g, 0, "G3")
         g.apply(0, N("G3"))
         with self.assertRaises(RuleError):
