@@ -8,7 +8,7 @@
  *                         LAST: C4
  *  1-6 = an empty node that exploit in your kit can run on (when hints are on)
  *  row 11  blank
- *  row 12  COWBOY          \  G  R  D  I  B  L  O
+ *  row 12  NETRUNNER       \  G  R  D  I  B  L  O
  *  rows 13-18 >NAME    ?  \6000  3  .  .  1  .  .  .    (one per seat)
  *  rows 19-21 log
  *  row 22  kit, or what the open prompt is about
@@ -429,7 +429,10 @@ void display_game_over(void)
 {
     clear_row(ROW_INFO);
     at(ROW_INFO, 1);
-    text("GAME OVER. TOP " T_PLAYER ":");
+    if (winners & (winners - 1))        /* a tie: the names need the room */
+        text("TOP " T_PLAYER_P ":");
+    else
+        text("GAME OVER. TOP " T_PLAYER ":");
     for (i = 0; i < SEATS; ++i)
         if (winners >> i & 1) {
             put(' ');

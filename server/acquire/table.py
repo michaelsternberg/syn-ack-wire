@@ -88,7 +88,7 @@ class Table:
         if seat is None:
             return proto.F_FULL
         seat.kind = HUMAN
-        seat.name = name.upper()[:8] or "COWBOY"
+        seat.name = name.upper()[:8] or "RUNNER"
         seat.token = self._new_token()
         seat.conn = conn
         seat.bot = HeuristicBot(self.rng.random())

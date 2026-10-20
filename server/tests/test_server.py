@@ -43,7 +43,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(a.cash, b.cash)
         self.assertEqual([k for k, _ in a.seats[:4]], [1, 1, 3, 3])
         self.assertEqual(a.faults + b.faults, [])
-        self.assertTrue(any("TOP COWBOY" in line for line in a.logs))
+        self.assertTrue(any("TOP NETRUNNER" in line for line in a.logs))
 
     async def test_server_logs_the_game_log(self):
         with self.assertLogs("synack", "INFO") as cm:

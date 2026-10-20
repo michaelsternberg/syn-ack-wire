@@ -32,8 +32,8 @@ spike  = "+"
 target = "*"      # PC test client: an empty node one of your exploits can run on (the Atari shows the exploit's 1-6)
 
 [terms]
-playertitle     = { s = "Access Cowboy" }
-player          = { s = "cowboy" }
+playertitle     = { s = "Netrunner" }
+player          = { s = "netrunner" }
 grid            = { s = "Grid" }
 node            = { s = "node" }
 exploit         = { s = "exploit" }
@@ -57,7 +57,7 @@ swap            = { s = "swap" }
 hodl            = { s = "HODL", p = "HODL" }
 flatlined       = { s = "flatlined", p = "flatlined" }
 revived         = { s = "back from the flatline", p = "back from the flatline" }
-bank            = { s = "Darkpool" }
+bank            = { s = "Laundry House" }
 nullroute       = { s = "null-route" }
 totalcompromise = { s = "Total Compromise", p = "Total Compromise" }
 lockdown        = { s = "Lockdown", p = "Lockdown" }
@@ -67,7 +67,7 @@ absorbed        = { s = "absorbed", p = "absorbed" }
 
 # Handles given to bot seats (<= 8 chars, ASCII uppercase/digits/punctuation).
 [bots]
-names = ["NULLPTR", "WIREWOLF", "R00TKIT", "SEGFAULT", "ZER0DAY", "GL1TCH", "K1LLSWCH", "BYTEME"]
+names = ["NULLPTR", "WIREWOLF", "R00TKIT", "SEGFAULT", "H0NEYP0T", "GL1TCH", "K1LLSWCH", "BYTEME"]
 
 # Log lines sent to clients (keep <= 38 chars after substitution; ASCII + currency symbol only).
 # Placeholders: {player} handle, {node} e.g. C4, {syn} syndicate short name, {coin} its coin ticker
@@ -95,7 +95,7 @@ callend    = "[!] {player} CALLS THE NULL-ROUTE"
 nullroute  = "[!] NULL-ROUTE {region}: {shout}"
 quarantine = "[!] GRID STALLED: {region} SEALED"
 final      = "[$] {player} FINAL {amount}"
-winner     = "[!] TOP COWBOY: {player}"
+winner     = "[!] TOP NETRUNNER: {player}"
 
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.
@@ -109,10 +109,10 @@ hasahive    = "[-] {syn} ALREADY HAS A HIVE"
 notoffered  = "[-] PICK ONE OF THE OFFERED HIVES"
 oddswap     = "[-] SWAP AN EVEN AMOUNT OF CRYPTO"
 toomany     = "[-] YOU ONLY HOLD {n} CRYPTO"
-swapsupply  = "[-] DARKPOOL HAS ONLY {n} {syn} LEFT"
+swapsupply  = "[-] ONLY {n} {syn} LEFT TO SWAP"
 maxbuy      = "[-] MAX {n} CRYPTO PER TURN"
 nohive      = "[-] THAT SYNDICATE HAS NO HIVE"
-soldout     = "[-] DARKPOOL IS OUT OF {syn}"
+soldout     = "[-] LAUNDRY HOUSE IS OUT OF {syn}"
 nocash      = "[-] NOT ENOUGH YEN"
 cantend     = "[-] NULL-ROUTE CAN'T BE CALLED YET"
 seats       = "[-] START WITH {lo}-{hi} SEATS"
@@ -189,4 +189,4 @@ coin   = "LDGR"
 tier   = "high"
 color  = "C9A227"
 alias  = "(none known)"
-flavor = "Faceless cabal of former central bankers. They run the Darkpool."
+flavor = "Faceless cabal of former central bankers. They run the Laundry House."

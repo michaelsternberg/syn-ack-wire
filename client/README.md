@@ -89,7 +89,7 @@ prompt line is the seconds left before your seat's bot answers for you.
 8 6oo..l4l...+ LAST: D6                    each hive's size by its letter; inverse = Black ICE
                                            during a buy: HIVES    PRICE LEFT
 
- COWBOY          ¥  g  r  d  i  b  l  o
+ NETRUNNER       ¥  g  r  d  i  b  l  o
 >ATARI        3100  4  1  .  2  2  3  2    > you; inverse name = whose turn; * bot; ? away
  [$] ROOT K1LLSWCH +¥7000                  3 log lines
  EXPLOITS 1:H2 2:C5 3:H6 4:A8 5:G8 6:D6    your kit, or what the open prompt is about
@@ -181,9 +181,9 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 9886 | whole file; loads at $2000, the 1K font sits at $4C00 |
-| `display_text.c` | 3026 | + 615 rodata (mostly screen words), 70 bss, 1K font |
-| `game.c` | 2673 | + 382 rodata, 281 bss (the game state) |
+| `synack.xex` | 9938 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `display_text.c` | 3046 | + 636 rodata (mostly screen words), 70 bss, 1K font |
+| `game.c` | 2673 | + 392 rodata, 281 bss (the game state) |
 | `main.c` | 743 | + 167 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 299 | + 10 rodata, 25 bss. 222 before PROCEED/SOUNDR |

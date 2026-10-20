@@ -8,7 +8,7 @@ edited there, and the rulebook (and later the server and client) are generated f
 Edit freely; anything marked **(TBD)** is still open.
 
 Ground rule: every term should be **technically accurate today, pushed a few years into the future**.
-Genre vocabulary (cowboy, deck, ICE, jack in, flatline) is fine; avoid Gibson's proper nouns
+Genre vocabulary (cowboy, netrunner, deck, ICE, jack in, flatline) is fine; avoid Gibson's proper nouns
 (Sprawl, Chatsubo, Ono-Sendai, Wintermute, Turing Police, Tessier-Ashpool, BAMA, etc.).
 
 ---
@@ -45,11 +45,11 @@ Examples: `MUNI TRAFFIC CTRL`, `ST. JUDE MEDICAL`, `KIOSKNET VENDING`, `HARBOR C
 
 | Term | Meaning |
 |---|---|
-| **Access Cowboy** (short: `COWBOY`) | The player. Real-world role: an *initial access broker* who breaks into networks and sells the foothold. |
+| **Netrunner** (short: `NETRUNNER`) | The player. Real-world role: an *initial access broker* who breaks into networks and sells the foothold. |
 | **Handle** | Player name (max 8 chars on screen). |
 | **Jacking in** | Joining a game / connecting. |
 
-Alternatives considered: Access Jockey, Wirejack, Runner.
+Alternatives considered: Access Cowboy (the first choice), Access Jockey, Wirejack, Runner.
 
 ---
 
@@ -82,7 +82,7 @@ Alternatives considered: Access Jockey, Wirejack, Runner.
 | Sell stock | **Cash out** | |
 | Trade 2:1 into the absorber | **Swap** (the 2:1 is the *haircut*) | Token swap with slippage |
 | Hold stock | **HODL** | |
-| Bank | **The Darkpool** | |
+| Bank | **The Laundry House** | |
 | Money | **New yen (¥)** — internally stored in units of ¥100 | |
 | Start money ($6,000) | ¥6,000 **(TBD: scale x100 to ¥600,000 for flavor?)** | |
 
@@ -97,8 +97,8 @@ The carriers, not a corporation, end the game by cutting the whole region off: t
 |---|---|
 | A chain of 41+ tiles | **TOTAL COMPROMISE** — carriers declare the region lost and null-route it |
 | All chains safe | **LOCKDOWN** — a black-ICE standoff; carriers quarantine the region |
-| End-game scoring | **The final cash-out** — everything is sold to the Darkpool before the routes go dark |
-| Winner | **(TBD)** e.g. "TOP COWBOY", "LAST ONE OUT RICH" |
+| End-game scoring | **The final cash-out** — everything is sold to the Laundry House before the routes go dark |
+| Winner | **(TBD)** e.g. "TOP NETRUNNER", "LAST ONE OUT RICH" |
 
 ### End shout **(TBD — pick one)**
 | Candidate | Notes |
@@ -217,7 +217,7 @@ and appears only on info screens.
 #### Obsidian Ledger
 - **Short:** `OBSIDIAN` · **Coin:** `LDGR` · **Letter:** `O` · **Color:** (TBD)
 - **Alias:** none known — they appear only in other syndicates' accounts
-- **Flavor:** A faceless cabal of former central bankers. They run the Darkpool. Nobody has seen a member's face.
+- **Flavor:** A faceless cabal of former central bankers. They run the Laundry House. Nobody has seen a member's face.
 
 ---
 
