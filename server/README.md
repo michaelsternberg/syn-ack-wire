@@ -60,6 +60,9 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   when someone reconnects (by token or handle). After `--abandon` seconds (default 600) the game is dropped and the
   table is an empty lobby again, so it doesn't stay full; an old token then gets fault 3 and its client joins as new.
   The log says `paused`, `resumed` or `abandoned`.
+- The same `--abandon` time applies when players are connected but every one of them is on autopilot (walked away
+  with the Atari on). The game is dropped with no result. The connected players stay, in a fresh lobby with the
+  first of them as host, and see `GAME DROPPED: NOBODY PLAYING`.
 - Bots, and away seats, wait `--bot-delay` before each decision. `--think-exploit` and `--think-buy` give them a
   thinking time instead before running an exploit and before buying: `MEAN,JITTER` in seconds, drawn evenly
   from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.

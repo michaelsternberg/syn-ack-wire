@@ -96,6 +96,7 @@ nullroute  = "[!] NULL-ROUTE {region}: {shout}"
 quarantine = "[!] GRID STALLED: {region} SEALED"
 final      = "[$] {player} FINAL {amount}"
 winner     = "[!] TOP NETRUNNER: {player}"
+abandoned  = "[!] GAME DROPPED: NOBODY PLAYING"
 
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.

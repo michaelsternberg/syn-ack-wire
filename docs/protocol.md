@@ -173,6 +173,8 @@ also carries `e` with the last game's winners.
 - `Q` → the seat becomes `kind 3` (bot) for the rest of the game.
 - No human connected → the game pauses until one reconnects. After the server's `--abandon` time (default 10
   minutes) the game is dropped and the table returns to an empty lobby; an old token then gets fault 3.
+- Every connected human on autopilot for that long → the game is dropped with no `e`. Each connected client gets a
+  lobby resync (`w` with its new seat number, `n`×6, an empty `s`, `S` for the host) and then an `l` saying why.
 - A seat change is announced to everyone with `n`.
 
 The server sends `u` every 10 seconds. A link can die without either end being told: the server's machine loses

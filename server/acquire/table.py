@@ -4,6 +4,7 @@ Every seat has a bot. A human's prompt that times out is answered by that seat's
 a dropped connection makes the seat AWAY and the bot plays every prompt until the token holder reconnects
 (or anyone joining without a token under that seat's handle).
 With no human connected at all the game pauses, and after `abandon` seconds it is dropped and the table freed.
+The same goes for a table where every connected human has been on autopilot that long: they get a fresh lobby.
 A connected player who lets `afk` prompts in a row time out is on autopilot: shown as away, still prompted, but
 on the bot's clock. Answering one in time brings back the full clock.
 """
@@ -64,6 +65,7 @@ class Table:
         self.present = asyncio.Event()  # set while a human is connected
         self.afk = afk              # timeouts in a row that put a seat on autopilot; 0 = never
         self.misses = {}            # Seat -> prompts in a row its bot answered
+        self.unattended = None      # loop time since every connected human has been on autopilot
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -188,6 +190,7 @@ class Table:
             bots.append(b)
         self.seats = humans + bots + [Seat() for _ in range(proto.SEATS - count)]
         self.misses.clear()
+        self.unattended = None
         self.game = rules.Game([s.name for s in self.seats[:count]], seed=self.rng.random(), theme=self.theme)
         events = self.game.start()
         self.lobby = False
@@ -212,6 +215,9 @@ class Table:
         loop = asyncio.get_running_loop()
         while not g.over:
             if not self.present.is_set() and not await self._hold():
+                return
+            if self._unattended_too_long(loop.time()):
+                self._drop(f"every player on autopilot for {self.abandon:g} s")
                 return
             d = g.pending
             seat = self.seats[d.seat]
@@ -275,13 +281,35 @@ class Table:
         try:
             await asyncio.wait_for(self.present.wait(), self.abandon or None)
         except TimeoutError:
-            log.info("table %d: abandoned, no players for %g s", self.tid, self.abandon)
-            self.game, self.task, self.lobby, self.host = None, None, True, None
-            self.seats = [Seat() for _ in range(proto.SEATS)]       # old tokens now get fault 3
-            self.timed_out.clear()
+            self._drop(f"no players for {self.abandon:g} s")
             return False
         log.info("table %d: resumed", self.tid)
         return True
+
+    def _unattended_too_long(self, now):
+        """True once every connected human has been on autopilot for `abandon` seconds."""
+        if not self.abandon or any(s.online and not self._autopilot(s) for s in self.seats):
+            self.unattended = None
+            return False
+        if self.unattended is None:
+            self.unattended = now
+        return now - self.unattended >= self.abandon
+
+    def _drop(self, why):
+        """End the game with no result. Connected players stay, in a fresh lobby (the first is host); every other
+        seat goes, and its token with it (a reconnect gets fault 3 and joins as new)."""
+        log.info("table %d: abandoned, %s", self.tid, why)
+        keep = [s for s in self.seats if s.online]
+        self.seats = keep + [Seat() for _ in range(proto.SEATS - len(keep))]
+        self.game, self.task, self.lobby = None, None, True
+        self.host = keep[0] if keep else None
+        self.misses.clear()
+        self.timed_out.clear()
+        self.unattended = None
+        line = proto.log_line(self.theme.say("abandoned"))
+        for s in keep:
+            self.resync(s)
+            self._send(s, line)         # after the resync, so the fresh screen keeps it
 
     def _bot_wait(self, kind):
         """Seconds a bot waits before deciding: bot_delay, or a thinking time for `kind`."""

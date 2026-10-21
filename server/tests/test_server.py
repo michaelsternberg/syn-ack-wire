@@ -172,6 +172,29 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         await asyncio.wait_for(host, 30)
 
+    async def test_everyone_on_autopilot_drops_the_game(self):
+        from acquire import table as tmod
+        old, tmod.AFK_MIN = tmod.AFK_MIN, 0.02
+        self.addCleanup(setattr, tmod, "AFK_MIN", old)
+        self.server.timeout, self.server.bot_delay, self.server.afk, self.server.abandon = 0.05, 0.01, 1, 0.5
+        reader, writer = await self.raw(name="DOZER")
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await reader.read(4096))
+        writer.write(b"S\x03")                             # start, then never answer
+        with self.assertLogs("synack", "INFO") as cm:
+            while not any("NOBODY PLAYING" in line for line in c.logs):
+                c.feed(await asyncio.wait_for(reader.read(4096), 10))
+        t = self.server.table(0)
+        self.assertTrue(t.lobby)
+        self.assertIsNone(t.game)
+        self.assertTrue(any("every player on autopilot" in m for m in cm.output))
+        self.assertIsNone(c.winners)                        # no result for a dropped game
+        self.assertEqual(c.prompt[0], "S")                  # still connected, and host of the new lobby
+        self.assertEqual(c.seats[c.seat], (proto.HUMAN, "DOZER"))
+        self.assertEqual([k for k, _ in c.seats].count(proto.EMPTY), proto.SEATS - 1)
+        writer.close()
+
     async def test_abandoned_game_frees_the_table(self):
         self.server.abandon = 0.1
         with self.assertLogs("synack", "INFO") as cm:
