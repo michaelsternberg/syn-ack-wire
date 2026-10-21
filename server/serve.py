@@ -3,7 +3,7 @@
 
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
-                    [--link-timeout 60] [--host-wait 60] [--trace]
+                    [--link-timeout 60] [--host-wait 60] [--region NEO-KANSAI-1] [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
@@ -17,11 +17,15 @@ from acquire.table import Conn, Table
 
 log = logging.getLogger("synack")
 
+REGION_MAX = 12     # the Atari title bar's room for it
+
 
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
-                 afk=2, link_timeout=60.0, host_wait=60.0):
+                 afk=2, link_timeout=60.0, host_wait=60.0, region=None):
         self.theme = theme.load()
+        if region:
+            self.theme.game["region"] = region
         self.timeout = timeout
         self.bot_delay = bot_delay
         self.think = think
@@ -112,6 +116,14 @@ def think_time(text):
     return mean, jitter
 
 
+def region_name(text):
+    """The game's fictional grid region: 1-12 characters a client can show (letters, digits, punctuation)."""
+    s = text.upper()
+    if not 1 <= len(s) <= REGION_MAX or not all(0x20 <= ord(ch) <= 0x5F and ch != "\\" for ch in s):
+        raise argparse.ArgumentTypeError(f"{text!r}: need 1-{REGION_MAX} letters, digits or punctuation")
+    return s
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0", metavar="ADDR",
@@ -147,6 +159,10 @@ async def main():
     ap.add_argument("--host-wait", type=float, default=60.0, metavar="SECONDS",
                     help="seconds a host may keep other players waiting in the lobby before the role passes on, "
                          "e.g. 120; 0 = wait for ever (default: %(default)g)")
+    ap.add_argument("--region", type=region_name, metavar="NAME",
+                    help="the fictional grid region the game is set in, shown in the title bar and the game log, "
+                         "so players can name the server they'll meet on, e.g. NEO-LAGOS-3; at most 12 characters "
+                         "(default: %s from theme.toml)" % theme.load().game["region"])
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
@@ -154,7 +170,7 @@ async def main():
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
     srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
                        abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
-                       host_wait=a.host_wait).serve(a.host, a.port)
+                       host_wait=a.host_wait, region=a.region).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 

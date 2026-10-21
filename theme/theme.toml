@@ -10,7 +10,7 @@
 [game]
 title       = "SYN-ACK WIRE"
 endshout    = "UNJACK!"
-region      = "NEO-KANSAI-1"          # example region used in docs (keep region IDs <= 12 chars)
+region      = "NEO-KANSAI-1"          # default grid region; serve.py --region overrides it (<= 12 chars)
 currency    = "¥"
 
 [rules]

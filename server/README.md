@@ -22,6 +22,7 @@ python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to
 python3 serve.py --abandon 300                # drop a game after 5 min with no player connected (default 600; 0 = never)
 python3 serve.py --afk 3                      # autopilot after 3 timeouts in a row (default 2; 0 = never)
 python3 serve.py --link-timeout 30            # drop a client that vanished without closing after 30 s (default 60)
+python3 serve.py --region NEO-LAGOS-3         # the fictional grid region in the title bar and log (default NEO-KANSAI-1)
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly

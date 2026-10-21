@@ -1,4 +1,5 @@
 """End-to-end: real TCP server, protocol clients, bots.  Run from server/:  python3 -m unittest -v"""
+import argparse
 import asyncio
 import random
 import socket
@@ -357,6 +358,29 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RegionTest(unittest.IsolatedAsyncioTestCase):
+    async def test_region_option_reaches_the_client(self):
+        server = Server(timeout=5.0, bot_delay=0, seed=42, region="NEO-LAGOS-3")
+        srv = await server.serve(HOST, 0)
+        try:
+            port = srv.sockets[0].getsockname()[1]
+            c = await asyncio.wait_for(testclient.run(HOST, port, 0, "ALICE", auto=True, quiet=True, start=2,
+                                                      rng=random.Random(1)), 30)
+            self.assertEqual(c.region, "NEO-LAGOS-3")
+            self.assertTrue(any("NEO-LAGOS-3" in line for line in c.logs))   # the null-route line
+        finally:
+            srv.close()
+            srv.close_clients()
+            await srv.wait_closed()
+
+    def test_region_names(self):
+        from serve import region_name
+        self.assertEqual(region_name("neo-lagos-3"), "NEO-LAGOS-3")
+        for bad in ("", "THIRTEEN-CHAR", "NEO\\KANSAI", "NEO~1"):
+            with self.assertRaises(argparse.ArgumentTypeError):
+                region_name(bad)
 
 
 class ThinkTimeTest(unittest.TestCase):
