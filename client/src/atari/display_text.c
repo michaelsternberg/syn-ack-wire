@@ -8,7 +8,7 @@
  *                         LAST: C4
  *  1-6 = an empty node that exploit in your kit can run on (when hints are on)
  *  row 11  blank
- *  row 12  NETRUNNER       \  G  R  D  I  B  L  O
+ *  row 12  NETRUNNER    ACCT  G  R  D  I  B  L  O
  *  rows 13-18 >NAME    ?  \6000  3  .  .  1  .  .  .    (one per seat)
  *  rows 19-21 log
  *  row 22  kit, or what the open prompt is about
@@ -112,10 +112,11 @@ static void clear_row(unsigned char r)
     memset(row[r], inv, 40);
 }
 
-/* Right-aligned decimal in `width` columns; `hundreds` appends "00" (money). */
+/* Right-aligned decimal in `width` columns. `money` (units of 100) appends "00"
+ * and puts the currency sign right before the digits, inside `width`. */
 static unsigned char digits[7];
 
-static void number(unsigned value, unsigned char width, unsigned char hundreds)
+static void number(unsigned value, unsigned char width, unsigned char money)
 {
     static const unsigned pow10[5] = { 10000, 1000, 100, 10, 1 };
     unsigned char len = 0, d, k;
@@ -125,12 +126,19 @@ static void number(unsigned value, unsigned char width, unsigned char hundreds)
         if (len || d != '0' || k == 4)
             digits[len++] = d;
     }
-    if (hundreds && (len > 1 || digits[0] != '0')) {
-        digits[len++] = '0';
-        digits[len++] = '0';
+    if (money) {
+        if (len > 1 || digits[0] != '0') {
+            digits[len++] = '0';
+            digits[len++] = '0';
+        }
+        ++len;                          /* the sign */
     }
     if (width > len)
         spaces(width - len);
+    if (money) {
+        put('\\');
+        --len;
+    }
     textn(digits, len);
 }
 
@@ -260,10 +268,7 @@ void display_hives(void)
         if (pr_kind == 'B') {           /* pr: timeout, cash[2], flags, price[7], supply[7] */
             n = pr[4 + j];
             if (n) {
-                if (n < 10)
-                    put(' ');
-                put('\\');
-                number(n, 0, 1);
+                number(n, 5, 1);
                 number(pr[11 + j], 5, 0);
                 spaces(40 - COL_NAME - 10);
             } else {
@@ -474,8 +479,8 @@ void display_playfield(void)
     display_hives();
     at(ROW_SEATS - 1, 1);
     text(T_PLAYER);
-    at(ROW_SEATS - 1, 17);
-    put('\\');
+    at(ROW_SEATS - 1, 18 - sizeof T_ACCOUNT + 1);
+    text(T_ACCOUNT);
     for (j = 0; j < NSYN; ++j) {
         at(ROW_SEATS - 1, 20 + 3 * j);
         inv = INV;

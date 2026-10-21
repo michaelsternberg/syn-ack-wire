@@ -188,7 +188,7 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10298 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 10308 | whole file; loads at $2000, the 1K font sits at $4C00 |
 | `display_text.c` | 3051 | + 636 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2760 | + 382 rodata, 281 bss (the game state) |
 | `main.c` | 746 | + 167 rodata |

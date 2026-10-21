@@ -50,6 +50,7 @@ patched         = { s = "patched out", p = "patched out" }
 burnkit         = { s = "burn the kit", p = "burn the kit" }
 coin            = { s = "crypto", p = "crypto" }
 money           = { s = "new yen", p = "new yen" }
+account         = { s = "acct" }            # Atari: the netrunner table's money column (<= 7 chars)
 root            = { s = "ROOT", p = "ROOT" }
 sudo            = { s = "SUDO", p = "SUDO" }
 cashout         = { s = "cash out", p = "cash out" }
