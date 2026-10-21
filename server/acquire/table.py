@@ -7,9 +7,12 @@ With no human connected at all the game pauses, and after `abandon` seconds it i
 The same goes for a table where every connected human has been on autopilot that long: they get a fresh lobby.
 A connected player who lets `afk` prompts in a row time out is on autopilot: shown as away, still prompted, but
 on the bot's clock. Answering one in time brings back the full clock.
+In the lobby, a host who keeps other humans waiting `host_wait` seconds without starting loses the role to the
+next one, so an absent host can't hold a table.
 """
 import asyncio
 import logging
+import math
 import os
 import random
 
@@ -55,7 +58,8 @@ class Seat:
 
 
 class Table:
-    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None, abandon=600.0, afk=2):
+    def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None, abandon=600.0, afk=2,
+                 host_wait=60.0):
         self.tid = tid
         self.theme = theme
         self.timeout = timeout
@@ -66,6 +70,9 @@ class Table:
         self.afk = afk              # timeouts in a row that put a seat on autopilot; 0 = never
         self.misses = {}            # Seat -> prompts in a row its bot answered
         self.unattended = None      # loop time since every connected human has been on autopilot
+        self.host_wait = host_wait  # seconds a host may keep others waiting in the lobby; 0 = for ever
+        self.host_timer = None      # task that passes the host role on
+        self.host_deadline = None   # loop time it does so
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -99,6 +106,7 @@ class Table:
             self.present.set()
             self._announce(seat)
             self.resync(seat)               # `w` hands the client the seat's token
+            self._lobby_news(seat)
             return seat
         if not self.lobby:
             return proto.F_FULL
@@ -117,6 +125,7 @@ class Table:
         self.present.set()
         self._announce(seat)
         self.resync(seat)
+        self._lobby_news(seat)
         return seat
 
     def disconnect(self, seat, conn):
@@ -126,14 +135,15 @@ class Table:
         self._check_present()
         if self.lobby and self.game is None:
             self._free(seat)                # left before any game: nothing to come back to
-            return
-        seat.kind = AWAY                    # mid-game, or after one: keep the seat and token
-        self._announce(seat)
-        self._release(seat)
-        if self.lobby and seat is self.host:
-            self.host = next((s for s in self.seats if s.online), None)
-            if self.host:
-                self._send(self.host, proto.lobby_prompt())
+        else:
+            seat.kind = AWAY                # mid-game, or after one: keep the seat and token
+            self._announce(seat)
+            self._release(seat)
+            if self.lobby and seat is self.host:
+                self.host = next((s for s in self.seats if s.online), None)
+                if self.host:
+                    self._send(self.host, self._lobby_prompt())
+        self._host_clock()
 
     def receive(self, seat, t, payload):
         """One client frame (type already validated, payload complete)."""
@@ -146,6 +156,7 @@ class Table:
             self._check_present()
             if self.lobby:
                 self._free(seat)
+                self._host_clock()
             else:
                 seat.kind = BOT
                 self._announce(seat)
@@ -178,7 +189,7 @@ class Table:
             self._reject(seat, self.theme.error("nodecision") if seat is not self.host or not self.lobby
                          else self.theme.error("seats", lo=max(len(humans), r["minplayers"]), hi=r["maxplayers"]))
             if self.lobby and seat is self.host:
-                self._send(seat, proto.lobby_prompt())
+                self._send(seat, self._lobby_prompt())
             return
         names = [s.name for s in humans]
         free = [b for b in self.theme.bots if b not in names]
@@ -189,11 +200,13 @@ class Table:
             b.kind, b.name, b.bot = BOT, free[i % len(free)], HeuristicBot(self.rng.random())
             bots.append(b)
         self.seats = humans + bots + [Seat() for _ in range(proto.SEATS - count)]
-        self.misses.clear()
+        # autopilot carries into the new game for anyone who hasn't touched a key since; starting it counts as one
+        self.misses = {s: n for s, n in self.misses.items() if s in humans and s is not seat}
         self.unattended = None
         self.game = rules.Game([s.name for s in self.seats[:count]], seed=self.rng.random(), theme=self.theme)
         events = self.game.start()
         self.lobby = False
+        self._host_clock()                  # started: no more countdown
         for s in self.seats:
             if s.online:
                 self.resync(s)
@@ -206,7 +219,74 @@ class Table:
         if seat is self.host:
             self.host = next((s for s in self.seats if s.kind == HUMAN), None)
             if self.host and self.lobby:
-                self._send(self.host, proto.lobby_prompt())
+                self._send(self.host, self._lobby_prompt())
+
+    def _host_clock(self):
+        """While other humans wait in the lobby, the host has `host_wait` seconds to start the game, shown as the
+        prompt's clock; then the role passes to the next human. Call after anything that changes who is here.
+        True if it started a countdown (and told everyone)."""
+        due = (self.lobby and self.host_wait and self.host is not None and self.host.online
+               and any(s.online and s is not self.host for s in self.seats))
+        if not due:
+            if self.host_timer:
+                self.host_timer.cancel()
+                self.host_timer = self.host_deadline = None
+                if self.lobby and self.host is not None:
+                    self._send(self.host, self._lobby_prompt())     # nobody waiting: the clock goes
+            return False
+        if self.host_timer:
+            return False                    # already counting
+        loop = asyncio.get_running_loop()
+        self.host_deadline = loop.time() + self.host_wait
+        self.host_timer = loop.create_task(self._pass_host())
+        self._send(self.host, self._lobby_prompt())
+        self._host_news(self.seats)
+        return True
+
+    def _host_news(self, seats):
+        """Tell the players among `seats` who are waiting in the lobby who may start, and how long they have."""
+        left = max(1, math.ceil(self.host_deadline - asyncio.get_running_loop().time()))
+        line = proto.log_line(self.theme.say("hostclock", player=self.host.name, n=left))
+        for s in seats:
+            if s is not self.host:
+                self._send(s, line)
+
+    def _lobby_news(self, seat):
+        """`seat` just arrived: start the host's countdown if it is due, or tell them about the running one.
+        A host on autopilot hands over at once: nobody here should wait on somebody who isn't."""
+        if (self.lobby and self.host_wait and self.host is not None and seat is not self.host
+                and self._autopilot(self.host) and not self._autopilot(seat)):
+            self._hand_host(seat)
+        elif not self._host_clock() and self.host_timer:
+            self._host_news([seat])
+
+    async def _pass_host(self):
+        await asyncio.sleep(self.host_wait)
+        self.host_timer = self.host_deadline = None
+        here = [s for s in self.seats if s.online]
+        if self.lobby and self.host in here and len(here) > 1:
+            i = here.index(self.host)
+            others = here[i + 1:] + here[:i]            # in turn after the host
+            self._hand_host(next((s for s in others if not self._autopilot(s)), others[0]))   # skip absentees
+        else:
+            self._host_clock()
+
+    def _hand_host(self, seat):
+        if self.host_timer:
+            self.host_timer.cancel()
+        self.host_timer = self.host_deadline = None
+        old, self.host = self.host, seat
+        log.info("table %d: host passes to %s", self.tid, seat.name)
+        if old is not None and old is not seat:
+            self.resync(old)                # a prompt can't be withdrawn, but a fresh snapshot clears it
+        self._host_clock()                  # the new host's countdown and prompt, and the news for the others
+
+    def _lobby_prompt(self):
+        """The host's `S` prompt, with the time left to start when others are waiting."""
+        left = 0
+        if self.host_deadline is not None:
+            left = max(1, math.ceil(self.host_deadline - asyncio.get_running_loop().time()))
+        return proto.lobby_prompt(min(left, 255))
 
     # -------------------------------------------------------------- game loop
 
@@ -303,13 +383,14 @@ class Table:
         self.seats = keep + [Seat() for _ in range(proto.SEATS - len(keep))]
         self.game, self.task, self.lobby = None, None, True
         self.host = keep[0] if keep else None
-        self.misses.clear()
+        self.misses = {s: n for s, n in self.misses.items() if s in keep}   # still on autopilot in the lobby
         self.timed_out.clear()
         self.unattended = None
         line = proto.log_line(self.theme.say("abandoned"))
         for s in keep:
             self.resync(s)
             self._send(s, line)         # after the resync, so the fresh screen keeps it
+        self._host_clock()
 
     def _bot_wait(self, kind):
         """Seconds a bot waits before deciding: bot_delay, or a thinking time for `kind`."""
@@ -324,7 +405,8 @@ class Table:
         if self.host is None or not self.host.online:
             self.host = next((s for s in self.seats if s.online), None)
         if self.host:
-            self._send(self.host, proto.lobby_prompt())
+            self._send(self.host, self._lobby_prompt())
+        self._host_clock()
         if self.on_game_over:
             self.on_game_over(self)
 
@@ -354,7 +436,7 @@ class Table:
             if g is not None and g.over:
                 out.append(proto.event(rules.GameOver(g.winners)))      # result of the last game
             if seat is self.host:
-                out.append(proto.lobby_prompt())
+                out.append(self._lobby_prompt())
         self._send(seat, b"".join(out))
 
     def _broadcast(self, events):

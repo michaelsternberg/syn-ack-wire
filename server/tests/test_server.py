@@ -191,7 +191,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(any("every player on autopilot" in m for m in cm.output))
         self.assertIsNone(c.winners)                        # no result for a dropped game
         self.assertEqual(c.prompt[0], "S")                  # still connected, and host of the new lobby
-        self.assertEqual(c.seats[c.seat], (proto.HUMAN, "DOZER"))
+        self.assertEqual(c.seats[c.seat], (proto.AWAY, "DOZER"))     # still on autopilot until a key is pressed
         self.assertEqual([k for k, _ in c.seats].count(proto.EMPTY), proto.SEATS - 1)
         writer.close()
 
@@ -217,6 +217,92 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         sock = self.server.table(0).seats[0].conn.writer.get_extra_info("socket")
         self.assertEqual(sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT), 60000)
         w.close()
+
+    async def lobby_client(self, name):
+        reader, writer = await self.raw(name=name)
+        c = testclient.Client()
+
+        async def until(cond):
+            while not cond():
+                c.feed(await asyncio.wait_for(reader.read(4096), 5))
+        return c, until, writer
+
+    async def test_idle_host_passes_on(self):
+        self.server.host_wait = 1.0
+        a, a_until, aw = await self.lobby_client("SLEEPY")
+        await a_until(lambda: a.prompt is not None)
+        self.assertEqual(a.prompt[:2], ("S", 0))            # alone: no clock
+        a.prompt = None
+        b, b_until, bw = await self.lobby_client("KEEN")
+        await a_until(lambda: a.prompt is not None)
+        self.assertEqual(a.prompt[:2], ("S", 1))            # someone is waiting: the host's clock runs
+        await b_until(lambda: "[*] SLEEPY HAS 1 S TO START" in b.logs)   # and they're told who and how long
+        with self.assertLogs("synack", "INFO") as cm:
+            await b_until(lambda: b.prompt is not None)     # it ran out: KEEN is host now
+        self.assertEqual(b.prompt[:2], ("S", 1))
+        self.assertTrue(any("host passes to KEEN" in m for m in cm.output))
+        await a_until(lambda: "[*] KEEN HAS 1 S TO START" in a.logs)
+        t = self.server.table(0)
+        self.assertIs(t.host, t.seats[b.seat])
+        bw.write(b"S\x02")                                 # and can start
+        await b_until(lambda: b.turn is not None)
+        self.assertFalse(t.lobby)
+        aw.close()
+        bw.close()
+
+    async def test_late_arrival_hears_the_countdown(self):
+        self.server.host_wait = 5.0
+        a, a_until, aw = await self.lobby_client("FIRST")
+        await a_until(lambda: a.prompt is not None)
+        b, b_until, bw = await self.lobby_client("SECOND")
+        await b_until(lambda: any("FIRST HAS" in line for line in b.logs))
+        c, c_until, cw = await self.lobby_client("THIRD")
+        await c_until(lambda: any(line.startswith("[*] FIRST HAS ") for line in c.logs))
+        self.assertEqual(sum("FIRST HAS" in line for line in b.logs), 1)   # no repeat for those already told
+        for w in (aw, bw, cw):
+            w.close()
+
+    async def test_autopilot_lasts_and_absentees_lose_the_host_role(self):
+        from acquire import table as tmod
+        old, tmod.AFK_MIN = tmod.AFK_MIN, 0.02
+        self.addCleanup(setattr, tmod, "AFK_MIN", old)
+        sv = self.server
+        sv.timeout, sv.bot_delay, sv.afk, sv.abandon, sv.host_wait = 0.05, 0.01, 1, 0.5, 30.0
+        a, a_until, aw = await self.lobby_client("AWAY1")
+        await a_until(lambda: a.prompt is not None)
+        b, b_until, bw = await self.lobby_client("AWAY2")
+        await b_until(lambda: b.seat is not None)
+        aw.write(b"S\x03")                                 # then neither answers again
+        await a_until(lambda: any("NOBODY PLAYING" in line for line in a.logs))
+        t = sv.table(0)
+        ids = {s.name: s for s in t.seats if s.online}
+        self.assertTrue(t._autopilot(ids["AWAY1"]) and t._autopilot(ids["AWAY2"]))   # still, in the lobby
+        c, c_until, cw = await self.lobby_client("ALERT")
+        with self.assertLogs("synack", "INFO") as cm:
+            await c_until(lambda: c.prompt is not None and c.prompt[0] == "S")   # host at once, no 30 s wait
+        self.assertTrue(any("host passes to ALERT" in m for m in cm.output))
+        await a_until(lambda: "[*] ALERT HAS 30 S TO START" in a.logs)   # the old host is told, and resynced:
+        self.assertIsNone(a.prompt)                         # no stale countdown left on their screen
+        cw.write(b"S\x03")
+        await c_until(lambda: c.turn is not None)
+        shown = {name: kind for kind, name in c.seats if name}
+        self.assertEqual(shown, {"AWAY1": proto.AWAY, "AWAY2": proto.AWAY, "ALERT": proto.HUMAN})
+        for w in (aw, bw, cw):
+            w.close()
+
+    async def test_host_clock_stops_when_alone_again(self):
+        self.server.host_wait = 5.0
+        a, a_until, aw = await self.lobby_client("STAYS")
+        await a_until(lambda: a.prompt is not None)
+        b, b_until, bw = await self.lobby_client("LEAVES")
+        a.prompt = None
+        await a_until(lambda: a.prompt is not None and a.prompt[1] > 0)
+        a.prompt = None
+        bw.close()                                          # nobody waiting any more
+        await a_until(lambda: a.prompt is not None)
+        self.assertEqual(a.prompt[:2], ("S", 0))
+        self.assertIsNone(self.server.table(0).host_timer)
+        aw.close()
 
     async def test_faults(self):
         r, w = await self.raw(ver=99)

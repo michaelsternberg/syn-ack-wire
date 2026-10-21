@@ -97,6 +97,7 @@ class Client:
         elif t == "n":
             self.seats[p[0]] = (p[1], p[2:10].decode().rstrip())
         elif t == "s":
+            self.prompt = None              # as the Atari client: a snapshot drops any open prompt
             for i in range(54):
                 self.board[2 * i] = p[i] & 0x0F
                 self.board[2 * i + 1] = p[i] >> 4

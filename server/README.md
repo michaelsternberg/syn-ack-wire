@@ -22,6 +22,7 @@ python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to
 python3 serve.py --abandon 300                # drop a game after 5 min with no player connected (default 600; 0 = never)
 python3 serve.py --afk 3                      # autopilot after 3 timeouts in a row (default 2; 0 = never)
 python3 serve.py --link-timeout 30            # drop a client that vanished without closing after 30 s (default 60)
+python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
 
@@ -45,6 +46,11 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 ## Seats and tables
 - The first frame must be `H`. Its table byte picks the table (created on demand). The first human is host and gets
   prompt `S`; `S n` starts with `n` seats, and bots fill the empty ones.
+- A host alone in the lobby can take as long as they like. Once another human is waiting, the host's prompt shows
+  a countdown of `--host-wait` seconds (default 60); if it runs out, the next human becomes host with a fresh
+  countdown, so an absent host can't hold the table. Players on autopilot are skipped (unless everyone waiting
+  is), and a host on autopilot hands over at once when an active player arrives. The others are told who may start and for how long
+  (`FRED HAS 60 S TO START`), again at each handoff and on arrival. The log says `host passes to NAME`.
 - Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time. Without a token
   (the Atari was switched off, say), joining under the handle of a seat that is away reclaims it, and `w` hands
   the client that seat's token. A connected player's seat, or one handed to the bot with `Q`, can't be taken
@@ -52,6 +58,8 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 - A prompt that times out is answered by that seat's bot; the seat stays human. After `--afk` timeouts in a row
   (default 2, a whole turn) the player is on autopilot: shown as away (`?`) to everyone, still prompted, but on the
   bot's clock (its thinking time, at least 10 s, never more than `--timeout`). Answering one in time ends it.
+  Autopilot lasts through a dropped game and into the next until the player presses a key (starting a game
+  counts).
 - A dropped connection marks the seat away and its bot plays until the token comes back. `Q` hands the seat to
   the bot for good. A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
   `--link-timeout` seconds (default 60): the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end

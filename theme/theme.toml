@@ -97,6 +97,7 @@ quarantine = "[!] GRID STALLED: {region} SEALED"
 final      = "[$] {player} FINAL {amount}"
 winner     = "[!] TOP NETRUNNER: {player}"
 abandoned  = "[!] GAME DROPPED: NOBODY PLAYING"
+hostclock  = "[*] {player} HAS {n} S TO START"
 
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.

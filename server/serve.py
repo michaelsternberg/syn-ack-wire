@@ -3,7 +3,7 @@
 
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
-                    [--link-timeout 60] [--trace]
+                    [--link-timeout 60] [--host-wait 60] [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
@@ -20,7 +20,7 @@ log = logging.getLogger("synack")
 
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
-                 afk=2, link_timeout=60.0):
+                 afk=2, link_timeout=60.0, host_wait=60.0):
         self.theme = theme.load()
         self.timeout = timeout
         self.bot_delay = bot_delay
@@ -29,13 +29,14 @@ class Server:
         self.afk = afk
         self.keepalive = keepalive
         self.link_timeout = link_timeout
+        self.host_wait = host_wait
         self.seed = seed
         self.tables = {}
 
     def table(self, tid):
         if tid not in self.tables:
             self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think,
-                                     self.abandon, self.afk)
+                                     self.abandon, self.afk, self.host_wait)
         return self.tables[tid]
 
     async def handle(self, reader, writer):
@@ -143,13 +144,17 @@ async def main():
                     help="seconds before a client that vanished without closing (switched off, Wi-Fi gone) is "
                          "dropped; keep it above --keepalive, e.g. 30; 0 = the system default, about 15 minutes "
                          "on Linux (default: %(default)g)")
+    ap.add_argument("--host-wait", type=float, default=60.0, metavar="SECONDS",
+                    help="seconds a host may keep other players waiting in the lobby before the role passes on, "
+                         "e.g. 120; 0 = wait for ever (default: %(default)g)")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
     srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
-                       abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout).serve(a.host, a.port)
+                       abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
+                       host_wait=a.host_wait).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 
