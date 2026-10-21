@@ -1,6 +1,7 @@
 """End-to-end: real TCP server, protocol clients, bots.  Run from server/:  python3 -m unittest -v"""
 import asyncio
 import random
+import socket
 import unittest
 
 import testclient
@@ -185,6 +186,14 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         c = await asyncio.wait_for(self.client("NEXT", start=2), 30)   # and the table takes a new game
         self.assertIsNotNone(c.winners)
+
+    @unittest.skipUnless(hasattr(socket, "TCP_USER_TIMEOUT"), "Linux only")
+    async def test_link_timeout_set(self):
+        r, w = await self.raw(name="WIRED")
+        await asyncio.wait_for(r.read(10), 5)               # joined
+        sock = self.server.table(0).seats[0].conn.writer.get_extra_info("socket")
+        self.assertEqual(sock.getsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT), 60000)
+        w.close()
 
     async def test_faults(self):
         r, w = await self.raw(ver=99)

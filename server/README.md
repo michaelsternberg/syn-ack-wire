@@ -21,6 +21,7 @@ python3 serve.py --trace                      # the log shows the game as player
 python3 serve.py --think-exploit 20,10 --think-buy 12,5   # bots take 10-30 s to run an exploit, 7-17 s to buy
 python3 serve.py --abandon 300                # drop a game after 5 min with no player connected (default 600; 0 = never)
 python3 serve.py --afk 3                      # autopilot after 3 timeouts in a row (default 2; 0 = never)
+python3 serve.py --link-timeout 30            # drop a client that vanished without closing after 30 s (default 60)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
 
@@ -52,7 +53,9 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   (default 2, a whole turn) the player is on autopilot: shown as away (`?`) to everyone, still prompted, but on the
   bot's clock (its thinking time, at least 10 s, never more than `--timeout`). Answering one in time ends it.
 - A dropped connection marks the seat away and its bot plays until the token comes back. `Q` hands the seat to
-  the bot for good.
+  the bot for good. A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
+  `--link-timeout` seconds (default 60): the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end
+  the connection. Without that option (it is Linux only) the system's own limit applies, about 15 minutes.
 - With no human connected at all, the game pauses instead of the bots playing it out for nobody, and play resumes
   when someone reconnects (by token or handle). After `--abandon` seconds (default 600) the game is dropped and the
   table is an empty lobby again, so it doesn't stay full; an old token then gets fault 3 and its client joins as new.

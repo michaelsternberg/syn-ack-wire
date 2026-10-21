@@ -3,13 +3,14 @@
 
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
-                    [--trace]
+                    [--link-timeout 60] [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
 import argparse
 import asyncio
 import logging
+import socket
 
 from acquire import proto, theme
 from acquire.table import Conn, Table
@@ -19,7 +20,7 @@ log = logging.getLogger("synack")
 
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
-                 afk=2):
+                 afk=2, link_timeout=60.0):
         self.theme = theme.load()
         self.timeout = timeout
         self.bot_delay = bot_delay
@@ -27,6 +28,7 @@ class Server:
         self.abandon = abandon
         self.afk = afk
         self.keepalive = keepalive
+        self.link_timeout = link_timeout
         self.seed = seed
         self.tables = {}
 
@@ -39,6 +41,7 @@ class Server:
     async def handle(self, reader, writer):
         peer = writer.get_extra_info("peername")
         conn = Conn(writer)
+        self.watch_link(writer)
         seat = table = beat = None
         try:
             t = await reader.readexactly(1)
@@ -66,7 +69,7 @@ class Server:
                 log.debug("%s (%s) sent %s %s", peer, seat.name, t.decode(), payload.hex(" "))
                 table.receive(seat, t, payload)
                 await writer.drain()
-        except (asyncio.IncompleteReadError, ConnectionError):
+        except (asyncio.IncompleteReadError, OSError):     # OSError: reset, or the link timed out
             pass
         finally:
             if beat:
@@ -75,6 +78,15 @@ class Server:
                 log.info("%s (%s) disconnected", peer, seat.name)
                 table.disconnect(seat, conn)
             conn.close()
+
+    def watch_link(self, writer):
+        """Notice a client that vanished without closing (power off, Wi-Fi gone) in about link_timeout seconds.
+        TCP keepalive can't do it: the kernel only probes idle connections, and the heartbeat keeps ours busy.
+        Instead TCP_USER_TIMEOUT drops a connection whose sent data goes unacknowledged that long; Linux's
+        default retransmission limit is about 15 minutes. Elsewhere, without the option, that default stays."""
+        sock = writer.get_extra_info("socket")
+        if self.link_timeout and sock is not None and hasattr(socket, "TCP_USER_TIMEOUT"):
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_USER_TIMEOUT, int(self.link_timeout * 1000))
 
     async def heartbeat(self, conn):
         """A `u` frame every few seconds, so a client can tell a quiet table from a dead link."""
@@ -127,13 +139,17 @@ async def main():
     ap.add_argument("--afk", type=int, default=2, metavar="N",
                     help="timeouts in a row before a player is on autopilot (the bot's clock, shown away), "
                          "e.g. 3; 0 = never (default: %(default)s)")
+    ap.add_argument("--link-timeout", type=float, default=60.0, metavar="SECONDS",
+                    help="seconds before a client that vanished without closing (switched off, Wi-Fi gone) is "
+                         "dropped; keep it above --keepalive, e.g. 30; 0 = the system default, about 15 minutes "
+                         "on Linux (default: %(default)g)")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
     srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
-                       abandon=a.abandon, afk=a.afk).serve(a.host, a.port)
+                       abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 

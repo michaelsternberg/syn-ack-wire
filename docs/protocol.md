@@ -178,8 +178,8 @@ also carries `e` with the last game's winners.
 The server sends `u` every 10 seconds. A link can die without either end being told: the server's machine loses
 power, or a router drops the session, and FujiNet still reports the connection as open. So the client counts silence
 instead: after 20 seconds with no frame of any kind it shows NO SIGNAL, and at 30 it hangs up and reconnects with its
-token. The server finds dead connections when a write fails (the keepalives make sure it keeps trying), and the prompt
-timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1.
+token. The server finds dead connections when its keepalives go unacknowledged for its `--link-timeout` (60 s by
+default; it sets `TCP_USER_TIMEOUT`), and the prompt timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1.
 
 ### Kit management (server-side, no protocol impact)
 - A **patched out** exploit (it could only join two black-ICE hives) is shown with bit 7 set in `h`.
