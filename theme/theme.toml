@@ -99,6 +99,8 @@ final      = "[$] {player} FINAL {amount}"
 winner     = "[!] TOP NETRUNNER: {player}"
 abandoned  = "[!] GAME DROPPED: NOBODY PLAYING"
 hostclock  = "[*] {player} HAS {n} S TO START"
+autopilot  = "[?] {player} ON AUTOPILOT"
+returned   = "[*] {player} JACKS BACK IN"
 
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.

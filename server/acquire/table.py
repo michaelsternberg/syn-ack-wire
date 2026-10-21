@@ -339,12 +339,16 @@ class Table:
         return bool(self.afk) and self.misses.get(seat, 0) >= self.afk
 
     def _missed(self, seat, missed):
-        """Count prompts in a row the seat's bot answered; announce the seat when autopilot starts or ends."""
+        """Count prompts in a row the seat's bot answered; announce the seat, and tell everyone,
+        when autopilot starts or ends."""
         was = self._autopilot(seat)
         self.misses[seat] = self.misses.get(seat, 0) + 1 if missed else 0
         if self._autopilot(seat) != was:
             log.info("table %d: %s %s", self.tid, seat.name, "on autopilot" if not was else "is back")
             self._announce(seat)
+            line = proto.log_line(self.theme.say("returned" if was else "autopilot", player=seat.name))
+            for s in self.seats:
+                self._send(s, line)
 
     def _shown_kind(self, seat):
         """What the players see: a seat on autopilot shows as away."""

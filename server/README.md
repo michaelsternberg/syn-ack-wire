@@ -58,6 +58,7 @@ leaves the state untouched. Money is in units of 100, like the protocol.
 - A prompt that times out is answered by that seat's bot; the seat stays human. After `--afk` timeouts in a row
   (default 2, a whole turn) the player is on autopilot: shown as away (`?`) to everyone, still prompted, but on the
   bot's clock (its thinking time, at least 10 s, never more than `--timeout`). Answering one in time ends it.
+  Everyone gets a log line when autopilot starts and when it ends (theme `autopilot`, `returned`).
   Autopilot lasts through a dropped game and into the next until the player presses a key (starting a game
   counts).
 - A dropped connection marks the seat away and its bot plays until the token comes back. `Q` hands the seat to

@@ -104,9 +104,11 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await next_prompt(), 1)            # twice
         self.assertEqual(await next_prompt(), 0)            # now the bot's clock
         self.assertEqual(c.seats[c.seat][0], proto.AWAY)
+        self.assertIn("[?] NAPPER ON AUTOPILOT", c.logs)
         writer.write(c.auto_answer())                       # back at the keyboard
         self.assertEqual(await next_prompt(), 1)
         self.assertEqual(c.seats[c.seat][0], proto.HUMAN)
+        self.assertIn("[*] NAPPER JACKS BACK IN", c.logs)
         writer.close()
 
     async def test_drop_and_reconnect(self):
