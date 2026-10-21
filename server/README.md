@@ -23,6 +23,7 @@ python3 serve.py --abandon 300                # drop a game after 5 min with no 
 python3 serve.py --afk 3                      # autopilot after 3 timeouts in a row (default 2; 0 = never)
 python3 serve.py --link-timeout 30            # drop a client that vanished without closing after 30 s (default 60)
 python3 serve.py --region NEO-LAGOS-3         # the fictional grid region in the title bar and log (default NEO-KANSAI-1)
+python3 serve.py --no-jack-in                 # newcomers to a game in progress get TABLE FULL, not a bot seat
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
@@ -66,6 +67,10 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   the bot for good. A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
   `--link-timeout` seconds (default 60): the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end
   the connection. Without that option (it is Linux only) the system's own limit applies, about 15 minutes.
+- Someone new joining a game in progress jacks in for a bot seat: the one worth least, cash and crypto at current
+  prices. It becomes theirs, holdings and kit included, under their handle. The newcomer is told first (theme
+  `takeover`), then everyone gets a log line (`jackin`). Away seats are kept for their owners; with no bot seat
+  the newcomer gets TABLE FULL, and so does everyone with `--no-jack-in`.
 - With no human connected at all, the game pauses instead of the bots playing it out for nobody, and play resumes
   when someone reconnects (by token or handle). After `--abandon` seconds (default 600) the game is dropped and the
   table is an empty lobby again, so it doesn't stay full; an old token then gets fault 3 and its client joins as new.

@@ -9,6 +9,8 @@ A connected player who lets `afk` prompts in a row time out is on autopilot: sho
 on the bot's clock. Answering one in time brings back the full clock.
 In the lobby, a host who keeps other humans waiting `host_wait` seconds without starting loses the role to the
 next one, so an absent host can't hold a table.
+Someone new joining a game in progress jacks in for a bot seat (with `jack_in`), the weakest one: it becomes theirs,
+holdings and all. Away seats are kept for their owners, so with no bot seat the table is full.
 """
 import asyncio
 import logging
@@ -59,7 +61,7 @@ class Seat:
 
 class Table:
     def __init__(self, tid, theme, timeout=60.0, bot_delay=1.0, seed=None, think=None, abandon=600.0, afk=2,
-                 host_wait=60.0):
+                 host_wait=60.0, jack_in=True):
         self.tid = tid
         self.theme = theme
         self.timeout = timeout
@@ -73,6 +75,7 @@ class Table:
         self.host_wait = host_wait  # seconds a host may keep others waiting in the lobby; 0 = for ever
         self.host_timer = None      # task that passes the host role on
         self.host_deadline = None   # loop time it does so
+        self.jack_in = jack_in      # someone new may take over a bot seat in a game in progress
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -109,7 +112,10 @@ class Table:
             self._lobby_news(seat)
             return seat
         if not self.lobby:
-            return proto.F_FULL
+            seat = self._bot_seat(name)
+            if seat is None:
+                return proto.F_FULL
+            return self._jack_in(seat, conn, name)
         # after a game, bot and away seats stay on show until someone needs the chair
         seat = (next((s for s in self.seats if s.kind == EMPTY), None)
                 or next((s for s in self.seats if s.kind in (BOT, AWAY)), None))
@@ -126,6 +132,28 @@ class Table:
         self._announce(seat)
         self.resync(seat)
         self._lobby_news(seat)
+        return seat
+
+    def _bot_seat(self, name):
+        """The bot seat a newcomer to a game in progress takes over: the one worth least, or None.
+        None too if a player at the table already has that handle (a second login, say)."""
+        bots = [i for i, s in enumerate(self.seats) if s.kind == BOT]
+        if not self.jack_in or not bots or any(s.kind == HUMAN and s.name == name for s in self.seats):
+            return None
+        return self.seats[min(bots, key=self.game.net_worth)]
+
+    def _jack_in(self, seat, conn, name):
+        """Hand a bot seat to a new player. A decision its bot is already thinking over stays the bot's."""
+        line = proto.log_line(self.theme.say("jackin", player=name, bot=seat.name))
+        log.info("table %d: %s jacks in for %s", self.tid, name, seat.name)
+        seat.kind, seat.name, seat.token, seat.conn = HUMAN, name, self._new_token(), conn
+        self.game.names[self.seats.index(seat)] = name     # the game log names them from now on
+        self.present.set()
+        self._announce(seat)
+        self.resync(seat)
+        self._send(seat, proto.log_line(self.theme.say("takeover")))   # after the resync, so the fresh screen keeps it
+        for s in self.seats:
+            self._send(s, line)
         return seat
 
     def disconnect(self, seat, conn):

@@ -69,7 +69,7 @@ arrives. The SIO transaction count matters far more than the byte count.
 
 | Type | Payload | Bytes | Meaning |
 |---|---|---|---|
-| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 2. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. Handle is space-padded. |
+| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 2. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2. Handle is space-padded. |
 | `S` | seats | 2 | Start the game (lobby only). `seats` = total seats 2–6; empty seats get bots. |
 | `P` | node | 2 | Answer to prompt `P`: run the exploit for this node. |
 | `F` | syn | 2 | Answer to prompt `F`: broker the new hive to this syndicate. |

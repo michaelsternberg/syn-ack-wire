@@ -74,7 +74,7 @@ names = ["NULLPTR", "WIREWOLF", "R00TKIT", "SEGFAULT", "H0NEYP0T", "GL1TCH", "K1
 # Placeholders: {player} handle, {node} e.g. C4, {syn} syndicate short name, {coin} its coin ticker
 # (coin lines name the syndicate, not the ticker, so players can tell who is who),
 # {absorber}/{absorbed} short names, {size}, {amount} formatted money, {n} count,
-# {region}, {shout}.
+# {region}, {shout}, {bot} a bot seat's handle.
 [log]
 spike      = "[+] {player} SPIKES {node}"
 found      = "[*] INFILTRATION! {syn} HIVE UP"
@@ -101,6 +101,8 @@ abandoned  = "[!] GAME DROPPED: NOBODY PLAYING"
 hostclock  = "[*] {player} HAS {n} S TO START"
 autopilot  = "[?] {player} ON AUTOPILOT"
 returned   = "[*] {player} JACKS BACK IN"
+jackin     = "[+] {player} JACKS IN FOR {bot}"
+takeover   = "[*] GAME IN PROGRESS: TAKING OVER BOT"   # to the one jacking in, just before `jackin`
 
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.

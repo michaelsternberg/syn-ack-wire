@@ -3,7 +3,7 @@
 
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
-                    [--link-timeout 60] [--host-wait 60] [--region NEO-KANSAI-1] [--trace]
+                    [--link-timeout 60] [--host-wait 60] [--region NEO-KANSAI-1] [--no-jack-in] [--trace]
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
 """
@@ -22,7 +22,7 @@ REGION_MAX = 12     # the Atari title bar's room for it
 
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
-                 afk=2, link_timeout=60.0, host_wait=60.0, region=None):
+                 afk=2, link_timeout=60.0, host_wait=60.0, region=None, jack_in=True):
         self.theme = theme.load()
         if region:
             self.theme.game["region"] = region
@@ -34,13 +34,14 @@ class Server:
         self.keepalive = keepalive
         self.link_timeout = link_timeout
         self.host_wait = host_wait
+        self.jack_in = jack_in
         self.seed = seed
         self.tables = {}
 
     def table(self, tid):
         if tid not in self.tables:
             self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think,
-                                     self.abandon, self.afk, self.host_wait)
+                                     self.abandon, self.afk, self.host_wait, self.jack_in)
         return self.tables[tid]
 
     async def handle(self, reader, writer):
@@ -163,6 +164,9 @@ async def main():
                     help="the fictional grid region the game is set in, shown in the title bar and the game log, "
                          "so players can name the server they'll meet on, e.g. NEO-LAGOS-3; at most 12 characters "
                          "(default: %s from theme.toml)" % theme.load().game["region"])
+    ap.add_argument("--no-jack-in", dest="jack_in", action="store_false",
+                    help="turn a newcomer away from a game in progress (TABLE FULL) instead of letting them take "
+                         "over a bot seat, holdings and all, e.g. for a game among friends")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     a = ap.parse_args()
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
@@ -170,7 +174,7 @@ async def main():
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
     srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
                        abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
-                       host_wait=a.host_wait, region=a.region).serve(a.host, a.port)
+                       host_wait=a.host_wait, region=a.region, jack_in=a.jack_in).serve(a.host, a.port)
     async with srv:
         await srv.serve_forever()
 

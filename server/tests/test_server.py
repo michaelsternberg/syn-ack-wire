@@ -348,12 +348,48 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_table_full_once_started(self):
         self.server.bot_delay = 0.01
+        self.server.jack_in = False
         host = asyncio.create_task(self.client("HOST", start=2, table=7))
         await asyncio.sleep(0.05)
         r, w = await self.raw(table=7, name="LATE")
         self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
         w.close()
         await asyncio.wait_for(host, 30)
+
+    async def test_newcomer_jacks_in_for_a_bot(self):
+        self.server.bot_delay = 0.01
+        host = asyncio.create_task(self.client("HOST", start=3))
+        await asyncio.sleep(0.2)                            # the game is on, two bots playing
+        t = self.server.table(0)
+        g = t.game
+        self.assertIs(t._bot_seat("LATE"), t.seats[min((1, 2), key=g.net_worth)])  # the weakest
+        self.assertIsNone(t._bot_seat("HOST"))              # a handle already playing doesn't get one
+        bots = {i: t.seats[i].name for i in (1, 2)}         # which is weakest by the time LATE gets in may change
+        late = await asyncio.wait_for(self.client("LATE"), 30)
+        await asyncio.wait_for(host, 30)
+        self.assertIn(late.seat, bots)
+        self.assertEqual(late.seats[late.seat], (proto.HUMAN, "LATE"))
+        i = late.logs.index(f"[+] LATE JACKS IN FOR {bots[late.seat]}")
+        self.assertEqual(late.logs[i - 1], "[*] GAME IN PROGRESS: TAKING OVER BOT")
+        self.assertIsNotNone(late.winners)                  # played it out from the bot's seat
+        self.assertEqual(g.names[late.seat], "LATE")
+        self.assertEqual(t.seats[late.seat].kind, proto.HUMAN)
+
+    async def test_jack_in_leaves_away_seats_alone(self):
+        ra, wa = await self.raw(name="ANN")
+        rb, wb = await self.raw(name="BEN")
+        a = testclient.Client()
+        while a.prompt is None:
+            a.feed(await ra.read(4096))
+        wa.write(b"S\x02")                                  # two humans, no bots
+        while a.turn is None:
+            a.feed(await ra.read(4096))
+        wb.close()                                          # BEN's seat is away, kept for BEN
+        await asyncio.sleep(0.05)
+        r, w = await self.raw(name="CAT")
+        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        w.close()
+        wa.close()
 
 
 if __name__ == "__main__":
