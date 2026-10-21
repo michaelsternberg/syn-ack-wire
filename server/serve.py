@@ -48,21 +48,36 @@ class Server:
         peer = writer.get_extra_info("peername")
         conn = Conn(writer)
         self.watch_link(writer)
-        seat = table = beat = None
+        seat = table = watched = beat = None
         try:
-            t = await reader.readexactly(1)
-            if t != b"H":
-                return
-            ver, tid, token, name = proto.parse_hello(await reader.readexactly(proto.CLIENT_LEN[b"H"]))
-            if ver != proto.VERSION:
-                conn.send(proto.fault(proto.F_VERSION))
-                return
-            table = self.table(tid)
-            seat = table.join(conn, token, name)
-            if isinstance(seat, int):
-                conn.send(proto.fault(seat))
-                seat = None
-                return
+            while seat is None:
+                # before joining: `I` watches a table's status (a client at its title screen), `H` joins
+                t = await reader.readexactly(1)
+                if t == b"I":
+                    ver, tid = proto.parse_info(await reader.readexactly(proto.CLIENT_LEN[b"I"]))
+                    if ver == proto.VERSION:            # otherwise its `H` gets fault 1
+                        if watched:
+                            watched.unwatch(conn)
+                        watched = self.table(tid)
+                        watched.watch(conn)
+                    continue
+                if t != b"H":
+                    return
+                ver, tid, token, name = proto.parse_hello(await reader.readexactly(proto.CLIENT_LEN[b"H"]))
+                if ver != proto.VERSION:
+                    conn.send(proto.fault(proto.F_VERSION))
+                    return
+                if watched:
+                    watched.unwatch(conn)
+                table = self.table(tid)
+                seat = table.join(conn, token, name)
+                if isinstance(seat, int):
+                    conn.send(proto.fault(seat))
+                    code, seat = seat, None
+                    if code not in (proto.F_FULL, proto.F_HANDLE):
+                        return
+                    watched = table                     # back to its title screen: still connected, watching
+                    table.watch(conn)
             log.info("%s joined table %d as %s", peer, tid, seat.name)
             beat = asyncio.create_task(self.heartbeat(conn))
             while True:
@@ -78,6 +93,8 @@ class Server:
         except (asyncio.IncompleteReadError, OSError):     # OSError: reset, or the link timed out
             pass
         finally:
+            if watched:
+                watched.unwatch(conn)
             if beat:
                 beat.cancel()
             if seat is not None:

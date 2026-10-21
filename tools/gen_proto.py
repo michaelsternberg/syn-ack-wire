@@ -36,11 +36,14 @@ def gen_h():
     L += ["}", "", "/* client -> server payload lengths */"]
     for t, n in proto.CLIENT_LEN.items():
         L.append(f"#define CLEN_{t.decode()} {n}")
-    L += ["", "/* seat kinds (n), fault codes (f) */",
+    L += ["", "/* seat kinds (n), fault codes (f), table status (i) */",
           f"#define SEAT_EMPTY {proto.EMPTY}", f"#define SEAT_HUMAN {proto.HUMAN}",
           f"#define SEAT_AWAY {proto.AWAY}", f"#define SEAT_BOT {proto.BOT}",
           f"#define F_VERSION {proto.F_VERSION}", f"#define F_FULL {proto.F_FULL}",
           f"#define F_TOKEN {proto.F_TOKEN}", f"#define F_ILLEGAL {proto.F_ILLEGAL}",
+          f"#define F_HANDLE {proto.F_HANDLE}",
+          f"#define ST_LOBBY {proto.ST_LOBBY}", f"#define ST_JACKIN {proto.ST_JACKIN}",
+          f"#define ST_FULL {proto.ST_FULL}",
           "", "#endif", ""]
     return "\n".join(L)
 

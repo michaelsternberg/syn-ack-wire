@@ -8,7 +8,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/platform.h` | The contract each platform implements: network calls, the receive ring, keys, a tick counter |
 | `src/display.h` | Everything the game shows. One text version per platform; hand-made screens can replace it |
 | `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `TABLE` |
-| `src/common/main.c` | Title, connect, the main loop, reconnect with the seat token |
+| `src/common/main.c` | Title (with the table's status), connect, the main loop, reconnect with the seat token |
 | `src/common/game.c` | Game state from server frames; keys → prompt answers, checked locally first |
 | `src/common/proto.c` | Frame assembler: bytes in `rx_ring` → one whole frame in `msg[]` |
 | `src/common/proto_tab.h` | Frame lengths, **generated** from `server/acquire/proto.py` by `tools/gen_proto.py` |
@@ -51,7 +51,9 @@ loads the program itself, so FujiNet only provides the network. Your own `fnconf
 `run-fujinet`, it restarts FujiNet-PC when it exits with code 75, which happens when the emulator resets it on connect.
 PROCEED needs atari800 7.2.1 or newer (installed in `/usr/local/bin`); `ATARI800=/path/to/atari800` picks another build.
 
-A table that already has a game running refuses newcomers ("TABLE FULL"). Restart the server or wait for the game to end.
+The title screen dials at once and shows, under the server, what joining would do: a lobby seat, taking over a bot
+in a game in progress, or a full table. If joining is refused anyway (someone took the last seat first, or the handle
+is already playing there), it returns to the title screen and says so, still connected; Return tries again.
 
 **Two Ataris at one table:** give each emulator its own instance number, so each gets its own FujiNet-PC ports.
 ```sh
@@ -188,10 +190,10 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10305 | whole file; loads at $2000, the 1K font sits at $4C00 |
-| `display_text.c` | 3051 | + 636 rodata (mostly screen words), 70 bss, 1K font |
-| `game.c` | 2760 | + 382 rodata, 281 bss (the game state) |
-| `main.c` | 746 | + 167 rodata |
+| `synack.xex` | 10645 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `display_text.c` | 3133 | + 713 rodata (mostly screen words), 70 bss, 1K font |
+| `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
+| `main.c` | 891 | + 138 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 318 | + 10 rodata, 26 bss, 2 data. 222 before PROCEED/SOUNDR |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |

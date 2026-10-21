@@ -1,4 +1,7 @@
 /* The client's main loop: title, connect, then frames in, keys out, forever.
+ * The title screen dials at once and asks for the table's status (`I`), which
+ * the server keeps up to date there; Return joins on the same connection. A
+ * full table sends the player back to the title screen, still connected.
  * A dropped link reconnects with the seat token; the server resends everything.
  * The server sends a keepalive every 10 s, so silence means a dead link even
  * when the FujiNet still thinks it's connected: NO SIGNAL, then redial. */
@@ -29,15 +32,45 @@ static void wait_ticks(unsigned char n)
         ;
 }
 
-/* Title: type a handle, Return to jack in. */
+/* Title: type a handle, Return to jack in. While the player types, the status
+ * line shows what joining would do (or NO CARRIER: Return dials again). */
 static void title(void)
 {
-    edit_len = 0;
+    if (!link_up) {
+        status_len = 0;
+        status_code = 0;
+        display_title_screen();         /* while it dials */
+        if (net_open(URL)) {
+            net_close();
+            status_code = NO_CARRIER;
+        } else {
+            link_up = 1;
+            tx[0] = 'I';
+            tx[1] = PROTO_VERSION;
+            tx[2] = TABLE;
+            net_send(1 + CLEN_I);
+        }
+    }
     display_title_screen();
     for (;;) {
+        if (link_up) {
+            if (net_poll()) {
+                link_up = status_len = 0;
+                status_code = NO_CARRIER;
+                net_close();
+                display_title_screen();
+            }
+            while ((c = proto_next()) != 0)
+                if (c == 'i') {
+                    game_frame();
+                    display_title_screen();
+                }
+        }
         c = in_key();
-        if (c == K_RETURN && edit_len)
+        if (c == K_RETURN && edit_len) {
+            refused = status_code != ST_FULL;   /* REFUSED_LATE, should it turn out full */
             return;
+        }
         if (c == K_HELP)
             help_show(in_key);
         else if (c == K_OPTION)
@@ -70,13 +103,16 @@ static void link(unsigned char up)
     display_link();
 }
 
+/* Join: on the title screen's connection if it has one, else dial until it answers. */
 static void connect(void)
 {
-    display_message("DIALING " URL);
-    while ((e = net_open(URL)) != 0) {
-        display_message("NO CARRIER. REDIALING...");
-        net_close();
-        wait_ticks(2 * TICKS_PER_SEC);
+    if (!link_up) {
+        display_message("DIALING " URL);
+        while ((e = net_open(URL)) != 0) {
+            display_message("NO CARRIER. REDIALING...");
+            net_close();
+            wait_ticks(2 * TICKS_PER_SEC);
+        }
     }
     hello();
     quiet = 0;
@@ -85,17 +121,16 @@ static void connect(void)
 
 static void redial(const char *why)
 {
-    link(0);
+    link(0);                            /* also tells connect() to dial */
     display_message(why);
     net_close();
     wait_ticks(2 * TICKS_PER_SEC);
     connect();
 }
 
-void main(void)
+/* The game, from joining on. Returns if the table turned out to be full. */
+static void play(void)
 {
-    snd_init();
-    title();
     for (c = 0; c < 8; ++c)
         handle[c] = c < edit_len ? edit[c] : ' ';
     connect();
@@ -118,17 +153,20 @@ void main(void)
                 if (msg[1] == F_TOKEN) {        /* the server forgot us: join as new */
                     for (e = 0; e < 4; ++e)
                         token[e] = 0;
+                    link_up = 0;
                     net_close();
                     connect();
                     break;
                 }
-                if (msg[1] == F_FULL)
-                    display_message("TABLE FULL: GAME IN PROGRESS");
-                else if (msg[1] == F_VERSION)
+                if (msg[1] == F_HANDLE)
+                    refused = REFUSED_HANDLE;
+                if (msg[1] == F_FULL || msg[1] == F_HANDLE)
+                    return;                     /* the server keeps us on, watching again */
+                if (msg[1] == F_VERSION) {
                     display_message("SERVER SPEAKS ANOTHER VERSION");
-                if (msg[1] != F_ILLEGAL)
                     for (;;)
                         ;
+                }
                 continue;
             }
             game_frame();
@@ -162,5 +200,14 @@ void main(void)
             if (!secs)
                 game_clear_prompt();    /* time's up: the seat's bot answers */
         }
+    }
+}
+
+void main(void)
+{
+    snd_init();
+    for (;;) {
+        title();
+        play();
     }
 }

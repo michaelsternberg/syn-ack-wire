@@ -4,6 +4,7 @@
  * Written for cc65: unsigned char globals, one operation per statement. The
  * client checks answers so the player gets an immediate reason, but the server
  * decides; an answer it refuses comes back as a log line and the same prompt. */
+#include <string.h>
 #include "../config.h"
 #include "../platform.h"
 #include "../display.h"
@@ -25,6 +26,7 @@ unsigned char kit[RULE_KITSIZE] = { NONE, NONE, NONE, NONE, NONE, NONE };
 unsigned char region[12], region_len;
 unsigned char hints = HINTS;
 unsigned char link_up;
+unsigned char status[30], refused;
 
 unsigned char pr_kind, pr[18];
 unsigned char step, edit[9], edit_len;
@@ -112,6 +114,9 @@ void game_frame(void)
         region_len = n;
         for (i = 0; i < n; ++i)
             region[i] = msg[2 + i];
+        break;
+    case 'i':                           /* title screen status: code, text (<= 28) */
+        memcpy(status, msg + 1, sizeof status);
         break;
     case 'n':                           /* seat, kind, handle[8] */
         n = msg[1];

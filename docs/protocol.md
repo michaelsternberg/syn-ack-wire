@@ -1,4 +1,4 @@
-# SYN-ACK WIRE — Wire Protocol (v2, draft)
+# SYN-ACK WIRE — Wire Protocol (v3, draft)
 
 Binary protocol between the 8-bit client (via FujiNet `N:TCP://host:port/`) and the Python server.
 Goals, in order: **tiny client code**, **few bytes on the wire**, **few SIO transactions**.
@@ -69,7 +69,8 @@ arrives. The SIO transaction count matters far more than the byte count.
 
 | Type | Payload | Bytes | Meaning |
 |---|---|---|---|
-| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 2. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2. Handle is space-padded. |
+| `I` | ver, table | 3 | Before `H` only: watch the table's status from the title screen. The server answers `i` and sends a new one whenever it changes, until `H`. A wrong `ver` gets no answer (its `H` gets fault 1). |
+| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 3. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2, and with a handle already playing there fault 5. After fault 2 or 5 the connection stays open, watching as after `I`, and `H` can be sent again. Handle is space-padded. |
 | `S` | seats | 2 | Start the game (lobby only). `seats` = total seats 2–6; empty seats get bots. |
 | `P` | node | 2 | Answer to prompt `P`: run the exploit for this node. |
 | `F` | syn | 2 | Answer to prompt `F`: broker the new hive to this syndicate. |
@@ -101,8 +102,9 @@ it needs no mapping table.
 | `p` | len, kind, timeout, params… | 4+n | you | Prompt. See section 5. |
 | `l` | len, text… | 2+n | all | Log line, ≤ 38 chars. Server-written flavor text. |
 | `a` | len, text… | 2+n | all | Region name, e.g. `NEO-KANSAI-1`. |
+| `i` | len, code, text… | 3+n | you | Table status, before joining (see `I`): what `H` would do now. `code`: 0 lobby, a seat for you; 1 game in progress, you'd take over a bot; 2 full (a dropped player can still rejoin by token or handle). `text` ≤ 28 chars, from theme `[status]`. |
 | `e` | winners | 2 | all | Game over. `winners` = bitmask of seats tied for first. Final cash arrives as `m` messages before this. |
-| `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows). |
+| `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows), 5 that handle is already playing at this table. |
 | `u` | — | 1 | you | Keepalive, every 10 s (`serve.py --keepalive`). Means nothing beyond "the link is up". |
 
 ### Snapshot `s` (116-byte payload)
@@ -148,9 +150,18 @@ A careful client rarely sees this, but the server never trusts the client. Reaso
 
 ## 6. Session flow
 
+### Title screen
+```
+C: I 03 tbl
+S: i 00 "LOBBY OPEN: 1 WAITING"
+S: i 01 "IN PROGRESS: TAKE OVER A BOT"   (whenever it changes)
+```
+Two players can see the same last bot seat; the first `H` to arrive gets it, the other gets fault 2 and a fresh `i`.
+The Atari client remembers what the status showed when Return was pressed, so it can say it was too late.
+
 ### New player
 ```
-C: H 01 tbl 00000000 "NEONMAMB"
+C: H 03 tbl 00000000 "NEONMAMB"
 S: w seat token[4]
 S: a "NEO-KANSAI-1"
 S: n …  (one per seat)
@@ -181,7 +192,8 @@ The server sends `u` every 10 seconds. A link can die without either end being t
 power, or a router drops the session, and FujiNet still reports the connection as open. So the client counts silence
 instead: after 20 seconds with no frame of any kind it shows NO SIGNAL, and at 30 it hangs up and reconnects with its
 token. The server finds dead connections when its keepalives go unacknowledged for its `--link-timeout` (60 s by
-default; it sets `TCP_USER_TIMEOUT`), and the prompt timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1.
+default; it sets `TCP_USER_TIMEOUT`), and the prompt timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1. v3 added `I`, `i` and fault 5, and keeps the
+connection open after fault 2.
 
 ### Kit management (server-side, no protocol impact)
 - A **patched out** exploit (it could only join two black-ICE hives) is shown with bit 7 set in `h`.

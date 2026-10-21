@@ -28,6 +28,7 @@ class Theme:
     terms: dict
     log: dict
     errors: dict
+    status: dict
     bots: tuple
     syndicates: tuple
 
@@ -50,4 +51,4 @@ def load(path=THEME_PATH):
     syns = tuple(Syndicate(i, s["name"], s["short"], s["letter"], s["coin"], s["tier"])
                  for i, s in enumerate(t["syndicate"]))
     return Theme(t["game"], t["rules"], t["glyphs"], t["terms"], t["log"], t["errors"],
-                 tuple(t["bots"]["names"]), syns)
+                 t["status"], tuple(t["bots"]["names"]), syns)

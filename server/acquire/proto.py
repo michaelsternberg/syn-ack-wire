@@ -1,17 +1,17 @@
-"""Wire protocol v2 (docs/protocol.md): frame encoding and decoding.
+"""Wire protocol v3 (docs/protocol.md): frame encoding and decoding.
 
 Server -> client types are lowercase; client -> server types are UPPERCASE and fixed length.
 """
 from . import rules
 
-VERSION = 2
+VERSION = 3
 SEATS = 6                                   # snapshot and seat messages always cover 6 seats
 NONE_SYN = 7
 
 # client -> server payload lengths
-CLIENT_LEN = {b"H": 14, b"S": 1, b"P": 1, b"F": 1, b"K": 1, b"D": 2, b"B": 3, b"R": 0, b"Q": 0}
+CLIENT_LEN = {b"I": 2, b"H": 14, b"S": 1, b"P": 1, b"F": 1, b"K": 1, b"D": 2, b"B": 3, b"R": 0, b"Q": 0}
 # server -> client: variable-length types carry a length byte; the rest are fixed
-SERVER_VAR = frozenset(b"alpx")
+SERVER_VAR = frozenset(b"ailpx")
 SERVER_LEN = {ord("w"): 5, ord("n"): 10, ord("s"): 116, ord("h"): 6, ord("t"): 1, ord("r"): 2, ord("z"): 2,
               ord("m"): 3, ord("k"): 3, ord("e"): 1, ord("f"): 1, ord("u"): 0}
 
@@ -19,7 +19,10 @@ SERVER_LEN = {ord("w"): 5, ord("n"): 10, ord("s"): 116, ord("h"): 6, ord("t"): 1
 EMPTY, HUMAN, AWAY, BOT = 0, 1, 2, 3
 
 # fault codes (f message)
-F_VERSION, F_FULL, F_TOKEN, F_ILLEGAL = 1, 2, 3, 4
+F_VERSION, F_FULL, F_TOKEN, F_ILLEGAL, F_HANDLE = 1, 2, 3, 4, 5
+
+# table status (i message): what joining now would do
+ST_LOBBY, ST_JACKIN, ST_FULL = 0, 1, 2
 
 
 def text(s, limit=255):
@@ -147,7 +150,15 @@ def fault(code):
     return frame("f", bytes([code]))
 
 
+def status(code, s):
+    return frame("i", bytes([code]) + text(s, 28))
+
+
 # ------------------------------------------------------------------ client messages
+
+def parse_info(payload):
+    return payload[0], payload[1]           # ver, table
+
 
 def parse_hello(payload):
     ver, table = payload[0], payload[1]
@@ -184,6 +195,10 @@ def from_action(kind, action):
     else:
         raise ValueError(kind)
     return kind.encode() + payload
+
+
+def info(table):
+    return b"I" + bytes([VERSION, table])
 
 
 def hello(table, token, name):

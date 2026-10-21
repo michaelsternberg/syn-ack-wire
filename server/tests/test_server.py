@@ -170,8 +170,8 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.server.bot_delay = 0.01
         host = asyncio.create_task(self.client("HOST", start=2))
         await asyncio.sleep(0.2)                            # the game is on, HOST is connected
-        r, w = await self.raw(name="HOST")
-        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        r, w = await self.raw(name="HOST")                  # a second login can't take the bot seat
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_HANDLE))
         w.close()
         await asyncio.wait_for(host, 30)
 
@@ -352,7 +352,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         host = asyncio.create_task(self.client("HOST", start=2, table=7))
         await asyncio.sleep(0.05)
         r, w = await self.raw(table=7, name="LATE")
-        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_FULL))
         w.close()
         await asyncio.wait_for(host, 30)
 
@@ -362,8 +362,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         await asyncio.sleep(0.2)                            # the game is on, two bots playing
         t = self.server.table(0)
         g = t.game
-        self.assertIs(t._bot_seat("LATE"), t.seats[min((1, 2), key=g.net_worth)])  # the weakest
-        self.assertIsNone(t._bot_seat("HOST"))              # a handle already playing doesn't get one
+        self.assertIs(t._bot_seat(), t.seats[min((1, 2), key=g.net_worth)])  # the weakest
         bots = {i: t.seats[i].name for i in (1, 2)}         # which is weakest by the time LATE gets in may change
         late = await asyncio.wait_for(self.client("LATE"), 30)
         await asyncio.wait_for(host, 30)
@@ -387,9 +386,62 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         wb.close()                                          # BEN's seat is away, kept for BEN
         await asyncio.sleep(0.05)
         r, w = await self.raw(name="CAT")
-        self.assertEqual(await asyncio.wait_for(r.read(10), 5), proto.fault(proto.F_FULL))
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_FULL))
         w.close()
         wa.close()
+
+    async def watch(self, table=0):
+        """A client at its title screen: connected, watching the table's status."""
+        reader, writer = await asyncio.open_connection(HOST, self.port)
+        writer.write(proto.info(table))
+        c = testclient.Client()
+
+        async def news():
+            c.status = None
+            while c.status is None:
+                c.feed(await asyncio.wait_for(reader.read(4096), 5))
+            return c.status
+        return reader, writer, c, news
+
+    async def test_title_screen_status(self):
+        self.server.bot_delay = 0.01
+        r, w, c, news = await self.watch()
+        self.assertEqual(await news(), (proto.ST_LOBBY, "LOBBY OPEN: 0 WAITING"))
+        ra, wa = await self.raw(name="ANN")
+        self.assertEqual(await news(), (proto.ST_LOBBY, "LOBBY OPEN: 1 WAITING"))
+        a = testclient.Client()
+        while a.prompt is None:
+            a.feed(await ra.read(4096))
+        wa.write(b"S\x02")                                  # ANN and a bot
+        self.assertEqual(await news(), (proto.ST_JACKIN, "IN PROGRESS: TAKE OVER A BOT"))
+        w.write(proto.hello(0, bytes(4), "BOB"))            # joins on the same connection
+        while c.seat is None:
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        self.assertEqual(c.seat, 1)
+        self.assertEqual(c.seats[1], (proto.HUMAN, "BOB"))
+        w.close()
+        wa.close()
+
+    async def test_too_late_for_the_last_bot_seat(self):
+        self.server.bot_delay = 0.01
+        host = asyncio.create_task(self.client("HOST", start=2))
+        await asyncio.sleep(0.2)                            # the game is on, one bot seat
+        r1, w1, c1, news1 = await self.watch()
+        r2, w2, c2, news2 = await self.watch()
+        self.assertEqual((await news1())[0], proto.ST_JACKIN)
+        self.assertEqual((await news2())[0], proto.ST_JACKIN)
+        w1.write(proto.hello(0, bytes(4), "FIRST"))
+        self.assertEqual(await news2(), (proto.ST_FULL, "TABLE FULL"))   # pushed as soon as FIRST got it
+        c2.status = None
+        w2.write(proto.hello(0, bytes(4), "SECOND"))        # pressed Return before seeing that
+        while c2.status is None:
+            c2.feed(await asyncio.wait_for(r2.read(4096), 5))
+        self.assertEqual(c2.faults, [proto.F_FULL])
+        self.assertEqual(c2.status[0], proto.ST_FULL)       # still connected, back to watching
+        self.assertIsNone(c2.seat)
+        w1.close()
+        w2.close()
+        await asyncio.wait_for(host, 30)
 
 
 if __name__ == "__main__":

@@ -9,6 +9,8 @@ A connected player who lets `afk` prompts in a row time out is on autopilot: sho
 on the bot's clock. Answering one in time brings back the full clock.
 In the lobby, a host who keeps other humans waiting `host_wait` seconds without starting loses the role to the
 next one, so an absent host can't hold a table.
+Connections that haven't joined yet (a client at its title screen) can watch the table's status: what joining
+would do right now, pushed again whenever it changes.
 Someone new joining a game in progress jacks in for a bot seat (with `jack_in`), the weakest one: it becomes theirs,
 holdings and all. Away seats are kept for their owners, so with no bot seat the table is full.
 """
@@ -76,6 +78,8 @@ class Table:
         self.host_timer = None      # task that passes the host role on
         self.host_deadline = None   # loop time it does so
         self.jack_in = jack_in      # someone new may take over a bot seat in a game in progress
+        self.watchers = set()       # Conns at a title screen, not joined yet: they get status news
+        self.shown = None           # the status frame they were last sent
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -112,7 +116,9 @@ class Table:
             self._lobby_news(seat)
             return seat
         if not self.lobby:
-            seat = self._bot_seat(name)
+            if any(s.kind == HUMAN and s.name == name for s in self.seats):
+                return proto.F_HANDLE           # a second login, say: it can't take a seat of its own
+            seat = self._bot_seat()
             if seat is None:
                 return proto.F_FULL
             return self._jack_in(seat, conn, name)
@@ -134,11 +140,40 @@ class Table:
         self._lobby_news(seat)
         return seat
 
-    def _bot_seat(self, name):
-        """The bot seat a newcomer to a game in progress takes over: the one worth least, or None.
-        None too if a player at the table already has that handle (a second login, say)."""
+    def watch(self, conn):
+        """A client at its title screen: send it the status now and whenever it changes, until it joins."""
+        self.watchers.add(conn)
+        conn.send(self._status())
+
+    def unwatch(self, conn):
+        self.watchers.discard(conn)
+
+    def _status(self):
+        """The `i` frame for what joining would do right now."""
+        say = self.theme.status
+        if self.lobby:
+            if all(s.kind == HUMAN for s in self.seats):
+                return proto.status(proto.ST_FULL, say["full"])
+            return proto.status(proto.ST_LOBBY, say["lobby"].format(n=sum(s.online for s in self.seats)))
+        if self._bot_seat() is not None:
+            return proto.status(proto.ST_JACKIN, say["jackin"])
+        return proto.status(proto.ST_FULL, say["away" if any(s.kind == AWAY for s in self.seats) else "full"])
+
+    def _status_news(self):
+        """Tell the watchers if the status changed."""
+        self.watchers = {c for c in self.watchers if c.alive}
+        if not self.watchers:
+            return
+        data = self._status()
+        if data != self.shown:
+            self.shown = data
+            for c in self.watchers:
+                c.send(data)
+
+    def _bot_seat(self):
+        """The bot seat a newcomer to a game in progress takes over: the one worth least, or None."""
         bots = [i for i, s in enumerate(self.seats) if s.kind == BOT]
-        if not self.jack_in or not bots or any(s.kind == HUMAN and s.name == name for s in self.seats):
+        if not self.jack_in or not bots:
             return None
         return self.seats[min(bots, key=self.game.net_worth)]
 
@@ -253,6 +288,7 @@ class Table:
         """While other humans wait in the lobby, the host has `host_wait` seconds to start the game, shown as the
         prompt's clock; then the role passes to the next human. Call after anything that changes who is here.
         True if it started a countdown (and told everyone)."""
+        self._status_news()
         due = (self.lobby and self.host_wait and self.host is not None and self.host.online
                and any(s.online and s is not self.host for s in self.seats))
         if not due:
@@ -499,6 +535,7 @@ class Table:
         data = proto.seat_info(self.seats.index(seat), self._shown_kind(seat), seat.name)
         for s in self.seats:
             self._send(s, data)
+        self._status_news()
 
     def _reject(self, seat, reason):
         """Tell one player why their answer was refused: a private log line, then fault 4."""

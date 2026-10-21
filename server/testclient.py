@@ -52,6 +52,7 @@ class Client:
         self.seat = None
         self.token = bytes(4)
         self.region = ""
+        self.status = None          # (code, text) from the title-screen status
         self.seats = [(0, "")] * 6
         self.board = [0] * NODES
         self.size = [0] * NSYN
@@ -94,6 +95,8 @@ class Client:
             self.seat, self.token = p[0], p[1:5]
         elif t == "a":
             self.region = p.decode()
+        elif t == "i":
+            self.status = (p[0], p[1:].decode())
         elif t == "n":
             self.seats[p[0]] = (p[1], p[2:10].decode().rstrip())
         elif t == "s":

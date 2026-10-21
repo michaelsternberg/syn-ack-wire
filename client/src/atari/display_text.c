@@ -177,6 +177,11 @@ void display_title_screen(void)
     text("A GAME OF HOSTILE " T_HIVEJACK_P);
     at(10, 4);
     text("SERVER  " URL);
+    at(11, 12);                         /* what joining would do, from the server */
+    if (status_len)
+        textn(status_text, status_len - 1);
+    else if (status_code == NO_CARRIER)
+        text("NO CARRIER");
     at(13, 4);
     text("HANDLE  ");
     textn(edit, edit_len);
@@ -199,7 +204,8 @@ void display_title_screen(void)
     inv = 0;
     text("    INSTRUCTIONS");
     at(20, 4);
-    text("TYPE A HANDLE, THEN RETURN");
+    text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
+         : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");
 }
 #endif
 

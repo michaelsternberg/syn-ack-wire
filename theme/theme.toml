@@ -104,6 +104,14 @@ returned   = "[*] {player} JACKS BACK IN"
 jackin     = "[+] {player} JACKS IN FOR {bot}"
 takeover   = "[*] GAME IN PROGRESS: TAKING OVER BOT"   # to the one jacking in, just before `jackin`
 
+# The title screen's line under the server, before the player joins (<= 28 chars).
+# Placeholders: {n} players waiting in the lobby.
+[status]
+lobby  = "LOBBY OPEN: {n} WAITING"
+jackin = "IN PROGRESS: TAKE OVER A BOT"
+away   = "FULL: DROPPED PLAYERS REJOIN"    # by token or handle
+full   = "TABLE FULL"
+
 # Why a move was rejected. Sent only to the player who made it, as a log line (<= 38 chars).
 # Placeholders: {node}, {syn} syndicate short name, {n}, {lo}/{hi} seat range.
 [errors]
