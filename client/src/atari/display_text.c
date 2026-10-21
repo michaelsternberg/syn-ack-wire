@@ -2,7 +2,7 @@
  * straight to screen memory. Hives are inverse letters; the last move, the
  * player whose turn it is and the prompt line are inverse too.
  *
- *  row  0  title bar ......................... region: CONNECTED (or NO SIGNAL)
+ *  row  0    NEO-KANSAI-1:CONNECTED    SYN-ACK WIRE   (or NO SIGNAL)
  *  row  1    ABCDEFGHIJKL   HIVES  SYNDICATES
  *  rows 2-10 0 ..+GG.3....    G 12  GHOST//MODEM   (one per syndicate)
  *                         LAST: C4
@@ -451,9 +451,10 @@ void display_link(void)
     if (!region_len)                    /* no playfield yet */
         return;
     inv = INV;
-    at(0, 39 - 11 - region_len);
+    at(0, COL_BOARD);                   /* over the grid */
     textn(region, region_len);
-    text(link_up ? ": CONNECTED" : ": NO SIGNAL");
+    put(':');
+    text(link_up ? "CONNECTED" : "NO SIGNAL");
     inv = 0;
 }
 
@@ -463,7 +464,7 @@ void display_playfield(void)
     memset(row[0], 0, 40 * 24);
     inv = INV;
     clear_row(0);
-    at(0, 1);
+    at(0, 39 - (sizeof TH_TITLE - 1));
     text(TH_TITLE);
     inv = 0;
     display_link();
