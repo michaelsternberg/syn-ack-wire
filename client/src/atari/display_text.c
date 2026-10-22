@@ -19,6 +19,9 @@
  * from what's behind it, so the letters stay readable in the panel's hue: the
  * background green one step brighter, a subtle shift.
  *
+ * On the title screen the same players, four of them now, fill the art's
+ * letters with static (snow.s).
+ *
  * Text arrives as ASCII $20-$5F; screen memory wants internal codes, which for
  * that range is the ASCII value minus $20. "\" ($5C) is redrawn as the yen sign.
  * Each screen can be replaced by a hand-made one: see config.h. */
@@ -36,14 +39,11 @@
 #define COLOR1  (*(unsigned char *)0x2C5)
 #define COLOR2  (*(unsigned char *)0x2C6)
 #define COLOR4  (*(unsigned char *)0x2C8)
-#define PCOLR0  (*(unsigned char *)0x2C0)
-#define PCOLR1  (*(unsigned char *)0x2C1)
+#define PCOLR0  ((unsigned char *)0x2C0)   /* PCOLR0-3 */
 #define SDMCTL  (*(unsigned char *)0x22F)
 #define GPRIOR  (*(unsigned char *)0x26F)
-#define HPOSP0  (*(unsigned char *)0xD000)
-#define HPOSP1  (*(unsigned char *)0xD001)
-#define SIZEP0  (*(unsigned char *)0xD008)
-#define SIZEP1  (*(unsigned char *)0xD009)
+#define HPOSP0  ((unsigned char *)0xD000)  /* HPOSP0-3 */
+#define SIZEP0  ((unsigned char *)0xD008)  /* SIZEP0-3 */
 #define GRACTL  (*(unsigned char *)0xD01D)
 #define PMBASE  (*(unsigned char *)0xD407)
 #define ROMFONT ((const unsigned char *)0xE000)
@@ -67,12 +67,18 @@
 #define PM_TOP      (16 + 4 * ROW_BOARD)
 #define PM_LEFT     (48 + 4 * COL_BOARD)
 #define PM_COLOR    0xC2                /* COLOR2, one luminance step up */
+#define SNOW_COLOR  0x08                /* gray: a dead channel */
+
+#include "title_art.h"                  /* title_art[], TITLE_END, SNOW_LEFT */
+
+extern unsigned char snow_on;           /* snow.s */
+void snow_init(void);
 
 #pragma bss-name (push, "FONT")
 static unsigned char font[1024];
 #pragma bss-name (pop)
 #pragma bss-name (push, "PM")
-static unsigned char pm[1024];          /* players from pm + $200, 128 bytes each */
+unsigned char pm[1024];                 /* players from pm + $200, 128 bytes each */
 #pragma bss-name (pop)
 
 static unsigned char *row[24];
@@ -99,13 +105,9 @@ static void setup(void)
     memcpy(font + 0x3C * 8, yen, 8);    /* "\" -> yen */
     CHBAS = (unsigned)font >> 8;
     memset(pm, 0, sizeof pm);           /* not zeroed at startup: only BSS is */
-    for (i = 0; i < 4 * RULE_ROWS; ++i) {
-        (pm + 0x200 + PM_TOP)[i] = 0xFF;  /* player 0: 8 columns */
-        (pm + 0x280 + PM_TOP)[i] = 0xF0;  /* player 1: the other 4 */
-    }
     PMBASE = (unsigned)pm >> 8;
-    SIZEP0 = SIZEP1 = 3;                /* quad width */
-    PCOLR0 = PCOLR1 = PM_COLOR;
+    memset(SIZEP0, 3, 4);               /* quad width */
+    snow_init();
     GPRIOR = 1;                         /* players in front of the playfield */
     SDMCTL |= 0x08;                     /* player DMA, double-line */
     GRACTL = 2;
@@ -115,12 +117,26 @@ static void setup(void)
     COLOR4 = 0x00;
 }
 
-/* The panel shows only behind the playfield's Grid: off screen otherwise. */
+/* The players: static in the title's letters, or the panel behind the Grid. */
+static const unsigned char hpos[2][4] = {
+    { SNOW_LEFT, SNOW_LEFT + 32, SNOW_LEFT + 64, SNOW_LEFT + 96 },
+    { PM_LEFT, PM_LEFT + 32, 0, 0 }     /* 0 = off screen */
+};
+
 static void panel(unsigned char on)
 {
+    snow_on = !on;                      /* first: the VBI keeps out of the players */
+    if (on != field) {
+        memset(pm + 0x200, 0, 0x200);
+        if (on)
+            for (i = 0; i < 4 * RULE_ROWS; ++i) {
+                (pm + 0x200 + PM_TOP)[i] = 0xFF;  /* player 0: 8 columns */
+                (pm + 0x280 + PM_TOP)[i] = 0xF0;  /* player 1: the other 4 */
+            }
+    }
     field = on;
-    HPOSP0 = on ? PM_LEFT : 0;
-    HPOSP1 = on ? PM_LEFT + 32 : 0;
+    memcpy(HPOSP0, hpos[on], 4);
+    memset(PCOLR0, on ? PM_COLOR : SNOW_COLOR, 4);
 }
 
 static void at(unsigned char r, unsigned char c)
@@ -212,33 +228,29 @@ static void syn_letters(unsigned char mask)
 
 void display_title_screen(void)
 {
+    const unsigned char *p;
     setup();
     panel(0);
     memset(row[0], 0, 40 * 24);
-    inv = INV;
-    clear_row(3);
-    at(3, 14);
-    text(TH_TITLE);
-    inv = 0;
-    at(6, 6);
-    text("A GAME OF HOSTILE " T_HIVEJACK_P);
-    at(10, 4);
+    for (p = title_art; *p != 0xFF; p += 3 + p[2])
+        memcpy(row[*p] + p[1], p + 3, p[2]);
+    at(TITLE_END + 1, 4);
     text("REGION  ");                   /* from the server, once it answers */
     textn(region, region_len);
-    at(11, 4);
+    at(TITLE_END + 2, 4);
     text("STATUS  ");                   /* what joining would do, from the server */
     if (status_len)
         textn(status_text, status_len - 1);
     else if (status_code == NO_CARRIER)
         text("NO CARRIER");
-    at(13, 4);
+    at(TITLE_END + 3, 4);
     text("HANDLE  ");
     textn(edit, edit_len);
     inv = INV;
     put(' ');                           /* cursor */
     inv = 0;
     spaces(8 - edit_len);
-    at(16, 4);
+    at(TITLE_END + 5, 4);
     inv = INV;
     text("OPTION");                     /* the OPTION key flips it */
     inv = 0;
@@ -247,12 +259,12 @@ void display_title_screen(void)
     text(hints ? "ON" : "OFF");
     inv = 0;
     put(' ');
-    at(17, 4);
+    at(TITLE_END + 6, 4);
     inv = INV;
     text("HELP");                       /* the HELP key: instruction pages */
     inv = 0;
     text("    INSTRUCTIONS");
-    at(20, 4);
+    at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
          : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");
 }

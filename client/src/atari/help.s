@@ -22,6 +22,8 @@ DAUX1   = $030A
 DAUX2   = $030B
 SIOV    = $E459
 SAVMSC  = $58           ; screen memory
+GRAFP0  = $D00D         ; GRAFP0-3: what a player shows without DMA
+GRACTL  = $D01D
 
 K_RETURN = $0D          ; platform.h
 K_HELP  = $02
@@ -48,6 +50,11 @@ _help_show:
         stx key+2
         lda #0
         sta page
+        sta GRACTL              ; hide the players (the title's static)
+        ldx #3
+:       sta GRAFP0,x
+        dex
+        bpl :-
         lda #1
         jsr show
         bcc keys
@@ -92,7 +99,9 @@ keys:   jsr key
         beq done
         cmp #K_HELP
         bne keys
-done:   rts
+done:   lda #2                  ; players back
+        sta GRACTL
+        rts
 prev:   cpx #2
         bcc keys
         dex

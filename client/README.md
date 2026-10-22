@@ -14,10 +14,13 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/common/proto_tab.h` | Frame lengths, **generated** from `server/acquire/proto.py` by `tools/gen_proto.py` |
 | `src/common/theme_tab.h` | Words, syndicate letters and names, rule numbers, **generated** from `theme/theme.toml` |
 | `src/atari/display_text.c` | Text-only screens: OS 40×24 text, written straight to screen memory |
+| `src/atari/snow.s` | The title's static: a deferred VBI fills the art's letters from POKEY's `RANDOM` |
+| `src/atari/title4.atascii` | The title art (ATASCII, $9B line ends) |
+| `src/atari/title_art.h`, `.inc` | The art in screen codes and the static's masks, **generated** by `tools/title_art.py` |
 | `src/atari/input.c` | Keyboard (the OS's last-key byte, no K: handler) and the frame counter |
 | `src/atari/net_sio.s` | Network calls for the Atari: FujiNet `N1:` ($71) over raw SIO |
 | `src/atari/ring.s` | `rx_ring` = page 6 ($0600): page-aligned, so the 8-bit indexes wrap for free |
-| `src/atari/game.cfg` | cc65's `atari.cfg` plus a 1K-aligned `FONT` segment |
+| `src/atari/game.cfg` | cc65's `atari.cfg` plus 1K-aligned `FONT` and `PM` segments |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
@@ -56,6 +59,12 @@ The title screen dials at once and shows the server's region and, under it, its 
 lobby seat, taking over a bot in a game in progress, or a full table). If joining is refused anyway (someone took the
 last seat first, or the handle is already playing there), it returns to the title screen and says so, still connected;
 Return tries again.
+
+The title art (`TITLE` and `TITLE_ROW` in the Makefile) is ATASCII box drawing: a letter's strokes are the spaces
+inside its outline. `tools/title_art.py` finds them (a flood fill from outside each line of letters) and makes the
+players' masks; `snow.s` fills those cells with static from POKEY's `RANDOM` every frame, using all four players
+side by side (quad width, one bit a character), so the strokes must fit in 32 columns. The static pauses while SIO
+runs (the deferred VBI is skipped then), and the help pages hide the players.
 
 **From the FujiNet game lobby:** the lobby saves the chosen server's address in an AppKey (creator 1, app 1, key =
 the `appkey` number the server registers with the lobby: `LOBBY_KEY` here and `serve.py --lobby-key` there, both
@@ -115,9 +124,9 @@ or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of 
 Behind the Grid (columns A-L, rows 0-8) sits a panel one luminance step brighter than the background ($C2 on
 $C0): two quad-width players, player 0 over 8 columns and player 1 ($F0) over the other 4, in front of the
 playfield. That works on a text screen because a GR.0 letter takes only its luminance from COLOR1 and its hue
-from whatever is behind it, here the player, so the letters stay readable. The players are moved off screen
-for the title and help pages. Player memory is the 1K `PM` segment in `game.cfg`; players 2 and 3 and the
-missiles are free.
+from whatever is behind it, here the player, so the letters stay readable. The title screen uses the same
+players for its static; leaving it clears them, refills the panel and moves players 2 and 3 off screen. Player
+memory is the 1K `PM` segment in `game.cfg`; the missiles are free.
 
 ### Instructions (help pages)
 The pages are `help/atari/screen/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
@@ -208,15 +217,16 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10924 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
-| `display_text.c` | 3281 | + 699 rodata (mostly screen words), 71 bss, 1K font, 1K player memory |
+| `synack.xex` | 11629 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
+| `display_text.c` | 3478 | + 1044 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
 | `main.c` | 980 | + 130 rodata |
-| `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
+| `help.s` | 266 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 127 | + 64-byte key table |
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
+| `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |

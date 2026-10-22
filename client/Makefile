@@ -28,7 +28,7 @@ HELP_SECTOR ?= 600
 NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
 
-GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/sound.o
+GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/sound.o $(B)/snow.o
 HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h
 
 all: $(B)/synack.xex $(B)/wiremon.xex $(B)/wiremon-auto.xex
@@ -37,6 +37,16 @@ src/common/proto_tab.h: ../server/acquire/proto.py ../tools/gen_proto.py
 	python3 ../tools/gen_proto.py h > $@
 src/common/theme_tab.h: ../theme/theme.toml ../tools/gen_theme.py
 	python3 ../tools/gen_theme.py c > $@
+
+# the title art, drawn from screen row TITLE_ROW; the static fills its letters (snow.s)
+TITLE   = src/atari/title4.atascii
+TITLE_ROW = 1
+src/atari/title_art.h: $(TITLE) tools/title_art.py
+	python3 tools/title_art.py c $(TITLE_ROW) $< > $@
+src/atari/title_art.inc: $(TITLE) tools/title_art.py
+	python3 tools/title_art.py s $(TITLE_ROW) $< > $@
+$(B)/display_text.s: src/atari/title_art.h
+$(B)/snow.o: src/atari/title_art.inc
 
 $(B)/synack.xex: $(GAME) $(COMMON) $(NET) src/atari/game.cfg
 	$(LD) -C src/atari/game.cfg -m $(B)/synack.map -o $@ $(GAME) $(COMMON) $(NET) $(TARGET).lib
