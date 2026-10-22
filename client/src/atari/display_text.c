@@ -14,6 +14,11 @@
  *  row 22  kit, or what the open prompt is about
  *  row 23  the question, and seconds left
  *
+ * Behind the Grid sits a panel: two quad-width players in front of the
+ * playfield. A GR.0 letter takes only its luminance from COLOR1 and its hue
+ * from what's behind it, so the letters stay readable in the panel's hue: the
+ * background green one step brighter, a subtle shift.
+ *
  * Text arrives as ASCII $20-$5F; screen memory wants internal codes, which for
  * that range is the ASCII value minus $20. "\" ($5C) is redrawn as the yen sign.
  * Each screen can be replaced by a hand-made one: see config.h. */
@@ -31,6 +36,16 @@
 #define COLOR1  (*(unsigned char *)0x2C5)
 #define COLOR2  (*(unsigned char *)0x2C6)
 #define COLOR4  (*(unsigned char *)0x2C8)
+#define PCOLR0  (*(unsigned char *)0x2C0)
+#define PCOLR1  (*(unsigned char *)0x2C1)
+#define SDMCTL  (*(unsigned char *)0x22F)
+#define GPRIOR  (*(unsigned char *)0x26F)
+#define HPOSP0  (*(unsigned char *)0xD000)
+#define HPOSP1  (*(unsigned char *)0xD001)
+#define SIZEP0  (*(unsigned char *)0xD008)
+#define SIZEP1  (*(unsigned char *)0xD009)
+#define GRACTL  (*(unsigned char *)0xD01D)
+#define PMBASE  (*(unsigned char *)0xD407)
 #define ROMFONT ((const unsigned char *)0xE000)
 
 #define INV 0x80
@@ -45,8 +60,19 @@
 #define ROW_INFO    22
 #define ROW_ASK     23
 
+/* The panel. Double-line player memory: a byte is 2 scan lines, and text row 0
+ * starts at scan line 32. A quad-width player bit is one character (4 color
+ * clocks); column 0 is at color clock 48. Player 0 covers 8 columns, player 1
+ * the other 4 ($F0). */
+#define PM_TOP      (16 + 4 * ROW_BOARD)
+#define PM_LEFT     (48 + 4 * COL_BOARD)
+#define PM_COLOR    0xC2                /* COLOR2, one luminance step up */
+
 #pragma bss-name (push, "FONT")
 static unsigned char font[1024];
+#pragma bss-name (pop)
+#pragma bss-name (push, "PM")
+static unsigned char pm[1024];          /* players from pm + $200, 128 bytes each */
 #pragma bss-name (pop)
 
 static unsigned char *row[24];
@@ -72,10 +98,29 @@ static void setup(void)
     memcpy(font, ROMFONT, sizeof font);
     memcpy(font + 0x3C * 8, yen, 8);    /* "\" -> yen */
     CHBAS = (unsigned)font >> 8;
+    memset(pm, 0, sizeof pm);           /* not zeroed at startup: only BSS is */
+    for (i = 0; i < 4 * RULE_ROWS; ++i) {
+        (pm + 0x200 + PM_TOP)[i] = 0xFF;  /* player 0: 8 columns */
+        (pm + 0x280 + PM_TOP)[i] = 0xF0;  /* player 1: the other 4 */
+    }
+    PMBASE = (unsigned)pm >> 8;
+    SIZEP0 = SIZEP1 = 3;                /* quad width */
+    PCOLR0 = PCOLR1 = PM_COLOR;
+    GPRIOR = 1;                         /* players in front of the playfield */
+    SDMCTL |= 0x08;                     /* player DMA, double-line */
+    GRACTL = 2;
     CRSINH = 1;
     COLOR2 = 0xC0;                      /* green on near-black */
     COLOR1 = 0x0C;
     COLOR4 = 0x00;
+}
+
+/* The panel shows only behind the playfield's Grid: off screen otherwise. */
+static void panel(unsigned char on)
+{
+    field = on;
+    HPOSP0 = on ? PM_LEFT : 0;
+    HPOSP1 = on ? PM_LEFT + 32 : 0;
 }
 
 static void at(unsigned char r, unsigned char c)
@@ -168,7 +213,7 @@ static void syn_letters(unsigned char mask)
 void display_title_screen(void)
 {
     setup();
-    field = 0;
+    panel(0);
     memset(row[0], 0, 40 * 24);
     inv = INV;
     clear_row(3);
@@ -471,7 +516,7 @@ void display_link(void)
 void display_playfield(void)
 {
     setup();
-    field = 1;
+    panel(1);
     memset(row[0], 0, 40 * 24);
     inv = INV;
     clear_row(0);

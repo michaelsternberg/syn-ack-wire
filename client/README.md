@@ -102,8 +102,8 @@ prompt line is the seconds left before your seat's bot answers for you.
 8 6oo..l4l...+ LAST: D6                    each hive's size by its letter; inverse = Black ICE
                                            during a buy: HIVES    PRICE LEFT
 
- NETRUNNER       ¥  g  r  d  i  b  l  o
->ATARI        3100  4  1  .  2  2  3  2    > you; inverse name = whose turn; * bot; ? away
+ NETRUNNER    ACCT  g  r  d  i  b  l  o
+>ATARI       ¥3100  4  1  .  2  2  3  2    > you; inverse name = whose turn; * bot; ? away
  [$] ROOT K1LLSWCH +¥7000                  3 log lines
  EXPLOITS 1:H2 2:C5 3:H6 4:A8 5:G8 6:D6    your kit, or what the open prompt is about
  RUN WHICH EXPLOIT? PRESS 1-6          20  the question, seconds left
@@ -111,6 +111,13 @@ prompt line is the seconds left before your seat's bot answers for you.
 (In this sketch lowercase marks an inverse letter.) Every word on screen that names a game thing comes from
 `theme.toml` through `theme_tab.h`, as do the glyphs (`.` `+`). The panel shows each syndicate's `screen` name,
 or its `name` when that fits in 15 characters. The yen sign is the `\` glyph of a RAM copy of the ROM font.
+
+Behind the Grid (columns A-L, rows 0-8) sits a panel one luminance step brighter than the background ($C2 on
+$C0): two quad-width players, player 0 over 8 columns and player 1 ($F0) over the other 4, in front of the
+playfield. That works on a text screen because a GR.0 letter takes only its luminance from COLOR1 and its hue
+from whatever is behind it, here the player, so the letters stay readable. The players are moved off screen
+for the title and help pages. Player memory is the 1K `PM` segment in `game.cfg`; players 2 and 3 and the
+missiles are free.
 
 ### Instructions (help pages)
 The pages are `help/atari/screen/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
@@ -201,8 +208,8 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10806 | whole file; loads at $2000, the 1K font sits at $4C00 (19 bytes of bss to spare before it moves to $5000) |
-| `display_text.c` | 3133 | + 713 rodata (mostly screen words), 70 bss, 1K font |
+| `synack.xex` | 10924 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
+| `display_text.c` | 3281 | + 699 rodata (mostly screen words), 71 bss, 1K font, 1K player memory |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
 | `main.c` | 980 | + 130 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
