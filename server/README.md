@@ -9,6 +9,7 @@ Python 3.11+, standard library only.
 | `acquire/bots.py` | `RandomBot` (any legal move) and `HeuristicBot` (plays sensibly) |
 | `acquire/proto.py` | Wire protocol v3 (`docs/protocol.md`): frame encode/decode |
 | `acquire/table.py` | A table: seats, tokens, lobby, shot clock, bot takeover, game loop |
+| `acquire/lobby.py` | Keeps this server's entry up to date in the FujiNet game lobby |
 | `serve.py` | The asyncio TCP server |
 | `testclient.py` | Protocol client for a modern PC: interactive, or `--auto` random play from wire data only |
 | `tests/test_rules.py` | Rulebook edge cases |
@@ -25,6 +26,8 @@ python3 serve.py --link-timeout 30            # drop a client that vanished with
 python3 serve.py --region NEO-LAGOS-3         # the fictional grid region in the title bar and log (default NEO-KANSAI-1)
 python3 serve.py --no-jack-in                 # newcomers to a game in progress get TABLE FULL, not a bot seat
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
+python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr
+                                              # list the server in the FujiNet game lobby (see below)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
 
@@ -87,3 +90,21 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.
 - After a game the table returns to the lobby. Bot and away seats stay visible until a new player needs the chair,
   and a reconnecting player is sent the result (`e`) of the last game.
+
+## FujiNet game lobby
+With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby
+(https://lobby.fujinet.online, from github.com/FujiNetWIFI/fujinet-lobby), so players can pick it from the lobby
+program on their Atari. The lobby boots the client disk from `--lobby-client` (a TNFS URL to `synack.atr`) and
+saves `--lobby` (`TCP://host:port/`, the server's public address) in an AppKey; the client reads it and dials
+`N:` + it (client/README.md).
+- The entry: game `SYN-ACK WIRE` (theme title), server name = the `--region`, real-world region `--lobby-region`
+  (1-2 letters, default `us`), platform `atari`, appkey `--lobby-key` (default 11; it must match the client's
+  `LOBBY_KEY`). Each server process is its own entry, so four regions are four `serve.py` on four ports.
+- PLAYERS shows table 0, the one clients join. In the lobby: humans here of 6. In a game: the seats humans hold
+  (away ones too) of the seats playing, the rest being bots a newcomer can jack in for; with `--no-jack-in` a game
+  shows full.
+- The server posts when that changes (at most once a second) and every 5 minutes regardless, since the lobby shows
+  how long ago each server last posted. Ctrl-C or SIGTERM posts it as offline.
+- The public lobby only accepts a listing from, and advertising, a publicly reachable address. To try one out, use
+  `--lobby-url https://qalobby.fujinet.online`, or run the lobby server locally (its `server/`, with
+  `db/lobby.sqlite3` made from `lobby_schema.sql`) and use `--lobby-url http://127.0.0.1:8080`.

@@ -1,12 +1,15 @@
 """End-to-end: real TCP server, protocol clients, bots.  Run from server/:  python3 -m unittest -v"""
 import argparse
 import asyncio
+import json
 import random
 import socket
+import threading
 import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import testclient
-from acquire import proto
+from acquire import lobby, proto
 from serve import Server
 
 HOST = "127.0.0.1"
@@ -390,6 +393,27 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         wa.close()
 
+    async def test_lobby_players(self):
+        """The game lobby's PLAYERS column: humans here of every seat in the lobby, human seats of the seats playing
+        in a game (full without jack-in)."""
+        t = self.server.table(0)
+        self.assertEqual(t.players(), (0, 6))
+        ra, wa = await self.raw(name="ANN")
+        a = testclient.Client()
+        while a.prompt is None:
+            a.feed(await ra.read(4096))
+        self.assertEqual(t.players(), (1, 6))
+        wa.write(b"S\x03")                                  # ANN and two bots
+        while a.turn is None:
+            a.feed(await ra.read(4096))
+        self.assertEqual(t.players(), (1, 3))
+        t.jack_in = False
+        self.assertEqual(t.players(), (3, 3))
+        t.jack_in = True
+        wa.close()
+        await asyncio.sleep(0.05)
+        self.assertEqual(t.players(), (1, 3))               # away: kept for ANN
+
     async def watch(self, table=0):
         """A client at its title screen: connected, watching the table's status."""
         reader, writer = await asyncio.open_connection(HOST, self.port)
@@ -444,11 +468,6 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w2.close()
         await asyncio.wait_for(host, 30)
 
-
-if __name__ == "__main__":
-    unittest.main()
-
-
 class RegionTest(unittest.IsolatedAsyncioTestCase):
     async def test_region_option_reaches_the_client(self):
         server = Server(timeout=5.0, bot_delay=0, seed=42, region="NEO-LAGOS-3")
@@ -485,3 +504,55 @@ class ThinkTimeTest(unittest.TestCase):
         for kind in "FKD":                         # the small choices stay quick
             self.assertEqual(table._bot_wait(kind), 0.5)
         self.assertEqual(Server(bot_delay=0.5).table(0)._bot_wait("P"), 0.5)
+
+
+class LobbyTest(unittest.IsolatedAsyncioTestCase):
+    async def test_listing_follows_the_table(self):
+        posts = []
+
+        class FakeLobby(BaseHTTPRequestHandler):
+            def do_POST(self):
+                posts.append((self.path, json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(200)
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        http = ThreadingHTTPServer((HOST, 0), FakeLobby)
+        threading.Thread(target=http.serve_forever, daemon=True).start()
+        server = Server(timeout=5.0, bot_delay=0, seed=42, region="NEO-LAGOS-3")
+        srv = await server.serve(HOST, 0)
+
+        async def listed(**want):
+            for _ in range(100):
+                if posts and all(posts[-1][1][k] == v for k, v in want.items()):
+                    return posts[-1]
+                await asyncio.sleep(0.05)
+            self.fail(f"no post with {want}: {posts[-1:]}")
+
+        try:
+            server.list_in(lobby.Lobby(f"http://{HOST}:{http.server_port}",
+                                       lobby.entry("SYN-ACK WIRE", "NEO-LAGOS-3", "eu", "TCP://wire.example.com:6502/",
+                                                   "TNFS://tnfs.example.com/synack.atr", 11)))
+            path, e = await listed(curplayers=0)
+            self.assertEqual(path, "/server")
+            self.assertEqual(e, {"game": "SYN-ACK WIRE", "appkey": 11, "server": "NEO-LAGOS-3", "region": "eu",
+                                 "serverurl": "TCP://wire.example.com:6502/", "status": "online",
+                                 "maxplayers": 6, "curplayers": 0,
+                                 "clients": [{"platform": "atari", "url": "TNFS://tnfs.example.com/synack.atr"}]})
+            r, w = await asyncio.open_connection(HOST, srv.sockets[0].getsockname()[1])
+            w.write(proto.hello(0, bytes(4), "ANN"))
+            await listed(curplayers=1, maxplayers=6)
+            await server.lobby.close()
+            self.assertEqual(posts[-1][1]["status"], "offline")
+            w.close()
+        finally:
+            http.shutdown()
+            srv.close()
+            srv.close_clients()
+            await srv.wait_closed()
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -58,13 +58,13 @@ last seat first, or the handle is already playing there), it returns to the titl
 Return tries again.
 
 **From the FujiNet game lobby:** the lobby saves the chosen server's address in an AppKey (creator 1, app 1, key =
-the `appkey` number the server registers with the lobby, `LOBBY_KEY` here, default 11) and boots the game. Before
-each dial the client reads that key and, if it holds an address, dials `N:` + it, so the server registers its
-address as `TCP://host:port/`. With no key it dials `URL`. The player's lobby name (key 0) starts the handle on the
-title screen, uppercased, with characters a handle can't have left out; the player can still change it. To try it
-in the emulator, put the keys in FujiNet's SD folder as `FujiNet/00010100.key` (the name) and
-`FujiNet/0001010b.key` (the address, key 11 in hex); `run-test.sh` uses an empty scratch folder, so it never finds
-any.
+the `appkey` number the server registers with the lobby: `LOBBY_KEY` here and `serve.py --lobby-key` there, both
+default 11) and boots the game. Before each dial the client reads that key and, if it holds an address, dials `N:` +
+it, so the server registers its address as `TCP://host:port/`. With no key it dials `URL`. The player's lobby name
+(key 0) starts the handle on the title screen, uppercased, with characters a handle can't have left out; the player
+can still change it. To try it in the emulator, put the keys in FujiNet's SD folder as `FujiNet/00010100.key` (the
+name) and `FujiNet/0001010b.key` (the address, key 11 in hex); `run-test.sh` uses an empty scratch folder, so it
+never finds any.
 
 **Two Ataris at one table:** give each emulator its own instance number, so each gets its own FujiNet-PC ports.
 ```sh

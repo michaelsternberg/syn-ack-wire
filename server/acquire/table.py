@@ -80,6 +80,7 @@ class Table:
         self.jack_in = jack_in      # someone new may take over a bot seat in a game in progress
         self.watchers = set()       # Conns at a title screen, not joined yet: they get status news
         self.shown = None           # the status frame they were last sent
+        self.on_news = None         # optional callback(table) when the status may have changed: the game lobby
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
         self.host = None            # Seat object
@@ -160,8 +161,21 @@ class Table:
             return proto.status(proto.ST_JACKIN, say["jackin"])
         return proto.status(proto.ST_FULL, say["away" if any(s.kind == AWAY for s in self.seats) else "full"])
 
+    def players(self):
+        """(here, seats) for the game lobby's PLAYERS column. In the lobby: the humans here, of every seat. In a
+        game: the seats humans hold (away ones too, kept for their owners), of the seats playing; the rest are bots
+        a newcomer can jack in for, so without jack-in the game shows full."""
+        if self.lobby:
+            return sum(s.online for s in self.seats), len(self.seats)
+        playing = sum(s.kind != EMPTY for s in self.seats)
+        if not self.jack_in:
+            return playing, playing
+        return sum(s.kind in (HUMAN, AWAY) for s in self.seats), playing
+
     def _status_news(self):
-        """Tell the watchers if the status changed."""
+        """Tell the watchers, and the game lobby, if the status changed."""
+        if self.on_news:
+            self.on_news(self)
         self.watchers = {c for c in self.watchers if c.alive}
         if not self.watchers:
             return

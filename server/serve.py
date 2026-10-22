@@ -4,20 +4,26 @@
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
                     [--link-timeout 60] [--host-wait 60] [--region NEO-KANSAI-1] [--no-jack-in] [--trace]
+                    [--lobby TCP://host:port/ --lobby-client TNFS://host/path.atr [--lobby-key 11]
+                     [--lobby-region us] [--lobby-url https://lobby.fujinet.online]]
 
-Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md.
+Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md. With --lobby, the server lists
+table 0 (the one clients join) in the FujiNet game lobby.
 """
 import argparse
 import asyncio
 import logging
+import signal
 import socket
+import urllib.parse
 
-from acquire import proto, theme
+from acquire import lobby, proto, theme
 from acquire.table import Conn, Table
 
 log = logging.getLogger("synack")
 
 REGION_MAX = 12     # the Atari title bar's room for it
+LOBBY_TABLE = 0     # the table clients join (client config.h TABLE)
 
 
 class Server:
@@ -37,12 +43,24 @@ class Server:
         self.jack_in = jack_in
         self.seed = seed
         self.tables = {}
+        self.lobby = None
 
     def table(self, tid):
         if tid not in self.tables:
-            self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think,
-                                     self.abandon, self.afk, self.host_wait, self.jack_in)
+            t = self.tables[tid] = Table(tid, self.theme, self.timeout, self.bot_delay, self.seed, self.think,
+                                         self.abandon, self.afk, self.host_wait, self.jack_in)
+            if tid == LOBBY_TABLE:
+                t.on_news = self._listing
         return self.tables[tid]
+
+    def list_in(self, lobby):
+        """Keep the game lobby's entry (a lobby.Lobby) up to date with the table clients join."""
+        self.lobby = lobby
+        self._listing(self.table(LOBBY_TABLE))
+
+    def _listing(self, table):
+        if self.lobby:
+            self.lobby.players(*table.players())
 
     async def handle(self, reader, writer):
         peer = writer.get_extra_info("peername")
@@ -142,6 +160,44 @@ def region_name(text):
     return s
 
 
+def lobby_address(text):
+    """The address the lobby hands clients: TCP://host:port/ (the client dials N: + it), at most 64 characters."""
+    u = urllib.parse.urlsplit(text)
+    try:
+        port = u.port
+    except ValueError:
+        port = None
+    if u.scheme.lower() != "tcp" or not u.hostname or not port or len(text) > 64:
+        raise argparse.ArgumentTypeError(f"{text!r}: need TCP://host:port/, at most 64 characters")
+    return text
+
+
+def lobby_client(text):
+    """Where the lobby boots the client disk from, e.g. TNFS://host/path.atr, at most 64 characters."""
+    u = urllib.parse.urlsplit(text)
+    if not u.scheme or not u.netloc or not u.path.strip("/") or len(text) > 64:
+        raise argparse.ArgumentTypeError(f"{text!r}: need a URL like TNFS://host/path.atr, at most 64 characters")
+    return text
+
+
+def lobby_key(text):
+    """The lobby's appkey number for the game: 1-255."""
+    try:
+        n = int(text)
+    except ValueError:
+        n = 0
+    if not 1 <= n <= 255:
+        raise argparse.ArgumentTypeError(f"{text!r}: need 1-255")
+    return n
+
+
+def lobby_region(text):
+    """The lobby's region code: 1-2 letters, e.g. us or eu."""
+    if not 1 <= len(text) <= 2 or not text.isalpha() or not text.isascii():
+        raise argparse.ArgumentTypeError(f"{text!r}: need 1-2 letters, e.g. us")
+    return text.lower()
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0", metavar="ADDR",
@@ -185,19 +241,48 @@ async def main():
                     help="turn a newcomer away from a game in progress (TABLE FULL) instead of letting them take "
                          "over a bot seat, holdings and all, e.g. for a game among friends")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
+    g = ap.add_argument_group("FujiNet game lobby", "list this server in the lobby, so players can pick it from "
+                              "their Atari; --lobby and --lobby-client turn it on")
+    g.add_argument("--lobby", type=lobby_address, metavar="TCP://HOST:PORT/",
+                   help="the public address players' Ataris dial, as the lobby gives it to the client, e.g. "
+                        "TCP://wire.example.com:6502/")
+    g.add_argument("--lobby-client", type=lobby_client, metavar="URL",
+                   help="where the lobby boots the Atari client disk (synack.atr) from, e.g. "
+                        "TNFS://tnfs.example.com/synack.atr")
+    g.add_argument("--lobby-key", type=lobby_key, default=11, metavar="N",
+                   help="the game's AppKey number in the lobby, 1-255; it must match the client's LOBBY_KEY "
+                        "(default: %(default)s)")
+    g.add_argument("--lobby-region", type=lobby_region, default="us", metavar="CODE",
+                   help="the real-world region the lobby shows for the server, 1-2 letters, e.g. eu "
+                        "(default: %(default)s)")
+    g.add_argument("--lobby-url", default="https://lobby.fujinet.online", metavar="URL",
+                   help="the lobby itself, e.g. https://qalobby.fujinet.online to try a listing out "
+                        "(default: %(default)s)")
     a = ap.parse_args()
+    if bool(a.lobby) != bool(a.lobby_client):
+        ap.error("--lobby and --lobby-client go together")
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
-    srv = await Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
-                       abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
-                       host_wait=a.host_wait, region=a.region, jack_in=a.jack_in).serve(a.host, a.port)
-    async with srv:
-        await srv.serve_forever()
+    server = Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
+                    abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
+                    host_wait=a.host_wait, region=a.region, jack_in=a.jack_in)
+    srv = await server.serve(a.host, a.port)
+    if a.lobby:
+        game = server.theme.game
+        server.list_in(lobby.Lobby(a.lobby_url, lobby.entry(game["title"], game["region"], a.lobby_region,
+                                                             a.lobby, a.lobby_client, a.lobby_key)))
+    asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
+    try:
+        async with srv:
+            await srv.serve_forever()
+    finally:                                    # Ctrl-C or SIGTERM: off the lobby's list
+        if server.lobby:
+            await server.lobby.close()
 
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, asyncio.CancelledError):     # Ctrl-C, or SIGTERM
         pass
