@@ -46,13 +46,15 @@ static unsigned char dial(void)
 }
 
 /* Title: type a handle, Return to jack in. While the player types, the status
- * line shows what joining would do (or NO CARRIER: Return dials again). */
+ * line shows what joining would do (or NO CARRIER: Return dials again). Only the
+ * first draw clears the screen; after that its lines are drawn over, so they
+ * don't flicker. */
 static void title(void)
 {
-    if (!link_up) {
-        status_len = 0;
-        status_code = 0;
-        display_title_screen();         /* while it dials */
+    if (!link_up)
+        status_len = status_code = 0;
+    display_title_screen();
+    if (!link_up) {                     /* dial while it shows */
         if (dial()) {
             net_close();
             status_code = NO_CARRIER;
@@ -63,19 +65,19 @@ static void title(void)
             tx[2] = TABLE;
             net_send(1 + CLEN_I);
         }
+        display_title_update();
     }
-    display_title_screen();
     for (;;) {
         if (link_up) {
             if (net_poll()) {
                 link_up = status_len = 0;
                 status_code = NO_CARRIER;
                 net_close();
-                display_title_screen();
+                display_title_update();
             }
             while ((c = proto_next()) != 0) {   /* only `a` and `i` come before joining */
                 game_frame();
-                display_title_screen();
+                display_title_update();
             }
         }
         c = in_key();
@@ -83,9 +85,12 @@ static void title(void)
             refused = status_code != ST_FULL;   /* REFUSED_LATE, should it turn out full */
             return;
         }
-        if (c == K_HELP)
+        if (c == K_HELP) {
             help_show(in_key);
-        else if (c == K_OPTION)
+            display_title_screen();     /* the pages drew over all of it */
+            continue;
+        }
+        if (c == K_OPTION)
             hints ^= 1;
         else if (c == K_DELETE && edit_len)
             --edit_len;
@@ -93,7 +98,7 @@ static void title(void)
             edit[edit_len++] = c;
         else
             continue;
-        display_title_screen();
+        display_title_update();
     }
 }
 

@@ -90,6 +90,7 @@ void snd_toggle(void) {}
 
 /* ---- display: print what changed */
 void display_title_screen(void) {}
+void display_title_update(void) {}
 void display_playfield(void) { fprintf(stderr, "[playfield] turn %d me %d\n", turn, me); }
 void display_node(unsigned char node) { (void)node; }
 void display_hives(void) {}

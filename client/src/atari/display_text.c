@@ -235,30 +235,16 @@ void display_title_screen(void)
     for (p = title_art; *p != 0xFF; p += 3 + p[2])
         memcpy(row[*p] + p[1], p + 3, p[2]);
     at(TITLE_END + 1, 4);
-    text("REGION  ");                   /* from the server, once it answers */
-    textn(region, region_len);
+    text("REGION");                     /* from the server, once it answers */
     at(TITLE_END + 2, 4);
-    text("STATUS  ");                   /* what joining would do, from the server */
-    if (status_len)
-        textn(status_text, status_len - 1);
-    else if (status_code == NO_CARRIER)
-        text("NO CARRIER");
+    text("STATUS");                     /* what joining would do, from the server */
     at(TITLE_END + 3, 4);
-    text("HANDLE  ");
-    textn(edit, edit_len);
-    inv = INV;
-    put(' ');                           /* cursor */
-    inv = 0;
-    spaces(8 - edit_len);
+    text("HANDLE");
     at(TITLE_END + 5, 4);
     inv = INV;
     text("OPTION");                     /* the OPTION key flips it */
     inv = 0;
-    text("  MOVE HINTS ");
-    inv = INV;
-    text(hints ? "ON" : "OFF");
-    inv = 0;
-    put(' ');
+    text("  MOVE HINTS");
     at(TITLE_END + 6, 4);
     inv = INV;
     text("HELP");                       /* the HELP key: instruction pages */
@@ -267,6 +253,36 @@ void display_title_screen(void)
     at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
          : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");
+    display_title_update();
+}
+
+/* Each field is padded to its widest, so drawing over the last one leaves nothing behind. */
+void display_title_update(void)
+{
+    at(TITLE_END + 1, 12);
+    textn(region, region_len);
+    spaces(sizeof region - region_len);
+    at(TITLE_END + 2, 12);
+    n = 0;
+    if (status_len) {
+        n = status_len - 1;
+        textn(status_text, n);
+    } else if (status_code == NO_CARRIER) {
+        n = 10;
+        text("NO CARRIER");
+    }
+    spaces(sizeof status - 2 - n);      /* 28: to the end of the row */
+    at(TITLE_END + 3, 12);
+    textn(edit, edit_len);
+    inv = INV;
+    put(' ');                           /* cursor */
+    inv = 0;
+    spaces(8 - edit_len);
+    at(TITLE_END + 5, 23);
+    inv = INV;
+    text(hints ? "ON" : "OFF");
+    inv = 0;
+    put(' ');
 }
 #endif
 

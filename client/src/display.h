@@ -6,6 +6,7 @@
 
 /* FANCY_TITLE */
 void display_title_screen(void);        /* title, region, the handle typed so far (edit[]) */
+void display_title_update(void);        /* just its changing lines, drawn over in place */
 
 /* the instruction pages, from the title screen; reads keys with `key` until Esc */
 void help_show(unsigned char (*key)(void));

@@ -217,10 +217,10 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 11629 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
-| `display_text.c` | 3478 | + 1044 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 11704 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
+| `display_text.c` | 3552 | + 1037 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 980 | + 130 rodata |
+| `main.c` | 988 | + 130 rodata |
 | `help.s` | 266 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
