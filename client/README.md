@@ -88,9 +88,9 @@ start; bots take any seats beyond the humans. Both must join before the host sta
 ### Keys
 | Prompt | Keys |
 |---|---|
-| Title | type a handle, **Return**. **OPTION** turns move hints on or off. **HELP** or **?** shows the instructions |
-| Instructions | **>** or **→** next page, **<** or **←** previous, **Esc** (or Return, HELP or ?) back to the title |
-| Any time | **OPTION** turns move hints on or off. **SELECT** turns sound on or off (a chord says it's on) |
+| Title | type a handle, **Return**. **OPTION** turns move hints on or off |
+| Instructions | **>** or **→** next page, **<** or **←** previous, **Esc** (or Return, HELP or ?) back to the title or the game |
+| Any time | **HELP** or **?** shows the instructions, on the title or mid-game. **OPTION** turns move hints on or off. **SELECT** turns sound on or off (a chord says it's on) |
 | Host in the lobby | **2–6**: start with that many seats; bots fill the empty ones |
 | Your turn | **1–6**: run that exploit from your kit. Inverse = can't run now; pressing it says why |
 | Infiltration | the **letter** of the syndicate to broker the new hive to |
@@ -146,6 +146,13 @@ they are the source (nothing generates them). `make atr` turns each into 960 byt
 raw sectors on the game disk, which the game reads straight onto the screen with SIO: no DOS, no files, no
 conversion on the Atari. So they need `make atr`; the bare `.xex` with no game disk in D1 says
 "NO HELP DISK IN D1. ESC:EXIT".
+- **A screen of their own:** the pages load into a 960-byte buffer (the 1K-aligned `HELP` segment, so it can't
+  cross a 4K boundary), and opening them points the display list's LMS at it; Esc points it back. The game screen
+  isn't touched, so mid-game it keeps up underneath (the loop goes on reading the network, and frames draw as
+  usual) and is simply there again on Esc. The buffer keeps the last page read, so the pages open again where
+  they were left (the price chart stays a key away) without reading the disk. The title says `INSTRUCTIONS, ANY TIME`, and
+  mid-game the inverse `WAITING FOR` line ends in an inverse `? HELP`, the moment a player has time to look something up. The pages hide the players and turn the DLIs off while they're up.
+  The turn clock keeps running: a new turn's chord is the cue to go back.
 - **One file is one screen:** at most 24 lines of at most 40 characters, each ended by EOL ($9B). The page bar
   (`<PREV  ESC:EXIT  NEXT>`, row 24) is part of the page: leave `<PREV` off page 1 and `NEXT>` off the last.
 - **Every byte except EOL shows as its glyph:** graphics characters (boxes, lines, the grid's `.` `+`) and inverse
@@ -229,11 +236,11 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 11971 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
-| `display_text.c` | 3669 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 12045 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
+| `display_text.c` | 3686 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 988 | + 130 rodata |
-| `help.s` | 278 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
+| `main.c` | 1009 | + 130 rodata |
+| `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 139 | + 64-byte key table |

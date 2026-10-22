@@ -265,7 +265,7 @@ void display_title_screen(void)
     put('?');                           /* every Atari has this one */
     inv = 0;
     at(TITLE_END + 6, 12);
-    text("INSTRUCTIONS");
+    text("INSTRUCTIONS, ANY TIME");
     at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
          : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");
@@ -477,7 +477,8 @@ void display_prompt(void)
             at(ROW_ASK, 1);
             text("WAITING FOR ");
             textn((const unsigned char *)seat_name[turn], 8);
-            inv = 0;
+            at(ROW_ASK, 33);            /* the instructions, while there's time */
+            text("? HELP");             /* (and HELP on an XL/XE: the title says so) */
         } else {
             clear_row(ROW_ASK);
         }

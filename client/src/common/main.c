@@ -15,7 +15,7 @@
 unsigned char token[4];
 static unsigned char handle[8];
 
-static unsigned char c, e, t0, secs, q0, quiet;
+static unsigned char c, e, t0, secs, q0, quiet, helping;
 
 #define NO_SIGNAL   20                  /* seconds without a frame: say so */
 #define REDIAL      30                  /* ...and hang up and dial again */
@@ -30,6 +30,24 @@ static void wait_ticks(unsigned char n)
     t0 = ticks();
     while ((unsigned char)(ticks() - t0) < n)
         ;
+}
+
+/* The next key, or 0. HELP opens the instructions, on the title or mid-game, and
+ * while they're up the keys are theirs; the loop goes on reading the network. */
+static unsigned char key(void)
+{
+    c = in_key();
+    if (helping) {
+        if (c)
+            helping = help_key(c);
+        return 0;
+    }
+    if (c == K_HELP) {
+        help_open();
+        helping = 1;
+        return 0;
+    }
+    return c;
 }
 
 /* Dial the server the lobby picked, else the one built in. */
@@ -80,15 +98,10 @@ static void title(void)
                 display_title_update();
             }
         }
-        c = in_key();
+        c = key();
         if (c == K_RETURN && edit_len) {
             refused = status_code != ST_FULL;   /* REFUSED_LATE, should it turn out full */
             return;
-        }
-        if (c == K_HELP) {
-            help_show(in_key);
-            display_title_screen();     /* the pages drew over all of it */
-            continue;
         }
         if (c == K_OPTION)
             hints ^= 1;
@@ -202,7 +215,7 @@ static void play(void)
                 continue;
             }
         }
-        c = in_key();                   /* always read, so no stale key answers the next prompt */
+        c = key();                      /* always read, so no stale key answers the next prompt */
         if (c == K_OPTION) {
             game_toggle_hints();
             c = 0;

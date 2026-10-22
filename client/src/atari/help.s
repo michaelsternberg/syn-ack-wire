@@ -5,9 +5,18 @@
 ; page, so this code knows nothing about how many pages there are: '>' on the
 ; last page reads past the end, finds no signature, and stays put.
 ;
-; void help_show(unsigned char (*key)(void))
+; The pages have a screen of their own: opening them points the display list at it
+; and closing points it back, so the game screen stays as it was, and keeps up
+; with the game underneath while the pages are up (they are a mode of the
+; caller's loop, which goes on reading the network).
+;
+; void help_open(void)                                  the page last read (it's
+;                                                       still in the screen), else
+;                                                       page 1, or why not
+; unsigned char __fastcall__ help_key(unsigned char k)  a key for the pages: 0 =
+;                                                       they closed
 
-        .export _help_show
+        .export _help_open, _help_key
         .importzp ptr1
 
         .ifndef HELP_SECTOR
@@ -21,7 +30,10 @@ DSTATS  = $0303
 DAUX1   = $030A
 DAUX2   = $030B
 SIOV    = $E459
-SAVMSC  = $58           ; screen memory
+SAVMSC  = $58           ; the game screen
+SDLSTL  = $0230         ; the OS display list: its LMS address at 4
+COLOR2  = $02C6
+COLPF2  = $D018
 GRAFP0  = $D00D         ; GRAFP0-3: what a player shows without DMA
 GRACTL  = $D01D
 NMIEN   = $D40E
@@ -30,8 +42,11 @@ K_RETURN = $0D          ; platform.h
 K_HELP  = $02
 K_ESC   = $1B
 
+        .segment "HELP"         ; 1K-aligned, so it can't cross a 4K boundary
+screen: .res 960
+
         .bss
-page:   .res 1          ; the page on screen; 0 = none yet
+page:   .res 1          ; the page in the screen; 0 = none (yet, or a torn read)
 want:   .res 1
 count:  .res 1
 buf:    .res 128        ; a page's first sector
@@ -46,48 +61,40 @@ nodisk: .repeat .strlen(NODISK), i
 NODISK_LEN = * - nodisk
 
         .code
-_help_show:
-        sta key+1
-        stx key+2
-        lda #0
-        sta page
-        sta GRACTL              ; hide the players (the title's static)
-        lda #$40
-        sta NMIEN               ; and the playfield's color band: VBI only
-        lda #0
+_help_open:
+        lda page
+        bne flip                ; back to it, with no reading
+        lda #1                  ; read it while the game still shows
+        jsr show
+        bcc flip
+        lda #0                  ; no page 1: a blank screen that says why
+        ldx #240
+:       dex
+        sta screen,x
+        sta screen+240,x
+        sta screen+480,x
+        sta screen+720,x
+        bne :-
+        ldy #NODISK_LEN-1
+:       lda nodisk,y
+        sta screen,y
+        dey
+        bpl :-
+flip:   lda #0
+        sta GRACTL              ; hide the players (the panel, the title's static)
         ldx #3
 :       sta GRAFP0,x
         dex
         bpl :-
-        lda #1
-        jsr show
-        bcc keys
-        lda SAVMSC              ; no page 1: clear the screen and say why
-        sta ptr1
-        lda SAVMSC+1
-        sta ptr1+1
-        ldx #4                  ; 4 x 240 = 960
-clear:  lda #0
-        ldy #240
-:       dey
-        sta (ptr1),y
-        bne :-
-        lda ptr1
-        clc
-        adc #240
-        sta ptr1
-        bcc :+
-        inc ptr1+1
-:       dex
-        bne clear
-        ldy #NODISK_LEN-1
-:       lda nodisk,y
-        ora #$80
-        sta (SAVMSC),y
-        dey
-        bpl :-
+        lda #$40
+        sta NMIEN               ; and the color bands: VBI only
+        lda COLOR2
+        sta COLPF2              ; the VBI may not get to it this frame
+        lda #<screen
+        ldx #>screen
+        jmp lms
 
-keys:   jsr key
+_help_key:
         ldx page
         cmp #'>'
         beq next
@@ -102,22 +109,41 @@ keys:   jsr key
         cmp #K_RETURN
         beq done
         cmp #K_HELP
-        bne keys
+        bne up
 done:   lda #2                  ; players back
         sta GRACTL
         lda #$C0                ; DLIs back
         sta NMIEN
+        lda SAVMSC              ; and the game screen
+        ldx SAVMSC+1
+        jsr lms
+        lda #0
+        tax
         rts
 prev:   cpx #2
-        bcc keys
+        bcc up
         dex
         dex
 next:   inx
         txa
         jsr show
-        jmp keys
+up:     lda #1
+        ldx #0
+        rts
 
-key:    jmp $FFFF               ; the caller's key function
+; Point the display list's LMS at A/X.
+lms:    pha
+        lda SDLSTL
+        sta ptr1
+        lda SDLSTL+1
+        sta ptr1+1
+        ldy #5
+        txa
+        sta (ptr1),y
+        dey
+        pla
+        sta (ptr1),y
+        rts
 
 ; Show page A, if it's on the disk. Carry clear if it is now on screen.
 show:   sta want
@@ -142,16 +168,16 @@ show:   sta want
         bne fail
         dex
         bpl :-
-        lda SAVMSC
+        lda #<screen
         sta ptr1
-        lda SAVMSC+1
+        lda #>screen
         sta ptr1+1
         lda #7
         sta count
 :       lda ptr1
         ldx ptr1+1
         jsr read
-        bmi fail                ; half a page; rare, and the next key redraws
+        bmi torn                ; half a page; rare, and the next key redraws
         lda ptr1
         eor #$80                ; += 128
         sta ptr1
@@ -168,6 +194,8 @@ show:   sta want
         sta page
         clc
         rts
+torn:   lda #0
+        sta page                ; not one to come back to
 fail:   sec
         rts
 

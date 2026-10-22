@@ -9,7 +9,8 @@ void display_title_screen(void);        /* title, region, the handle typed so fa
 void display_title_update(void);        /* just its changing lines, drawn over in place */
 
 /* the instruction pages, from the title screen; reads keys with `key` until Esc */
-void help_show(unsigned char (*key)(void));
+void help_open(void);                   /* the instructions over the screen, which stays as it was */
+unsigned char __fastcall__ help_key(unsigned char k);  /* a key for them: 0 = they closed */
 
 /* FANCY_PLAYFIELD */
 void display_playfield(void);           /* full redraw from the game state */
