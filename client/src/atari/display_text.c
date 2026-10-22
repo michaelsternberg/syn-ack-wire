@@ -19,7 +19,8 @@
  * from what's behind it, so the letters stay readable in the panel's hue: the
  * background green one step brighter, a subtle shift. Behind the seats
  * (rows 13-18) the background itself is that green, and behind the info row
- * (22) purple: display list interrupts change it there and back (dli.s).
+ * and the question (22-23) purple: display list interrupts change it (dli.s).
+ * While the link is down the title bar turns purple too.
  *
  * On the title screen the same players, four of them now, fill the art's
  * letters with static (snow.s).
@@ -79,7 +80,7 @@
 extern unsigned char snow_on;           /* snow.s */
 void snow_init(void);
 void dli(void);                         /* dli.s */
-void __fastcall__ band(unsigned char on);
+void __fastcall__ band(unsigned char m); /* 0 off, 1 the bands, 3 + the title alert */
 
 #pragma bss-name (push, "FONT")
 static unsigned char font[1024];
@@ -548,6 +549,7 @@ void display_link(void)
 {
     if (!field)                         /* still on the title screen */
         return;
+    band(link_up ? 1 : 3);              /* NO SIGNAL turns the title bar purple */
     inv = INV;
     at(0, COL_BOARD);                   /* over the grid */
     textn(region, region_len);

@@ -129,9 +129,12 @@ from whatever is behind it, here the player, so the letters stay readable. The t
 players for its static; leaving it clears them, refills the panel and moves players 2 and 3 off screen. Player
 memory is the 1K `PM` segment in `game.cfg`; the missiles are free.
 
-The seats (rows 13-18) sit on the same green as the panel, as a band across the screen, and the info row (22) on
-purple ($60, green's complement): `dli.s` puts a display list interrupt on the last line of rows 12, 18, 21 and 22,
-which sets COLPF2 to $C2, back to COLOR2, to $60 and back again between lines. The DLI bits are set only on the
+The seats (rows 13-18) sit on the same green as the panel, as a band across the screen, and the info row and the
+question (22-23) on purple ($60, green's complement): `dli.s` puts a display list interrupt on the last line of rows
+12, 18 and 21, which sets COLPF2 to $C2, back to COLOR2, then to $60 between lines. One more, below row 23, puts
+COLOR2 back: the OS's vertical blank copies the shadow only in its second stage, which it skips when it interrupts a
+key or SIO interrupt, and the purple would then show from the top. While the link is down (NO SIGNAL), two more,
+on the last blank line above row 0 and at the end of row 0, turn the title bar purple as well. The DLI bits are set only on the
 playfield (the title shows its handle there), and the help pages turn DLIs off. A DLI
 is an NMI that may interrupt SIO's serial IRQs; at standard speed a byte takes about 930 cycles, far more than the
 handler's few dozen (high-speed SIO would need a second look).
@@ -225,8 +228,8 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 11841 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
-| `display_text.c` | 3603 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 11901 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
+| `display_text.c` | 3618 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
 | `main.c` | 988 | + 130 rodata |
 | `help.s` | 278 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
@@ -235,7 +238,7 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 | `input.c` | 139 | + 64-byte key table |
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
-| `dli.s` | 66 | the color bands' DLI handler and its display list switch |
+| `dli.s` | 110 | the color bands' DLI handler and its display list switch |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |
