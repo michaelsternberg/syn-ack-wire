@@ -6,7 +6,8 @@
 ;   end of row 12 (the NETRUNNER header)  green one step up behind the seats
 ;   end of row 18 (the last seat)         back to COLOR2 for the log
 ;   end of row 21 (the last log line)     purple behind the info row and the
-;                                         question
+;                                         question: only while this seat has a
+;                                         decision to make
 ;   end of row 23 (the last row)          back to COLOR2, out of sight
 ; The last one matters: the OS copies COLOR2 to COLPF2 in its vertical blank's
 ; second stage, which it skips when the blank interrupts an IRQ (a key, SIO),
@@ -17,7 +18,8 @@
 ;
 ; void dli(void)                            the handler, for VDSLST
 ; void __fastcall__ band(unsigned char m)   the bands: 0 off, 1 on (the
-;                                           playfield), 3 on + the title alert
+;                                           playfield); + 2 the title alert,
+;                                           + 4 the purple at the bottom
 
         .export _dli, _band
         .importzp ptr1
@@ -38,7 +40,8 @@ ROW_INFO = 22           ;   the info row, then the question
 next:   .byte SEATS             ; the color the coming DLI sets
 
         .bss
-mode:   .res 1                  ; band()'s; bit 1 = the title alert
+mode:   .res 1                  ; band()'s; bit 1 = the title alert, bit 2 = the
+                                ; bottom's purple
 
         .code
 ; The new color must be in COLPF2 before the end of the DLI's own line, and a
@@ -62,7 +65,7 @@ _dli:   pha
         cmp #AFTER + 4 * (ROW_SEATS - 1)
         bcc @back               ; after row 12: row 18's puts it back
         cmp #AFTER + 4 * (ROW_LOG - 1)
-        bcc @info               ; after row 18: row 21's makes it purple
+        bcc @ask                ; after row 18: row 21's may make it purple
         cmp #AFTER + 4 * (ROW_INFO - 1)
         bcc @back               ; after row 21: row 23's puts it back
         lda mode                ; after row 23: next frame's top, if alerting,
@@ -70,6 +73,9 @@ _dli:   pha
         bne @info
 @seats: lda #SEATS              ;   else its row 12
         bne @set
+@ask:   lda mode
+        and #4
+        beq @back
 @info:  lda #INFO
         bne @set
 @back:  lda COLOR2

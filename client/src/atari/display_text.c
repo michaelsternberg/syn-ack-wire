@@ -80,7 +80,7 @@
 extern unsigned char snow_on;           /* snow.s */
 void snow_init(void);
 void dli(void);                         /* dli.s */
-void __fastcall__ band(unsigned char m); /* 0 off, 1 the bands, 3 + the title alert */
+void __fastcall__ band(unsigned char m); /* 0 off, 1 the bands; + 2 the title alert, + 4 the bottom's purple */
 
 #pragma bss-name (push, "FONT")
 static unsigned char font[1024];
@@ -447,8 +447,23 @@ static void ask(const char *s)
     text(complaint ? complaint : s);
 }
 
+/* The playfield's bands: the title bar purple while the link is down (NO SIGNAL),
+ * the info row and the question purple while this seat has a decision to make.
+ * That lasts the whole turn, so it doesn't blink between one prompt and the next. */
+static void bands(void)
+{
+    v = 1;
+    if (!link_up)
+        v |= 2;
+    if (pr_kind || turn == me)
+        v |= 4;
+    band(v);
+}
+
 void display_prompt(void)
 {
+    if (field)
+        bands();
     if (pr_kind == 'P' || (pr_kind == 0 && turn != NONE))
         kit_line();
     else if (pr_kind != 'S' && pr_kind != 0)
@@ -549,7 +564,7 @@ void display_link(void)
 {
     if (!field)                         /* still on the title screen */
         return;
-    band(link_up ? 1 : 3);              /* NO SIGNAL turns the title bar purple */
+    bands();
     inv = INV;
     at(0, COL_BOARD);                   /* over the grid */
     textn(region, region_len);
