@@ -141,9 +141,10 @@ class Table:
         return seat
 
     def watch(self, conn):
-        """A client at its title screen: send it the status now and whenever it changes, until it joins."""
+        """A client at its title screen: send it the region and the status now, and the status whenever it
+        changes, until it joins."""
         self.watchers.add(conn)
-        conn.send(self._status())
+        conn.send(proto.area(self.theme.game["region"]) + self._status())
 
     def unwatch(self, conn):
         self.watchers.discard(conn)

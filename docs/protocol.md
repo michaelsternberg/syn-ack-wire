@@ -69,7 +69,7 @@ arrives. The SIO transaction count matters far more than the byte count.
 
 | Type | Payload | Bytes | Meaning |
 |---|---|---|---|
-| `I` | ver, table | 3 | Before `H` only: watch the table's status from the title screen. The server answers `i` and sends a new one whenever it changes, until `H`. A wrong `ver` gets no answer (its `H` gets fault 1). |
+| `I` | ver, table | 3 | Before `H` only: watch the table's status from the title screen. The server answers `a` (the region) and `i`, and sends a new `i` whenever it changes, until `H`. A wrong `ver` gets no answer (its `H` gets fault 1). |
 | `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 3. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2, and with a handle already playing there fault 5. After fault 2 or 5 the connection stays open, watching as after `I`, and `H` can be sent again. Handle is space-padded. |
 | `S` | seats | 2 | Start the game (lobby only). `seats` = total seats 2–6; empty seats get bots. |
 | `P` | node | 2 | Answer to prompt `P`: run the exploit for this node. |

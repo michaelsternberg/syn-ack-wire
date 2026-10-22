@@ -52,6 +52,7 @@ static unsigned char font[1024];
 static unsigned char *row[24];
 static unsigned char *cur;
 static unsigned char inv, ready, i, j, n, v;
+static unsigned char field;             /* the playfield is up: the title bar may draw */
 
 static const unsigned char yen[8] = { 0x00, 0x66, 0x66, 0x3C, 0x7E, 0x18, 0x7E, 0x18 };
 
@@ -167,6 +168,7 @@ static void syn_letters(unsigned char mask)
 void display_title_screen(void)
 {
     setup();
+    field = 0;
     memset(row[0], 0, 40 * 24);
     inv = INV;
     clear_row(3);
@@ -176,8 +178,10 @@ void display_title_screen(void)
     at(6, 6);
     text("A GAME OF HOSTILE " T_HIVEJACK_P);
     at(10, 4);
-    text("SERVER  " URL);
-    at(11, 12);                         /* what joining would do, from the server */
+    text("REGION  ");                   /* from the server, once it answers */
+    textn(region, region_len);
+    at(11, 4);
+    text("STATUS  ");                   /* what joining would do, from the server */
     if (status_len)
         textn(status_text, status_len - 1);
     else if (status_code == NO_CARRIER)
@@ -454,7 +458,7 @@ void display_game_over(void)
 
 void display_link(void)
 {
-    if (!region_len)                    /* no playfield yet */
+    if (!field)                         /* still on the title screen */
         return;
     inv = INV;
     at(0, COL_BOARD);                   /* over the grid */
@@ -467,6 +471,7 @@ void display_link(void)
 void display_playfield(void)
 {
     setup();
+    field = 1;
     memset(row[0], 0, 40 * 24);
     inv = INV;
     clear_row(0);

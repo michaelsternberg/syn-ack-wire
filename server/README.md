@@ -71,9 +71,10 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   prices. It becomes theirs, holdings and kit included, under their handle. The newcomer is told first (theme
   `takeover`), then everyone gets a log line (`jackin`). Away seats are kept for their owners; with no bot seat
   the newcomer gets TABLE FULL, and so does everyone with `--no-jack-in`.
-- A client at its title screen can watch a table before joining (`I`): it is sent a one-line status (theme
-  `[status]`) and a new one whenever that changes. A join refused as full, or because the handle is already playing
-  there (fault 5), leaves the connection open and watching, so the player can try again from the title screen.
+- A client at its title screen can watch a table before joining (`I`): it is sent the region and a one-line status
+  (theme `[status]`), and a new status whenever that changes. A join refused as full, or because the handle is
+  already playing there (fault 5), leaves the connection open and watching, so the player can try again from the
+  title screen.
 - With no human connected at all, the game pauses instead of the bots playing it out for nobody, and play resumes
   when someone reconnects (by token or handle). After `--abandon` seconds (default 600) the game is dropped and the
   table is an empty lobby again, so it doesn't stay full; an old token then gets fault 3 and its client joins as new.

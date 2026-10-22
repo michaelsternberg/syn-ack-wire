@@ -60,11 +60,10 @@ static void title(void)
                 net_close();
                 display_title_screen();
             }
-            while ((c = proto_next()) != 0)
-                if (c == 'i') {
-                    game_frame();
-                    display_title_screen();
-                }
+            while ((c = proto_next()) != 0) {   /* only `a` and `i` come before joining */
+                game_frame();
+                display_title_screen();
+            }
         }
         c = in_key();
         if (c == K_RETURN && edit_len) {
@@ -107,7 +106,7 @@ static void link(unsigned char up)
 static void connect(void)
 {
     if (!link_up) {
-        display_message("DIALING " URL);
+        display_message("DIALING...");
         while ((e = net_open(URL)) != 0) {
             display_message("NO CARRIER. REDIALING...");
             net_close();

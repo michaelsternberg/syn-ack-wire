@@ -51,7 +51,7 @@ loads the program itself, so FujiNet only provides the network. Your own `fnconf
 `run-fujinet`, it restarts FujiNet-PC when it exits with code 75, which happens when the emulator resets it on connect.
 PROCEED needs atari800 7.2.1 or newer (installed in `/usr/local/bin`); `ATARI800=/path/to/atari800` picks another build.
 
-The title screen dials at once and shows, under the server, what joining would do: a lobby seat, taking over a bot
+The title screen dials at once and shows the server's region and, under it, its status: what joining would do: a lobby seat, taking over a bot
 in a game in progress, or a full table. If joining is refused anyway (someone took the last seat first, or the handle
 is already playing there), it returns to the title screen and says so, still connected; Return tries again.
 
@@ -83,7 +83,7 @@ prompt line is the seconds left before your seat's bot answers for you.
 
 ### Screen
 ```
- SYN-ACK WIRE   NEO-KANSAI-1: CONNECTED    title bar (inverse); NO SIGNAL after 20 s of silence
+  NEO-KANSAI-1:CONNECTED    SYN-ACK WIRE  title bar (inverse); NO SIGNAL after 20 s of silence
   ABCDEFGHIJKL   HIVES  SYNDICATES
 0 .ggg..ggg.dd   g 11   GHOST//MODEM       hives: inverse letters; + spike; . empty
 2 rr...g.2....   d  2   HOLY DAEMON        1-6 = that exploit in your kit can run here (move hints)

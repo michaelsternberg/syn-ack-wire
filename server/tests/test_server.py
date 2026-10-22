@@ -407,6 +407,7 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         self.server.bot_delay = 0.01
         r, w, c, news = await self.watch()
         self.assertEqual(await news(), (proto.ST_LOBBY, "LOBBY OPEN: 0 WAITING"))
+        self.assertEqual(c.region, "NEO-KANSAI-1")                # the title screen shows it before joining
         ra, wa = await self.raw(name="ANN")
         self.assertEqual(await news(), (proto.ST_LOBBY, "LOBBY OPEN: 1 WAITING"))
         a = testclient.Client()
