@@ -47,6 +47,7 @@
 #define GRACTL  (*(unsigned char *)0xD01D)
 #define PMBASE  (*(unsigned char *)0xD407)
 #define ROMFONT ((const unsigned char *)0xE000)
+#define OSREV   (*(const unsigned char *)0xFFF7)  /* XL/XE OS revision; $FF on a 400/800 */
 
 #define INV 0x80
 
@@ -247,9 +248,14 @@ void display_title_screen(void)
     text("  MOVE HINTS");
     at(TITLE_END + 6, 4);
     inv = INV;
-    text("HELP");                       /* the HELP key: instruction pages */
+    if (OSREV != 0xFF) {                /* an XL/XE OS, so the HELP key */
+        text("HELP");
+        ++cur;
+    }
+    put('?');                           /* every Atari has this one */
     inv = 0;
-    text("    INSTRUCTIONS");
+    at(TITLE_END + 6, 12);
+    text("INSTRUCTIONS");
     at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
          : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");

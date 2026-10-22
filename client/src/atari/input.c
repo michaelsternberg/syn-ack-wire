@@ -1,6 +1,7 @@
 /* Keyboard and clock for the Atari. Reads the OS's last-key byte directly: no
  * K: handler, no key click. Shift and Control are ignored, so the arrow keys
- * arrive as + * - =. HELP (XL/XE) comes from the OS's HELPFG. The OPTION and
+ * arrive as + * - =, except Shift-/ (?), which is HELP for the 400/800; the
+ * HELP key (XL/XE) comes from the OS's HELPFG. The OPTION and
  * SELECT console keys are read from CONSOL once a frame (which rides out contact
  * bounce), and act once per press: OPTION is reported, SELECT turns sound on
  * or off right here, wherever the game is reading keys. */
@@ -46,6 +47,8 @@ unsigned char in_key(void)
         return 0;
     CH = 0xFF;
     ATRACT = 0;                         /* a key stops the colour-cycling screen saver */
+    if (k == 0x66)                      /* Shift-/ */
+        return K_HELP;
     return keymap[k & 0x3F];
 }
 
