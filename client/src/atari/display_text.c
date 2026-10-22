@@ -512,6 +512,8 @@ void display_prompt(void)
             textn(edit, edit_len);
         break;
     case 'B':                           /* pr: cash[2], flags, price[7], supply[7] */
+        if (step && !edit_len)          /* nothing bought: just the question */
+            break;
         text("BUY UP TO 3 " T_COIN ": ");
         textn(edit, edit_len);
         break;

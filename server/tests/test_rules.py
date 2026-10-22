@@ -333,6 +333,28 @@ class BuyingAndEnd(unittest.TestCase):
         self.assertEqual(len(g.hands[0]), 6)
         self.assertEqual(g.turn, 1)
 
+    def test_nothing_to_buy_skips(self):
+        g = make()
+        hive(g, HIGH6, "A8", "B8")      # price 4
+        g.cash[0] = 3
+        my_turn(g, 0, "L4")
+        g.apply(0, N("L4"))
+        self.assertEqual(g.turn, 1)     # no buy decision: straight on
+        self.assertEqual(len(g.hands[0]), 6)
+        give(g, 2, HIGH6, 25)           # all sold, however rich
+        g.cash[1] = 60
+        my_turn(g, 1, "F2")
+        g.apply(1, N("F2"))
+        self.assertNotEqual(g.turn, 1)  # (seat 2 has no kit here, so it may pass on too)
+
+    def test_nothing_to_buy_still_asks_to_end(self):
+        g = make()
+        row_hive(g, HIGH6, 11, 0)       # Black ICE: the game can end
+        g.cash[0] = 0
+        self._to_buy(g)
+        self.assertTrue(g.pending.data["can_end"])
+        self.assertFalse(g.pending.data["can_buy"])
+
     def test_out_of_supply(self):
         g = make()
         hive(g, HIGH6, "A8", "B8")

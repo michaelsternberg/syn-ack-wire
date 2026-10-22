@@ -389,11 +389,18 @@ class Game:
             self._end_turn()
             return
         seat = self.turn
+        can_buy = any(self.supply[s] and self.price(s) <= self.cash[seat] for s in active)
+        can_end = self.can_call_end()
+        if not (can_buy or can_end):
+            self._log("nobuy", player=self.names[seat])     # nothing to decide
+            self._end_turn()
+            return
         self.pending = Decision("B", seat, {
             "cash": self.cash[seat],
             "prices": [self.price(s) for s in range(NSYN)],
             "supply": list(self.supply),
-            "can_end": self.can_call_end(),
+            "can_end": can_end,
+            "can_buy": can_buy,
         })
 
     def _act_buy(self, action):

@@ -127,7 +127,7 @@ def prompt(d, timeout):
     elif k == "D":
         params = bytes([data["absorbed"], data["absorber"], data["held"], data["supply"]])
     elif k == "B":
-        params = u16(data["cash"]) + bytes([1 if data["can_end"] else 0]) + bytes(data["prices"]) \
+        params = u16(data["cash"]) + bytes([(1 if data["can_end"] else 0) | (0 if data["can_buy"] else 2)]) + bytes(data["prices"]) \
                  + bytes(data["supply"])
     else:
         raise ValueError(k)

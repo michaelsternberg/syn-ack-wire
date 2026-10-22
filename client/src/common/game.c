@@ -206,6 +206,8 @@ void game_frame(void)
         edit_len = 0;
         complaint = 0;
         if (pr_kind == 'B') {
+            if (pr[3] & 2)              /* nothing to buy: asked only because */
+                step = 1;               /* the game may end */
             display_hives();            /* names become prices */
             play_chord(CHORD_BUY);
         } else if (pr_kind == 'P')
