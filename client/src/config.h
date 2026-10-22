@@ -17,8 +17,15 @@
 #define HINTS 1
 #endif
 
+/* The server to dial, unless the FujiNet game lobby picked one: it stores the
+ * server's address ("TCP://host:port/") in AppKey creator 1, app 1, key LOBBY_KEY,
+ * the number the server registers with the lobby as its `appkey` (1-255).
+ * LOBBY_KEY 0: always dial URL and leave the handle empty. */
 #ifndef URL
 #define URL "N:TCP://localhost:6502/"
+#endif
+#ifndef LOBBY_KEY
+#define LOBBY_KEY 11
 #endif
 #ifndef TABLE
 #define TABLE 0

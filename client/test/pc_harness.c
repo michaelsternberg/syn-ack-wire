@@ -65,6 +65,13 @@ void net_close(void)
     close(sock);
 }
 
+unsigned char __fastcall__ net_appkey(unsigned char key)
+{
+    (void)key;
+    rx_ring[2] = 0;                     /* no game lobby here */
+    return 0;
+}
+
 unsigned char in_key(void)
 {
     return 0;

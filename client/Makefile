@@ -15,7 +15,7 @@ CFLAGS  = -t $(TARGET) -O -Or -Cl
 URL     ?= N:TCP://localhost:6502/
 FANCY   ?=
 HINTS   ?=
-DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),)
+DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)
 B       = build
 FNLIB   = vendor/fujinet-lib-5.0.0
 # the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25

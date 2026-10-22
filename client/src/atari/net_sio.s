@@ -9,7 +9,7 @@
 ; `ready`. net_poll only spends an SIO status call when `ready` is set, or once
 ; a second as a safety net for a missed pulse or a quiet disconnect.
 
-        .export _net_open, _net_poll, _net_send, _net_close
+        .export _net_open, _net_poll, _net_send, _net_close, _net_appkey
         .export _rx_head, _rx_tail, _tx
         .export net_hush, net_after
         .import _rx_ring
@@ -35,6 +35,7 @@ PACTL   = $D302         ; bit 0 enables the CA1 (PROCEED) interrupt; bit 3 is th
 SAFETY  = 60            ; jiffies between status calls with no PROCEED (about 1 s)
 
 NDEV    = $71           ; N1:
+FUJI    = $70           ; the FujiNet device itself: AppKeys
 TIMEOUT = 15            ; DTIMLO units of 64 frames, about a second each
 NET_CLOSED = $FF
 
@@ -44,6 +45,8 @@ STATUS  = 1
 READ    = 2
 WRITE   = 3
 CLOSE   = 4
+AKOPEN  = 5             ; from here on, commands for FUJI
+AKREAD  = 6
 
         .bss
 _rx_head: .res 1        ; next byte the frame assembler takes
@@ -59,12 +62,40 @@ net_hush: .res 1        ; non-zero while a sound plays (sound.s keeps its volume
 
         .data
 net_after: .addr done   ; sound.s points it at snd_put
+akey:   .word 1         ; AppKey open block: creator (FujiNet), app (the lobby),
+        .byte 1, 0, 0, 0 ;   key, mode (read), reserved
 
         .rodata
-cmd:    .byte 'O', 'S', 'R', 'W', 'C'
-dir:    .byte $80, $40, $40, $80, $00
+cmd:    .byte 'O', 'S', 'R', 'W', 'C', $DC, $DD
+dir:    .byte $80, $40, $40, $80, $00, $80, $40
 
         .code
+
+; unsigned char net_appkey(unsigned char key)
+; Open the lobby's AppKey, then read it into the ring: a 2-byte length, then 64
+; bytes. A missing key reads as length 0; older firmware fails the read instead.
+_net_appkey:
+        sta akey+3
+        lda #6
+        ldx #<akey
+        ldy #AKOPEN
+        jsr xfer_ak
+        bne @none
+        lda #2 + 64
+        ldx #<_rx_ring
+        ldy #AKREAD
+        jsr xfer_ring
+        bne @none
+        lda _rx_ring            ; length, low byte: never over 64
+        cmp #64 + 1
+        bcc :+
+@none:  lda #0
+:       tay
+        lda #0
+        sta _rx_ring+2,y        ; a C string from rx_ring[2], empty if none
+        tax
+        tya
+        rts
 
 ; unsigned char net_open(const char *url)
 ; The devicespec is sent as a 256-byte block; bytes after the NUL are ignored.
@@ -181,7 +212,12 @@ _net_send:
         bne xfer                ; always
 
 ; A = length (1-255), X = buffer low byte, Y = command. xfer: buffer in tx's page,
-; xfer_hi: in stat's page, xfer_ring: in the ring's page. Length doubles as AUX1/2.
+; xfer_hi: in stat's page, xfer_ring: in the ring's page, xfer_ak: in akey's page.
+; Length doubles as AUX1/2 (FujiNet ignores it for AppKeys).
+xfer_ak:
+        pha
+        lda #>akey
+        bne xfer_page           ; always
 xfer_ring:
         pha
         lda #>_rx_ring
@@ -209,7 +245,10 @@ xfer_page:
 
 ; X = command index. Returns A = 0 if SIO said OK, else its status; X = 0.
 sio:    lda #NDEV
-        sta DDEVIC
+        cpx #AKOPEN
+        bcc :+
+        lda #FUJI
+:       sta DDEVIC
         lda #1
         sta DUNIT
         lda cmd,x

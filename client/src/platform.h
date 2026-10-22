@@ -22,6 +22,12 @@ unsigned char net_poll(void);           /* move waiting bytes into rx_ring */
 unsigned char __fastcall__ net_send(unsigned char len); /* send tx[0..len-1] */
 void net_close(void);
 
+/* The FujiNet game lobby's AppKey `key` (creator 1, app 1), read into rx_ring
+ * as a string from rx_ring[2] on: returns its length (1-64), or 0 (an empty
+ * string) if there is none. Key 0 is the player's lobby name. The ring must be
+ * idle: call it only before net_open. */
+unsigned char __fastcall__ net_appkey(unsigned char key);
+
 /* ------------------------------------------------------------------ input, time */
 #define K_RETURN '\r'
 #define K_DELETE '\b'

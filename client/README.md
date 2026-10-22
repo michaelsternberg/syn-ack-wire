@@ -7,7 +7,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 |---|---|
 | `src/platform.h` | The contract each platform implements: network calls, the receive ring, keys, a tick counter |
 | `src/display.h` | Everything the game shows. One text version per platform; hand-made screens can replace it |
-| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `TABLE` |
+| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `LOBBY_KEY`, `TABLE` |
 | `src/common/main.c` | Title (with the table's status), connect, the main loop, reconnect with the seat token |
 | `src/common/game.c` | Game state from server frames; keys → prompt answers, checked locally first |
 | `src/common/proto.c` | Frame assembler: bytes in `rx_ring` → one whole frame in `msg[]` |
@@ -30,6 +30,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 ```sh
 make                                     # build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
 make URL=N:TCP://192.168.1.20:6502/      # aim them at another server
+make LOBBY_KEY=0                         # ignore the game lobby's AppKeys (see below)
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/synack-auto.xex: plays by itself, for the emulator
@@ -51,9 +52,19 @@ loads the program itself, so FujiNet only provides the network. Your own `fnconf
 `run-fujinet`, it restarts FujiNet-PC when it exits with code 75, which happens when the emulator resets it on connect.
 PROCEED needs atari800 7.2.1 or newer (installed in `/usr/local/bin`); `ATARI800=/path/to/atari800` picks another build.
 
-The title screen dials at once and shows the server's region and, under it, its status: what joining would do: a lobby seat, taking over a bot
-in a game in progress, or a full table. If joining is refused anyway (someone took the last seat first, or the handle
-is already playing there), it returns to the title screen and says so, still connected; Return tries again.
+The title screen dials at once and shows the server's region and, under it, its status: what joining would do (a
+lobby seat, taking over a bot in a game in progress, or a full table). If joining is refused anyway (someone took the
+last seat first, or the handle is already playing there), it returns to the title screen and says so, still connected;
+Return tries again.
+
+**From the FujiNet game lobby:** the lobby saves the chosen server's address in an AppKey (creator 1, app 1, key =
+the `appkey` number the server registers with the lobby, `LOBBY_KEY` here, default 11) and boots the game. Before
+each dial the client reads that key and, if it holds an address, dials `N:` + it, so the server registers its
+address as `TCP://host:port/`. With no key it dials `URL`. The player's lobby name (key 0) starts the handle on the
+title screen, uppercased, with characters a handle can't have left out; the player can still change it. To try it
+in the emulator, put the keys in FujiNet's SD folder as `FujiNet/00010100.key` (the name) and
+`FujiNet/0001010b.key` (the address, key 11 in hex); `run-test.sh` uses an empty scratch folder, so it never finds
+any.
 
 **Two Ataris at one table:** give each emulator its own instance number, so each gets its own FujiNet-PC ports.
 ```sh
@@ -190,12 +201,12 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 10645 | whole file; loads at $2000, the 1K font sits at $4C00 |
+| `synack.xex` | 10806 | whole file; loads at $2000, the 1K font sits at $4C00 (19 bytes of bss to spare before it moves to $5000) |
 | `display_text.c` | 3133 | + 713 rodata (mostly screen words), 70 bss, 1K font |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 891 | + 138 rodata |
+| `main.c` | 980 | + 130 rodata |
 | `help.s` | 250 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
-| `net_sio.s` | 318 | + 10 rodata, 26 bss, 2 data. 222 before PROCEED/SOUNDR |
+| `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 127 | + 64-byte key table |
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |

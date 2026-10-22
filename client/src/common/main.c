@@ -32,6 +32,19 @@ static void wait_ticks(unsigned char n)
         ;
 }
 
+/* Dial the server the lobby picked, else the one built in. */
+static unsigned char dial(void)
+{
+#if LOBBY_KEY
+    if (net_appkey(LOBBY_KEY)) {
+        rx_ring[0] = 'N';               /* over the length: "N:TCP://host:port/" */
+        rx_ring[1] = ':';
+        return net_open((const char *)rx_ring);
+    }
+#endif
+    return net_open(URL);
+}
+
 /* Title: type a handle, Return to jack in. While the player types, the status
  * line shows what joining would do (or NO CARRIER: Return dials again). */
 static void title(void)
@@ -40,7 +53,7 @@ static void title(void)
         status_len = 0;
         status_code = 0;
         display_title_screen();         /* while it dials */
-        if (net_open(URL)) {
+        if (dial()) {
             net_close();
             status_code = NO_CARRIER;
         } else {
@@ -107,7 +120,7 @@ static void connect(void)
 {
     if (!link_up) {
         display_message("DIALING...");
-        while ((e = net_open(URL)) != 0) {
+        while ((e = dial()) != 0) {
             display_message("NO CARRIER. REDIALING...");
             net_close();
             wait_ticks(2 * TICKS_PER_SEC);
@@ -205,6 +218,17 @@ static void play(void)
 void main(void)
 {
     snd_init();
+#if LOBBY_KEY
+    net_appkey(0);                      /* the player's lobby name starts the handle */
+    for (e = 2; (c = rx_ring[e]) != 0 && edit_len < 8; ++e) {
+        if (c >= 'a')
+            c -= 'a' - 'A';
+        if (c > ' ' && c <= 'Z') {      /* what the title lets a player type */
+            edit[edit_len] = c;
+            ++edit_len;
+        }
+    }
+#endif
     for (;;) {
         title();
         play();
