@@ -24,6 +24,7 @@ SIOV    = $E459
 SAVMSC  = $58           ; screen memory
 GRAFP0  = $D00D         ; GRAFP0-3: what a player shows without DMA
 GRACTL  = $D01D
+NMIEN   = $D40E
 
 K_RETURN = $0D          ; platform.h
 K_HELP  = $02
@@ -51,6 +52,9 @@ _help_show:
         lda #0
         sta page
         sta GRACTL              ; hide the players (the title's static)
+        lda #$40
+        sta NMIEN               ; and the playfield's color band: VBI only
+        lda #0
         ldx #3
 :       sta GRAFP0,x
         dex
@@ -101,6 +105,8 @@ keys:   jsr key
         bne keys
 done:   lda #2                  ; players back
         sta GRACTL
+        lda #$C0                ; DLIs back
+        sta NMIEN
         rts
 prev:   cpx #2
         bcc keys

@@ -17,7 +17,9 @@
  * Behind the Grid sits a panel: two quad-width players in front of the
  * playfield. A GR.0 letter takes only its luminance from COLOR1 and its hue
  * from what's behind it, so the letters stay readable in the panel's hue: the
- * background green one step brighter, a subtle shift.
+ * background green one step brighter, a subtle shift. Behind the seats
+ * (rows 13-18) the background itself is that green, and behind the info row
+ * (22) purple: display list interrupts change it there and back (dli.s).
  *
  * On the title screen the same players, four of them now, fill the art's
  * letters with static (snow.s).
@@ -34,6 +36,8 @@
 #include "../common/game.h"
 
 #define SAVMSC  (*(unsigned char **)0x58)
+#define VDSLST  (*(void **)0x200)
+#define NMIEN   (*(unsigned char *)0xD40E)
 #define CRSINH  (*(unsigned char *)0x2F0)
 #define CHBAS   (*(unsigned char *)0x2F4)
 #define COLOR1  (*(unsigned char *)0x2C5)
@@ -74,6 +78,8 @@
 
 extern unsigned char snow_on;           /* snow.s */
 void snow_init(void);
+void dli(void);                         /* dli.s */
+void __fastcall__ band(unsigned char on);
 
 #pragma bss-name (push, "FONT")
 static unsigned char font[1024];
@@ -112,6 +118,8 @@ static void setup(void)
     GPRIOR = 1;                         /* players in front of the playfield */
     SDMCTL |= 0x08;                     /* player DMA, double-line */
     GRACTL = 2;
+    VDSLST = dli;
+    NMIEN = 0xC0;                       /* DLIs too; they fire only where the display list asks */
     CRSINH = 1;
     COLOR2 = 0xC0;                      /* green on near-black */
     COLOR1 = 0x0C;
@@ -136,6 +144,7 @@ static void panel(unsigned char on)
             }
     }
     field = on;
+    band(on);
     memcpy(HPOSP0, hpos[on], 4);
     memset(PCOLR0, on ? PM_COLOR : SNOW_COLOR, 4);
 }

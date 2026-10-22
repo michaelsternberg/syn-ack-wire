@@ -15,6 +15,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/common/theme_tab.h` | Words, syndicate letters and names, rule numbers, **generated** from `theme/theme.toml` |
 | `src/atari/display_text.c` | Text-only screens: OS 40×24 text, written straight to screen memory |
 | `src/atari/snow.s` | The title's static: a deferred VBI fills the art's letters from POKEY's `RANDOM` |
+| `src/atari/dli.s` | The playfield's color bands: display list interrupts behind the seats and the info row |
 | `src/atari/title4.atascii` | The title art (ATASCII, $9B line ends) |
 | `src/atari/title_art.h`, `.inc` | The art in screen codes and the static's masks, **generated** by `tools/title_art.py` |
 | `src/atari/input.c` | Keyboard (the OS's last-key byte, no K: handler) and the frame counter |
@@ -128,6 +129,13 @@ from whatever is behind it, here the player, so the letters stay readable. The t
 players for its static; leaving it clears them, refills the panel and moves players 2 and 3 off screen. Player
 memory is the 1K `PM` segment in `game.cfg`; the missiles are free.
 
+The seats (rows 13-18) sit on the same green as the panel, as a band across the screen, and the info row (22) on
+purple ($60, green's complement): `dli.s` puts a display list interrupt on the last line of rows 12, 18, 21 and 22,
+which sets COLPF2 to $C2, back to COLOR2, to $60 and back again between lines. The DLI bits are set only on the
+playfield (the title shows its handle there), and the help pages turn DLIs off. A DLI
+is an NMI that may interrupt SIO's serial IRQs; at standard speed a byte takes about 930 cycles, far more than the
+handler's few dozen (high-speed SIO would need a second look).
+
 ### Instructions (help pages)
 The pages are `help/atari/screen/HELP01.TXT`, `HELP02.TXT`, and so on: plain ATASCII files, edited in any Atari text editor, and
 they are the source (nothing generates them). `make atr` turns each into 960 bytes of screen codes and writes it to
@@ -217,16 +225,17 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 11742 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
-| `display_text.c` | 3582 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 11841 | whole file; loads at $2000, the 1K font at $5000 and the 1K player memory at $5400 (both bss) |
+| `display_text.c` | 3603 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2788 | + 382 rodata, 312 bss (the game state) |
 | `main.c` | 988 | + 130 rodata |
-| `help.s` | 266 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
+| `help.s` | 278 | + 44 rodata, 131 bss: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
 | `input.c` | 139 | + 64-byte key table |
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
+| `dli.s` | 66 | the color bands' DLI handler and its display list switch |
 | Bake-off, network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |
