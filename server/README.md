@@ -104,7 +104,7 @@ saves `--lobby` (`TCP://host:port/`, the server's public address) in an AppKey; 
   (away ones too) of the seats playing, the rest being bots a newcomer can jack in for; with `--no-jack-in` a game
   shows full.
 - The server posts when that changes (at most once a second) and every 5 minutes regardless, since the lobby shows
-  how long ago each server last posted. Ctrl-C or SIGTERM posts it as offline.
+  how long ago each server last posted. Ctrl-C or SIGTERM deletes the entry.
 - The public lobby only accepts a listing from, and advertising, a publicly reachable address. To try one out, use
   `--lobby-url https://qalobby.fujinet.online`, or run the lobby server locally (its `server/`, with
   `db/lobby.sqlite3` made from `lobby_schema.sql`) and use `--lobby-url http://127.0.0.1:8080`.

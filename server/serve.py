@@ -276,7 +276,7 @@ async def main():
     try:
         async with srv:
             await srv.serve_forever()
-    finally:                                    # Ctrl-C or SIGTERM: off the lobby's list
+    finally:                                    # Ctrl-C or SIGTERM: off the lobby's list (DELETE)
         if server.lobby:
             await server.lobby.close()
 

@@ -516,6 +516,11 @@ class LobbyTest(unittest.IsolatedAsyncioTestCase):
                 self.send_response(200)
                 self.end_headers()
 
+            def do_DELETE(self):
+                posts.append((self.command, json.loads(self.rfile.read(int(self.headers["Content-Length"])))))
+                self.send_response(204)
+                self.end_headers()
+
             def log_message(self, *args):
                 pass
 
@@ -545,7 +550,7 @@ class LobbyTest(unittest.IsolatedAsyncioTestCase):
             w.write(proto.hello(0, bytes(4), "ANN"))
             await listed(curplayers=1, maxplayers=6)
             await server.lobby.close()
-            self.assertEqual(posts[-1][1]["status"], "offline")
+            self.assertEqual(posts[-1], ("DELETE", {"serverurl": "TCP://wire.example.com:6502/"}))
             w.close()
         finally:
             http.shutdown()

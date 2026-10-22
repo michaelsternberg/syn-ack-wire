@@ -6,7 +6,7 @@ entries for its platform. When a player picks one, the lobby program stores the 
 reads the key and dials that address (client/README.md).
 
 The lobby never ages an entry out: it shows how long ago the server last posted. So we post whenever the player
-count changes (at most once a second) and every few minutes regardless, then status "offline" on shutdown.
+count changes (at most once a second) and every few minutes regardless, and DELETE the entry on shutdown.
 """
 import asyncio
 import json
@@ -45,10 +45,10 @@ class Lobby:
         self.dirty.set()
 
     async def close(self):
-        """Tell the lobby we're gone."""
+        """Take the entry off the lobby's list."""
         self.task.cancel()
-        self.entry["status"] = "offline"
-        await self._post(dict(self.entry))
+        if await self._request("DELETE", {"serverurl": self.entry["serverurl"]}):
+            log.info("lobby: removed %s from %s", self.entry["serverurl"], self.url)
 
     async def _run(self):
         self.dirty.set()
@@ -63,20 +63,26 @@ class Lobby:
             await asyncio.sleep(1.0)
 
     async def _post(self, entry):
-        req = urllib.request.Request(self.url, data=json.dumps(entry).encode(), method="POST",
-                                     headers={"Content-Type": "application/json"})
-        try:
-            await asyncio.to_thread(self._send, req)
-        except urllib.error.HTTPError as e:     # the lobby's reasons come back as JSON
-            log.warning("lobby refused the listing: %s %s", e.code, e.read().decode(errors="replace").strip())
-            return
-        except OSError as e:                    # unreachable: try again at the next change or keepalive
-            log.warning("lobby unreachable: %s", e)
-            return
+        if not await self._request("POST", entry):
+            return                              # try again at the next change or keepalive
         if entry["status"] != self.listed:
             self.listed = entry["status"]
             log.info("lobby: listed %s as %s at %s", entry["serverurl"], entry["status"], self.url)
         self.sent = entry
+
+    async def _request(self, method, body):
+        """Send `body` as JSON; True if the lobby took it."""
+        req = urllib.request.Request(self.url, data=json.dumps(body).encode(), method=method,
+                                     headers={"Content-Type": "application/json"})
+        try:
+            await asyncio.to_thread(self._send, req)
+        except urllib.error.HTTPError as e:     # the lobby's reasons come back as JSON
+            log.warning("lobby refused %s: %s %s", method, e.code, e.read().decode(errors="replace").strip())
+            return False
+        except OSError as e:
+            log.warning("lobby unreachable: %s", e)
+            return False
+        return True
 
     @staticmethod
     def _send(req):
