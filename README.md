@@ -46,6 +46,8 @@ python3 sim.py 2000                     # soak test: 2000 bot-vs-bot games with 
 - **FujiNet lobby:** `--lobby` lists the table in the FujiNet game lobby, with the disk image players boot to
   join it.
 - **Testing without an Atari:** `testclient.py` plays a game from a PC terminal, by hand or automatically.
+- **Several servers, and the cloud:** `--config` runs several servers in one process, each with its own pace;
+  `Dockerfile` and `fly.toml` deploy them to fly.io (see `server/README.md`).
 
 The rules engine is pure (actions in, events out, no I/O), which keeps it easy to test. Options, the engine and
 the lobby are described in [`server/README.md`](server/README.md).

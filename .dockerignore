@@ -1,0 +1,6 @@
+# The image needs only the server and the theme.
+*
+!server/
+!theme/theme.toml
+server/tests/
+**/__pycache__

@@ -116,6 +116,36 @@ with a message naming the server and the setting. Only `--host` and `--trace` go
 - Ctrl-C or SIGTERM stops at once: the lobby entries are removed, then every connection is closed, games in
   progress included. (A cloud host sends SIGTERM to redeploy; waiting for the games to end could take hours.)
 
+## Deploying to fly.io
+The repository root has what [fly.io](https://fly.io) needs: `Dockerfile` (Python and the server, nothing else),
+`fly.toml` (one small machine, always on, a TCP service per server) and `server/servers.fly.toml` (the four servers:
+one fast, one quicker, two relaxed). Fly builds the image on its own machines, so Docker isn't needed locally.
+Cost at the time of writing: about $2/month for the machine (256 MB) and $2/month for the dedicated IPv4 address a
+raw TCP service needs; the host name `<app>.fly.dev` comes with the app.
+
+1. Install `flyctl` and log in: `fly auth login`.
+2. In `fly.toml`, set `app` to the name you want (it must be unique on fly.io; players dial `<app>.fly.dev`) and
+   `primary_region` to a region near your players (`fly platform regions` lists them). Then create the app:
+   `fly apps create <app>`.
+3. Give it a dedicated IPv4 address: `fly ips allocate-v4`. (The free shared address only carries HTTP and TLS;
+   FujiNet's `N:TCP://` is neither.)
+4. Deploy, as **one** machine: `fly deploy --ha=false`. (By default fly.io starts two machines for redundancy, which
+   here would be two separate servers behind one address, splitting players between unrelated games.)
+   `fly status` should show one machine, started; `fly logs` shows the four servers listening.
+5. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/`. A disk booted directly
+   dials that one server (6502 is the fast one here); the FujiNet lobby gives each server its own port.
+6. To list the servers in the lobby, uncomment `[lobby]` in `servers.fly.toml`, set `address` and `client` (where
+   the lobby boots `synack.atr` from, e.g. a TNFS host), keep `url` on the QA lobby until a listing looks right,
+   and deploy again.
+
+To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
+`fly deploy`. A deploy restarts the machine: games in progress end, and the servers leave the lobby and rejoin it.
+
+Behind fly.io's proxy, every connection would seem to come from the proxy. `fly.toml` turns on its `proxy_proto`
+handler, which sends a PROXY protocol header naming the player first, and `servers.fly.toml` sets
+`proxy-protocol = true`, so the server reads it and its limits and blocks apply to players (a connection without the
+header is closed). `--proxy-protocol` does the same for a single server.
+
 ## On the public internet
 A port open to the internet is soon found by scanners. `acquire/guard.py` keeps them from wearing the server down:
 
@@ -134,8 +164,8 @@ A port open to the internet is soon found by scanners. `acquire/guard.py` keeps 
   consistent.
 
 The limits are constants at the top of `guard.py`. Behind a proxy that hides the client's address (a cloud
-service's TCP proxy, say), every connection seems to come from the proxy, so blocking would shut everyone out: the
-server needs the original address passed on (the PROXY protocol) before it is deployed there.
+service's TCP proxy, say), every connection seems to come from the proxy, so blocking would shut everyone out: run
+the server with the proxy's PROXY protocol header turned on and `--proxy-protocol` (as on fly.io, above).
 
 ## FujiNet game lobby
 With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby

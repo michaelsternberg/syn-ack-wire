@@ -1,0 +1,72 @@
+# fly.io: the SYN-ACK WIRE servers on one small machine, always on. server/README.md, "Deploying to fly.io".
+app = "syn-ack-wire"            # your app's name (unique across fly.io); players dial <app>.fly.dev
+primary_region = "ord"          # where the machine runs, e.g. ord (Chicago), iad (Virginia), lhr (London)
+kill_signal = "SIGTERM"         # the server leaves the lobby and closes its connections at once on SIGTERM
+kill_timeout = 10
+
+[build]
+  dockerfile = "Dockerfile"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
+
+# One TCP service per [[server]] in server/servers.fly.toml. The only handler is proxy_proto: the bytes pass as
+# they are, after a PROXY header that tells the server who connected (its proxy-protocol setting), so its
+# per-address limits and blocks see players, not the proxy. A raw TCP service needs a dedicated IPv4 address
+# (fly ips allocate-v4). Games live in memory: the machine stays on, and a deploy ends the games in progress.
+[[services]]
+  internal_port = 6502
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+  [[services.ports]]
+    port = 6502
+    handlers = ["proxy_proto"]
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 80
+    hard_limit = 100
+
+[[services]]
+  internal_port = 6503
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+  [[services.ports]]
+    port = 6503
+    handlers = ["proxy_proto"]
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 80
+    hard_limit = 100
+
+[[services]]
+  internal_port = 6504
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+  [[services.ports]]
+    port = 6504
+    handlers = ["proxy_proto"]
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 80
+    hard_limit = 100
+
+[[services]]
+  internal_port = 6505
+  protocol = "tcp"
+  auto_stop_machines = "off"
+  auto_start_machines = false
+  min_machines_running = 1
+  [[services.ports]]
+    port = 6505
+    handlers = ["proxy_proto"]
+  [services.concurrency]
+    type = "connections"
+    soft_limit = 80
+    hard_limit = 100

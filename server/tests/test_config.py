@@ -40,6 +40,11 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(lob["key"], 11)
         self.assertEqual(lob["url"], "https://lobby.fujinet.online")
 
+    def test_proxy_protocol_reaches_every_server(self):
+        specs, _, _ = load_config("proxy-protocol = true\n" + config(['port = 6502\nregion = "A"',
+                                                                        'port = 6503\nregion = "B"']), REGION)
+        self.assertEqual([s.args.get("proxy_protocol") for s in specs], [True, True])
+
     def test_mistakes_are_named(self):
         cases = {
             config(['port = 6502\nregion = "A"\ntimout = 9']): "unknown setting 'timout'",
@@ -60,6 +65,18 @@ class ConfigTest(unittest.TestCase):
                 with self.assertRaises(ValueError) as cm:
                     load_config(text, REGION)
                 self.assertIn(want, str(cm.exception))
+
+    def test_fly_services_match_the_servers(self):
+        """fly.toml forwards each server's port with the PROXY header, and the servers expect it."""
+        import tomllib
+        fly = tomllib.loads((HERE.parent / "fly.toml").read_text())
+        specs, _, host = load_config((HERE / "servers.fly.toml").read_text(), REGION)
+        services = {s["internal_port"]: s for s in fly["services"]}
+        self.assertEqual(sorted(services), sorted(s.port for s in specs))
+        for port, s in services.items():
+            self.assertEqual([(p["port"], p["handlers"]) for p in s["ports"]], [(port, ["proxy_proto"])])
+        self.assertTrue(all(s.args.get("proxy_protocol") for s in specs))
+        self.assertEqual(host, "0.0.0.0")
 
     def test_config_replaces_the_other_options(self):
         r = subprocess.run([sys.executable, "serve.py", "--config", "servers.example.toml", "--timeout", "30"],

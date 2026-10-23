@@ -132,6 +132,33 @@ class ServerGuardTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.server.table(0).seats[0].name, "[2JBO")
         w.close()
 
+    async def test_behind_a_proxy_the_player_is_blocked_not_the_proxy(self):
+        """With --proxy-protocol every connection comes from the proxy (here 127.0.0.1); the header says who it is."""
+        await self.start(proxy_protocol=True)
+
+        async def via(src, data):
+            r, w = await asyncio.open_connection(HOST, self.port)
+            w.write(f"PROXY TCP4 {src} 10.0.0.1 40000 6502\r\n".encode() + data)
+            return r, w
+
+        r, w = await asyncio.open_connection(HOST, self.port)
+        w.write(proto.hello(0, bytes(4), "NOHEADER"))       # straight to the server, no header: closed
+        self.assertEqual(await self.rest(r), b"")
+        w.close()
+        for _ in range(3):                                  # a scanner behind the proxy earns three strikes
+            r, w = await via("198.51.100.1", b"GET / HTTP/1.0\r\n\r\n")
+            self.assertEqual(await self.rest(r), b"")
+            w.close()
+        self.assertIn("198.51.100.1", self.server.guard.blocked)
+        r, w = await via("198.51.100.2", proto.hello(0, bytes(4), "PLAYER"))   # someone else still gets in
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        r2, w2 = await via("198.51.100.1", proto.hello(0, bytes(4), "SCANNER"))
+        self.assertEqual(await self.rest(r2), b"")          # the scanner doesn't
+        w.close()
+        w2.close()
+
     async def test_garbage_does_not_hurt_the_server(self):
         """Random frames, valid types with random payloads and random bytes, from many connections, in the lobby
         and in games; then the server must still play a real game to the end, and every table be consistent."""

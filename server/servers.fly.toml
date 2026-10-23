@@ -1,0 +1,43 @@
+# The servers the fly.io machine runs (Dockerfile, fly.toml): one TCP service in fly.toml per [[server]] here,
+# same port. Settings as in servers.example.toml; python3 serve.py --help says what each does.
+
+host = "0.0.0.0"
+proxy-protocol = true           # fly.io's proxy_proto handler names each player: required behind its proxy
+
+# List every server in the FujiNet game lobby. Try the QA lobby first; leave the section commented out to stay
+# unlisted. `address` is the name players' Ataris dial: <app>.fly.dev, or your own domain pointing at the app.
+# [lobby]
+# address = "syn-ack-wire.fly.dev"
+# client = "TNFS://tnfs.example.com/synack.atr"
+# key = 11
+# region = "us"
+# url = "https://qalobby.fujinet.online"
+
+[[server]]
+port = 6502
+region = "NEO-KANSAI-1"
+description = "fast pace"
+bot-delay = 0.5
+
+[[server]]
+port = 6503
+region = "CHIBA-GRID-7"
+description = "quicker pace"
+think-exploit = "8,4"
+think-buy = "5,2"
+
+[[server]]
+port = 6504
+region = "OSAKA-SPRAWL"
+description = "relaxed pace"
+think-exploit = "20,10"
+think-buy = "12,5"
+timeout = 90
+
+[[server]]
+port = 6505
+region = "SEOUL-NODE-2"
+description = "relaxed pace"
+think-exploit = "20,10"
+think-buy = "12,5"
+timeout = 90

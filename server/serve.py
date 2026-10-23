@@ -16,6 +16,7 @@ on its own port with its own settings and its own lobby entry (servers.example.t
 import argparse
 import asyncio
 import contextvars
+import ipaddress
 import logging
 import signal
 import socket
@@ -48,7 +49,7 @@ FRAME_TIMEOUT = 10.0    # seconds a frame's payload may trail its type byte
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
                  afk=2, link_timeout=60.0, host_wait=60.0, region=None, jack_in=True, tables=(LOBBY_TABLE,),
-                 guard=None, hello_timeout=HELLO_TIMEOUT, frame_timeout=FRAME_TIMEOUT):
+                 guard=None, hello_timeout=HELLO_TIMEOUT, frame_timeout=FRAME_TIMEOUT, proxy_protocol=False):
         self.theme = theme.load()
         if region:
             self.theme.game["region"] = region
@@ -66,6 +67,7 @@ class Server:
         self.guard = guard or Guard()
         self.hello_timeout = hello_timeout
         self.frame_timeout = frame_timeout
+        self.proxy_protocol = proxy_protocol   # behind a proxy that says who connected (PROXY protocol v1)
         self.tables = {}
         self.lobby = None
         self.writers = set()        # every open connection, to close them all on shutdown
@@ -90,6 +92,22 @@ class Server:
     async def handle(self, reader, writer):
         serving.set(self.theme.game["region"] + " ")    # this connection's task: its log lines name the server
         peer = writer.get_extra_info("peername")
+        if self.proxy_protocol:                     # the proxy's header names the player; without it, nobody
+            async def header():
+                for ch in b"PROXY ":                # closed at the first byte that can't start a header
+                    if (await reader.readexactly(1))[0] != ch:
+                        return b""
+                return b"PROXY " + await reader.readuntil(b"\n")
+            try:
+                line = await asyncio.wait_for(header(), self.hello_timeout)
+            except (TimeoutError, asyncio.IncompleteReadError, asyncio.LimitOverrunError, OSError):
+                line = b""
+            if not (line.startswith(b"PROXY UNKNOWN") and line.endswith(b"\r\n")):   # UNKNOWN: not forwarded
+                peer = proxy_source(line)                                               # (a check): the proxy's own
+            if peer is None:
+                log.debug("no PROXY header from %s; closed", writer.get_extra_info("peername"))
+                writer.close()
+                return
         addr = peer[0] if peer else "?"
         if not self.guard.admit(addr):              # blocked, or too many connections: closed without a word
             writer.close()
@@ -199,6 +217,24 @@ class Server:
         srv = await asyncio.start_server(self.handle, host, port)
         log.info("%s listening on %s", self.theme.game["region"], ", ".join(str(s.getsockname()) for s in srv.sockets))
         return srv
+
+
+def proxy_source(line):
+    """The client's (address, port) from a PROXY protocol v1 header, b"PROXY TCP4 src dst sport dport\\r\\n"; None if
+    it isn't one. (A proxy sends it first on each connection it forwards, so the server sees who connected.)"""
+    if len(line) > 107 or not line.endswith(b"\r\n"):
+        return None
+    parts = line[:-2].split(b" ")
+    if len(parts) != 6 or parts[0] != b"PROXY" or parts[1] not in (b"TCP4", b"TCP6"):
+        return None
+    try:
+        src = ipaddress.ip_address(parts[2].decode("ascii"))
+        port = int(parts[4])
+    except (UnicodeDecodeError, ValueError):
+        return None
+    if not 0 < port < 65536 or (src.version == 4) != (parts[1] == b"TCP4"):
+        return None
+    return str(src), port
 
 
 def think_time(text):
@@ -360,11 +396,15 @@ def load_config(text, default_region):
     except tomllib.TOMLDecodeError as e:
         raise ValueError(f"not valid TOML: {e}")
     for k in cfg:
-        if k not in ("host", "lobby", "server"):
-            raise ValueError(f"unknown setting {k!r} (expected host, [lobby] and [[server]])")
+        if k not in ("host", "proxy-protocol", "lobby", "server"):
+            raise ValueError(f"unknown setting {k!r} (expected host, proxy-protocol, [lobby] and [[server]])")
     host = cfg.get("host")
     if host is not None and not isinstance(host, str):
         raise ValueError("host: need a string in quotes")
+    try:
+        proxy = _flag(cfg.get("proxy-protocol", False))
+    except ValueError as e:
+        raise ValueError(f"proxy-protocol: {e}")
     lob = None
     if "lobby" in cfg:
         lob = {"key": 11, "region": "us", "url": "https://lobby.fujinet.online"}
@@ -392,6 +432,8 @@ def load_config(text, default_region):
             raise ValueError(f"{where}: port {port} is used twice")
         ports.add(port)
         spec = Spec(port)
+        if proxy:
+            spec.args["proxy_protocol"] = True
         think = {}
         for k, v in sv.items():
             if k in ("port",):
@@ -478,6 +520,11 @@ async def main():
     ap.add_argument("--tables", type=table_list, default=(LOBBY_TABLE,), metavar="N,N",
                     help="the tables clients may join, e.g. 0,1 for clients built with TABLE=1 too; any other "
                          "table is refused (default: 0)")
+    ap.add_argument("--proxy-protocol", action="store_true",
+                    help="every connection starts with a PROXY protocol v1 header naming the player's address, as "
+                         "from a cloud host's TCP proxy (fly.io's proxy_proto handler); a connection without one is "
+                         "closed. Needed there for the per-address limits and blocks, which would otherwise see "
+                         "only the proxy")
     ap.add_argument("--config", metavar="FILE",
                     help="run the servers a TOML file describes, each on its own port with its own settings and "
                          "lobby entry, instead of one from the options above (see servers.example.toml); only "
@@ -521,7 +568,8 @@ async def main():
         think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
         specs = [Spec(a.port, dict(timeout=a.timeout, bot_delay=a.bot_delay, keepalive=a.keepalive, think=think,
                                    abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout, host_wait=a.host_wait,
-                                   region=a.region, jack_in=a.jack_in, tables=a.tables),
+                                   region=a.region, jack_in=a.jack_in, tables=a.tables,
+                                   proxy_protocol=a.proxy_protocol),
                       a.description or "", a.lobby or "")]
         lob = a.lobby and {"client": a.lobby_client, "key": a.lobby_key, "region": a.lobby_region, "url": a.lobby_url}
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO,
