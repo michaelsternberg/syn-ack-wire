@@ -70,7 +70,7 @@ arrives. The SIO transaction count matters far more than the byte count.
 | Type | Payload | Bytes | Meaning |
 |---|---|---|---|
 | `I` | ver, table | 3 | Before `H` only: watch the table's status from the title screen. The server answers `a` (the region) and `i`, and sends a new `i` whenever it changes, until `H`. A wrong `ver` gets no answer (its `H` gets fault 1). |
-| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 3. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2, and with a handle already playing there fault 5. After fault 2 or 5 the connection stays open, watching as after `I`, and `H` can be sent again. Handle is space-padded. |
+| `H` | ver, table, token[4], handle[8] | 15 | Hello. `ver` = 3. `token` all zero = new player, unless `handle` matches a seat that is away (kind 2): that seat is reclaimed. Otherwise the token reclaims its seat. A new player joining a game in progress takes over a bot seat (kind 3) unless the server runs with `--no-jack-in`; with no bot seat it gets fault 2, and with a handle taken there (a player's or a bot's, in the lobby too) fault 5. After fault 2 or 5 the connection stays open, watching as after `I`, and `H` can be sent again. Handle is space-padded. |
 | `S` | seats | 2 | Start the game (lobby only). `seats` = total seats 2–6; empty seats get bots. |
 | `P` | node | 2 | Answer to prompt `P`: run the exploit for this node. |
 | `F` | syn | 2 | Answer to prompt `F`: broker the new hive to this syndicate. |
@@ -104,7 +104,7 @@ it needs no mapping table.
 | `a` | len, text… | 2+n | all | Region name, e.g. `NEO-KANSAI-1`. |
 | `i` | len, code, text… | 3+n | you | Table status, before joining (see `I`): what `H` would do now. `code`: 0 lobby, a seat for you; 1 game in progress, you'd take over a bot; 2 full (a dropped player can still rejoin by token or handle). `text` ≤ 28 chars, from theme `[status]`. |
 | `e` | winners | 2 | all | Game over. `winners` = bitmask of seats tied for first. Final cash arrives as `m` messages before this. |
-| `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows), 5 that handle is already playing at this table. |
+| `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows), 5 that handle is taken at this table (a player's or a bot's). |
 | `u` | — | 1 | you | Keepalive, every 10 s (`serve.py --keepalive`). Means nothing beyond "the link is up". |
 
 ### Snapshot `s` (116-byte payload)

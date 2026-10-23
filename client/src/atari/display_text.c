@@ -268,7 +268,7 @@ void display_title_screen(void)
     text("INSTRUCTIONS, ANY TIME");
     at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
-         : refused == REFUSED_HANDLE ? "THAT HANDLE IS ALREADY PLAYING" : "TYPE A HANDLE, THEN RETURN");
+         : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN RETURN");
     display_title_update();
 }
 

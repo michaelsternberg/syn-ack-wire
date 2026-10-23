@@ -54,7 +54,7 @@ PROCEED needs atari800 7.2.1 or newer (installed in `/usr/local/bin`); `ATARI800
 
 The title screen dials at once and shows the server's region and, under it, its status: what joining would do (a
 lobby seat, taking over a bot in a game in progress, or a full table). If joining is refused anyway (someone took the
-last seat first, or the handle is already playing there), it returns to the title screen and says so, still connected;
+last seat first, or the handle is taken there), it returns to the title screen and says so, still connected;
 Return tries again.
 
 The title art (`TITLE` and `TITLE_ROW` in the Makefile) is ATASCII box drawing: a letter's strokes are the spaces

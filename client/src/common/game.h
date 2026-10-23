@@ -31,7 +31,7 @@ extern unsigned char link_up;                   /* 0 = no frame from the server 
  * ST_ code, text), and why joining was last refused */
 extern unsigned char status[30], refused;
 #define REFUSED_LATE   1                        /* full, though the status showed a seat */
-#define REFUSED_HANDLE 2                        /* that handle is already playing there */
+#define REFUSED_HANDLE 2                        /* that handle is taken there */
 #define status_len  status[0]                   /* 0 = none; else 1 + the text's length */
 #define status_code status[1]
 #define status_text (status + 2)

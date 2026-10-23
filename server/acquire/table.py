@@ -117,9 +117,9 @@ class Table:
             self.resync(seat)               # `w` hands the client the seat's token
             self._lobby_news(seat)
             return seat
+        if any(s.kind in (HUMAN, BOT) and s.name == name for s in self.seats):
+            return proto.F_HANDLE               # a second login, or a bot's name: one handle, one seat
         if not self.lobby:
-            if any(s.kind == HUMAN and s.name == name for s in self.seats):
-                return proto.F_HANDLE           # a second login, say: it can't take a seat of its own
             seat = self._bot_seat()
             if seat is None:
                 return proto.F_FULL

@@ -178,6 +178,31 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         await asyncio.wait_for(host, 30)
 
+    async def test_handle_taken_in_the_lobby(self):
+        ra, wa = await self.raw(name="FRED")
+        a = testclient.Client()
+        while a.prompt is None:
+            a.feed(await asyncio.wait_for(ra.read(4096), 5))
+        r, w = await self.raw(name="fred")                  # a second FRED before any game
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_HANDLE))
+        w.write(proto.hello(0, bytes(4), "FRANK"))          # still connected: another handle gets in
+        b = testclient.Client()
+        while b.seat is None:
+            b.feed(await asyncio.wait_for(r.read(4096), 5))
+        self.assertEqual(b.seat, 1)
+        w.close()
+        wa.close()
+
+    async def test_handle_of_a_bot_at_the_table_is_taken(self):
+        self.server.bot_delay = 0.01
+        host = asyncio.create_task(self.client("HOST", start=3))
+        await asyncio.sleep(0.2)                            # the game is on, two bots
+        bot = next(s.name for s in self.server.table(0).seats if s.kind == proto.BOT)
+        r, w = await self.raw(name=bot)                     # jacking in under a bot's name
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_HANDLE))
+        w.close()
+        await asyncio.wait_for(host, 30)
+
     async def test_everyone_on_autopilot_drops_the_game(self):
         from acquire import table as tmod
         old, tmod.AFK_MIN = tmod.AFK_MIN, 0.02
