@@ -71,12 +71,14 @@ class ConfigTest(unittest.TestCase):
         import tomllib
         fly = tomllib.loads((HERE.parent / "fly.toml").read_text())
         specs, _, host = load_config((HERE / "servers.fly.toml").read_text(), REGION)
-        services = {s["internal_port"]: s for s in fly["services"]}
+        services = {s["internal_port"]: s for s in fly["services"] if s["protocol"] == "tcp"}
         self.assertEqual(sorted(services), sorted(s.port for s in specs))
         for port, s in services.items():
             self.assertEqual([(p["port"], p["handlers"]) for p in s["ports"]], [(port, ["proxy_proto"])])
         self.assertTrue(all(s.args.get("proxy_protocol") for s in specs))
         self.assertEqual(host, "0.0.0.0")
+        udp = [s for s in fly["services"] if s["protocol"] == "udp"]       # tnfsd, for the lobby: plain UDP
+        self.assertEqual([(s["internal_port"], s["ports"]) for s in udp], [(16384, [{"port": 16384}])])
 
     def test_config_replaces_the_other_options(self):
         r = subprocess.run([sys.executable, "serve.py", "--config", "servers.example.toml", "--timeout", "30"],

@@ -8,7 +8,7 @@ proxy-protocol = true           # fly.io's proxy_proto handler names each player
 # unlisted. `address` is the name players' Ataris dial: <app>.fly.dev, or your own domain pointing at the app.
 # [lobby]
 # address = "syn-ack-wire.fly.dev"
-# client = "TNFS://tnfs.example.com/synack.atr"
+# client = "TNFS://syn-ack-wire.fly.dev/synack.atr"     # the disk this machine serves (tnfsd)
 # key = 11
 # region = "us"
 # url = "https://qalobby.fujinet.online"

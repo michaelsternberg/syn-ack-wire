@@ -1,6 +1,8 @@
-# The image needs only the server and the theme.
+# The image needs the server, the theme, the client disk and deploy/.
 *
 !server/
 !theme/theme.toml
+!client/build/synack.atr
+!deploy/
 server/tests/
 **/__pycache__
