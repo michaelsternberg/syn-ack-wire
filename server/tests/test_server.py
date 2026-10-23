@@ -447,6 +447,30 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         wa.close()
 
+    async def test_host_hears_who_is_at_the_door(self):
+        ra, wa = await self.raw(name="ANN")
+        a = testclient.Client()
+
+        async def until(done):
+            while not done():
+                a.feed(await asyncio.wait_for(ra.read(4096), 5))
+
+        await until(lambda: a.prompt is not None)           # the host's `S`
+        door = lambda: [line for line in a.logs if "AT THE DOOR" in line]
+        r1, w1, c1, news1 = await self.watch()
+        await until(lambda: door() == ["[*] 1 AT THE DOOR"])
+        r2, w2, c2, news2 = await self.watch()
+        await until(lambda: len(door()) == 2)
+        self.assertEqual(door()[-1], "[*] 2 AT THE DOOR")
+        w1.write(proto.hello(0, bytes(4), "BOB"))           # BOB comes in: a seat row, and one fewer at the door
+        await until(lambda: a.seats[1] == (proto.HUMAN, "BOB") and len(door()) == 3)
+        self.assertEqual(door()[-1], "[*] 1 AT THE DOOR")
+        w2.close()                                          # the other one goes away
+        await until(lambda: len(door()) == 4)
+        self.assertEqual(door()[-1], "[*] 0 AT THE DOOR")
+        w1.close()
+        wa.close()
+
     async def test_too_late_for_the_last_bot_seat(self):
         self.server.bot_delay = 0.01
         host = asyncio.create_task(self.client("HOST", start=2))

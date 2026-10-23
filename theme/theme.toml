@@ -100,6 +100,7 @@ final      = "[$] {player} FINAL {amount}"
 winner     = "[!] TOP NETRUNNER: {player}"
 abandoned  = "[!] GAME DROPPED: NOBODY PLAYING"
 hostclock  = "[*] {player} HAS {n} S TO START"
+door       = "[*] {n} AT THE DOOR"                  # to the host: how many are at the title screen
 autopilot  = "[?] {player} ON AUTOPILOT"
 returned   = "[*] {player} JACKS BACK IN"
 jackin     = "[+] {player} JACKS IN FOR {bot}"

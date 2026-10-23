@@ -56,6 +56,8 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   countdown, so an absent host can't hold the table. Players on autopilot are skipped (unless everyone waiting
   is), and a host on autopilot hands over at once when an active player arrives. The others are told who may start and for how long
   (`FRED HAS 60 S TO START`), again at each handoff and on arrival. The log says `host passes to NAME`.
+- The host also hears how many players are at the title screen (connected, still typing a handle), each time
+  that changes, whether they join or leave: `2 AT THE DOOR`. They don't start the countdown.
 - Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time. Without a token
   (the Atari was switched off, say), joining under the handle of a seat that is away reclaims it, and `w` hands
   the client that seat's token. A connected player's seat, or one handed to the bot with `Q`, can't be taken

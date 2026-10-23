@@ -80,6 +80,7 @@ class Table:
         self.jack_in = jack_in      # someone new may take over a bot seat in a game in progress
         self.watchers = set()       # Conns at a title screen, not joined yet: they get status news
         self.shown = None           # the status frame they were last sent
+        self.door = (None, 0)       # (host, watchers) the host was last told about
         self.on_news = None         # optional callback(table) when the status may have changed: the game lobby
         self.rng = random.Random(seed)
         self.seats = [Seat() for _ in range(proto.SEATS)]
@@ -146,9 +147,25 @@ class Table:
         changes, until it joins."""
         self.watchers.add(conn)
         conn.send(proto.area(self.theme.game["region"]) + self._status())
+        self._door_news()
 
     def unwatch(self, conn):
         self.watchers.discard(conn)
+        self._door_news()
+
+    def _door_news(self):
+        """In the lobby, tell the host how many are at the title screen (they may be about to join), when that
+        changes, or when a new host has somebody there."""
+        self.watchers = {c for c in self.watchers if c.alive}
+        n = len(self.watchers)
+        if not self.lobby or self.host is None or not self.host.online:
+            return
+        host, told = self.door
+        if (self.host, n) == (host, told) or (n == 0 and self.host is not host):
+            self.door = self.host, n
+            return
+        self.door = self.host, n
+        self._send(self.host, proto.log_line(self.theme.say("door", n=n)))
 
     def _status(self):
         """The `i` frame for what joining would do right now."""
@@ -304,6 +321,7 @@ class Table:
         prompt's clock; then the role passes to the next human. Call after anything that changes who is here.
         True if it started a countdown (and told everyone)."""
         self._status_news()
+        self._door_news()
         due = (self.lobby and self.host_wait and self.host is not None and self.host.online
                and any(s.online and s is not self.host for s in self.seats))
         if not due:
