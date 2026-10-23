@@ -223,6 +223,22 @@ class Table:
             self._send(s, line)
         return seat
 
+    def _log_off(self, seat):
+        """The player left the game for good: their bot plays on under a bot's name, at once and for the rest of
+        the game, and the seat is a bot seat a newcomer can jack in for. The token goes, so it can't be reclaimed."""
+        taken = {s.name for s in self.seats}
+        free = [b for b in self.theme.bots if b not in taken]
+        name = self.rng.choice(free) if free else seat.name
+        line = proto.log_line(self.theme.say("logoff", player=seat.name, bot=name))
+        log.info("table %d: %s logs off, %s takes over", self.tid, seat.name, name)
+        seat.kind, seat.name, seat.token = BOT, name, None
+        self.misses.pop(seat, None)
+        self.game.names[self.seats.index(seat)] = name
+        self._announce(seat)
+        self._release(seat)
+        for s in self.seats:
+            self._send(s, line)
+
     def disconnect(self, seat, conn):
         if seat.conn is not conn:
             return                  # an old connection replaced by a reconnect
@@ -253,9 +269,7 @@ class Table:
                 self._free(seat)
                 self._host_clock()
             else:
-                seat.kind = BOT
-                self._announce(seat)
-                self._release(seat)
+                self._log_off(seat)
             if conn:
                 conn.close()
         elif k == "S":

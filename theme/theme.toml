@@ -48,6 +48,7 @@ spread          = { s = "spread" }
 safe            = { s = "Black ICE", p = "Black ICE" }
 patched         = { s = "patched out", p = "patched out" }
 burnkit         = { s = "burn the kit", p = "burn the kit" }
+logoff          = { s = "log off", p = "log off" }     # leave the game for good: the client's Esc, Y/N
 coin            = { s = "crypto", p = "crypto" }
 money           = { s = "new yen", p = "new yen" }
 account         = { s = "acct" }            # Atari: the netrunner table's money column (<= 7 chars)
@@ -105,6 +106,7 @@ autopilot  = "[?] {player} ON AUTOPILOT"
 returned   = "[*] {player} JACKS BACK IN"
 jackin     = "[+] {player} JACKS IN FOR {bot}"
 takeover   = "[*] GAME IN PROGRESS: TAKING OVER BOT"   # to the one jacking in, just before `jackin`
+logoff     = "[-] {bot} TAKES OVER FROM {player}"   # a player left the game for good (Esc, Y)
 
 # The title screen's line under the server, before the player joins (<= 28 chars).
 # Placeholders: {n} players waiting in the lobby.

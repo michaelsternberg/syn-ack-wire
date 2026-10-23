@@ -203,6 +203,43 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         await asyncio.wait_for(host, 30)
 
+    async def test_log_off_hands_the_seat_to_a_bot(self):
+        self.server.timeout, self.server.bot_delay = 0.2, 0.01
+        ra, wa = await self.raw(name="ALICE")
+        a = testclient.Client()
+
+        async def until(done):
+            while not done():
+                a.feed(await asyncio.wait_for(ra.read(4096), 5))
+
+        await until(lambda: a.prompt is not None)
+        rb, wb = await self.raw(name="BOB")
+        b = testclient.Client()
+        while b.seat is None:
+            b.feed(await asyncio.wait_for(rb.read(4096), 5))
+        await until(lambda: a.seats[1] == (proto.HUMAN, "BOB"))
+        wa.write(b"S\x02")                                  # two players, no bots
+        while b.turn is None:
+            b.feed(await asyncio.wait_for(rb.read(4096), 5))
+        wb.write(b"Q")                                      # BOB logs off
+        while await asyncio.wait_for(rb.read(4096), 5):     # and is hung up on
+            pass
+        wb.close()
+        await until(lambda: a.seats[1][0] == proto.BOT)
+        bot = a.seats[1][1]
+        self.assertIn(bot, self.server.theme.bots)          # a bot's name, not BOB's
+        self.assertIn(f"[-] {bot} TAKES OVER FROM BOB", a.logs)
+        r, w = await self.raw(token=b.token, name="BOB")    # the old token is no good
+        self.assertEqual(await asyncio.wait_for(r.readexactly(2), 5), proto.fault(proto.F_TOKEN))
+        w.close()
+        r, w = await self.raw(name="BOB")                   # but BOB can jack in again, for the bot seat
+        c = testclient.Client()
+        while c.seat is None:
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        self.assertEqual(c.seat, 1)
+        w.close()
+        wa.close()
+
     async def test_everyone_on_autopilot_drops_the_game(self):
         from acquire import table as tmod
         old, tmod.AFK_MIN = tmod.AFK_MIN, 0.02

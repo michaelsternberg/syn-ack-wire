@@ -3,8 +3,10 @@
  * the server keeps up to date there; Return joins on the same connection. A
  * full table sends the player back to the title screen, still connected.
  * A dropped link reconnects with the seat token; the server resends everything.
+ * Esc, then Y, logs off for good: back to the title, a bot in the seat.
  * The server sends a keepalive every 10 s, so silence means a dead link even
  * when the FujiNet still thinks it's connected: NO SIGNAL, then redial. */
+#include <string.h>
 #include "../config.h"
 #include "../platform.h"
 #include "../display.h"
@@ -12,8 +14,8 @@
 #include "proto_tab.h"
 #include "game.h"
 
-unsigned char token[4];
-static unsigned char handle[8];
+unsigned char token[4], leaving;
+static unsigned char handle[8], handle_len;
 
 static unsigned char c, e, t0, secs, q0, quiet, helping;
 
@@ -149,6 +151,20 @@ static void connect(void)
     q0 = ticks();
 }
 
+/* Esc, then Y: leave the game for good. The server hands the seat to a bot and
+ * forgets the token, so this client goes back to the title as a newcomer. */
+static void log_off(void)
+{
+    tx[0] = 'Q';
+    net_send(1 + CLEN_Q);
+    net_close();
+    for (c = 0; c < 4; ++c)
+        token[c] = 0;
+    link_up = leaving = refused = 0;
+    memcpy(edit, handle, 8);            /* the prompts used it: the handle again */
+    edit_len = handle_len;
+}
+
 static void redial(const char *why)
 {
     link(0);                            /* also tells connect() to dial */
@@ -163,6 +179,7 @@ static void play(void)
 {
     for (c = 0; c < 8; ++c)
         handle[c] = c < edit_len ? edit[c] : ' ';
+    handle_len = edit_len;
     connect();
     for (;;) {
         if ((e = net_poll()) != 0) {
@@ -218,6 +235,19 @@ static void play(void)
         c = key();                      /* always read, so no stale key answers the next prompt */
         if (c == K_OPTION) {
             game_toggle_hints();
+            c = 0;
+        }
+        if (leaving && c) {             /* the Y/N after Esc: Y leaves, any other key stays */
+            if (c == 'Y') {
+                log_off();
+                return;
+            }
+            leaving = 0;
+            display_prompt();
+            c = 0;
+        } else if (c == K_ESC) {
+            leaving = 1;
+            display_prompt();
             c = 0;
         }
         if (!pr_kind)

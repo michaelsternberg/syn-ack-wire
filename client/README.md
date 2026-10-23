@@ -88,6 +88,7 @@ start; bots take any seats beyond the humans. Both must join before the host sta
 | Instructions | **>** or **→** next page, **<** or **←** previous, **Esc** (or Return, HELP or ?) back to the title or the game |
 | Any time | **HELP** or **?** shows the instructions, on the title or mid-game. **OPTION** turns move hints on or off. **SELECT** turns sound on or off (a chord says it's on) |
 | Host in the lobby | **2–6**: start with that many seats; bots fill the empty ones |
+| After joining | **Esc**, then **Y**: log off for good. A bot takes over the seat and the client goes back to the title; any other key stays |
 | Your turn | **1–6**: run that exploit from your kit. Inverse = can't run now; pressing it says why |
 | Infiltration | the **letter** of the syndicate to broker the new hive to |
 | Tie | the **letter** of the syndicate that survives (or is absorbed next) |
@@ -232,10 +233,10 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 12045 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
-| `display_text.c` | 3686 | + 1033 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 12198 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
+| `display_text.c` | 3706 | + 1052 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 1009 | + 130 rodata |
+| `main.c` | 1135 | + 130 rodata |
 | `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |

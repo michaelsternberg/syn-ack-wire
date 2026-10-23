@@ -68,8 +68,9 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   Everyone gets a log line when autopilot starts and when it ends (theme `autopilot`, `returned`).
   Autopilot lasts through a dropped game and into the next until the player presses a key (starting a game
   counts).
-- A dropped connection marks the seat away and its bot plays until the token comes back. `Q` hands the seat to
-  the bot for good. A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
+- A dropped connection marks the seat away and its bot plays until the token comes back. `Q` (the Atari's Esc, then Y)
+  hands the seat to its bot for good, at once: it takes a free bot name, its token is forgotten, and a newcomer
+  can jack in for it (theme `logoff`). A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
   `--link-timeout` seconds (default 60): the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end
   the connection. Without that option (it is Linux only) the system's own limit applies, about 15 minutes.
 - Someone new joining a game in progress jacks in for a bot seat: the one worth least, cash and crypto at current

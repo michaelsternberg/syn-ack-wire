@@ -455,7 +455,7 @@ static void bands(void)
     v = 1;
     if (!link_up)
         v |= 2;
-    if (pr_kind || turn == me)
+    if (pr_kind || turn == me || leaving)
         v |= 4;
     band(v);
 }
@@ -464,6 +464,11 @@ void display_prompt(void)
 {
     if (field)
         bands();
+    if (leaving) {                      /* Esc: the question waits; the prompt comes back after */
+        ask(T_LOGOFF " NOW? Y/N");
+        inv = 0;
+        return;
+    }
     if (pr_kind == 'P' || (pr_kind == 0 && turn != NONE))
         kit_line();
     else if (pr_kind != 'S' && pr_kind != 0)

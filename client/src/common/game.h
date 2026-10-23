@@ -42,6 +42,8 @@ extern unsigned char pr_kind, pr[18];
 /* answering it: step within the prompt, text typed so far, last complaint */
 extern unsigned char step, edit[9], edit_len;
 extern const char *complaint;
+/* main.c: Esc asked whether to log off; the prompt line shows the Y/N instead */
+extern unsigned char leaving;
 
 void game_frame(void);                  /* apply the frame in msg[] */
 void game_key(unsigned char c);         /* a key while a prompt is open */

@@ -78,7 +78,7 @@ arrives. The SIO transaction count matters far more than the byte count.
 | `D` | sell, swap | 3 | Answer to prompt `D`: cash out `sell` coins, swap `swap` coins (even number, 2:1). HODL the rest. |
 | `B` | b0, b1, b2 | 4 | Answer to prompt `B`: up to three coin purchases, each a syndicate id or 7 for none. **Bit 7 of `b0`** = "call the null-route" (declare game end). |
 | `R` | — | 1 | Resync: please resend the full state. |
-| `Q` | — | 1 | Leave. A bot takes over the seat. |
+| `Q` | — | 1 | Leave for good (the Atari's Esc, then Y). In a game, the seat's bot takes over at once under a bot's name, and everyone gets a log line (theme `logoff`); the token is forgotten, so an `H` with it gets fault 3, and the seat is a bot seat a newcomer can jack in for. In the lobby the seat is freed. The server then closes the connection. |
 
 **Prompt answers use the same letter as the prompt kind.** The client echoes the kind letter as the message type, so
 it needs no mapping table.
