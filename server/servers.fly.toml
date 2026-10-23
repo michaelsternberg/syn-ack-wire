@@ -24,6 +24,8 @@ description = "relaxed pace"
 think-exploit = "20,10"         # 10 to 30 s before a bot runs an exploit
 think-buy = "12,5"              # 7 to 17 s before it buys
 timeout = 90                    # and a longer shot clock for the people
+abandon = 180                   # drop a game after 3 minutes with nobody connected
+afk = 2                         # two timeouts in a row put a player on autopilot
 
 [[server]]
 port = 6503
@@ -32,6 +34,8 @@ description = "relaxed pace"
 think-exploit = "20,10"
 think-buy = "12,5"
 timeout = 90
+abandon = 180
+afk = 2
 
 [[server]]
 port = 6504
@@ -39,6 +43,8 @@ region = "OSAKA-SPRAWL"
 description = "quicker pace"
 think-exploit = "8,4"           # 4 to 12 s
 think-buy = "5,2"               # 3 to 7 s
+abandon = 180
+afk = 2
 
 [[server]]
 port = 6505
@@ -46,3 +52,5 @@ region = "SEOUL-NODE-2"
 description = "fast pace"
 think-exploit = "3,1"           # 2 to 4 s
 think-buy = "2,1"               # 1 to 3 s
+abandon = 180
+afk = 2
