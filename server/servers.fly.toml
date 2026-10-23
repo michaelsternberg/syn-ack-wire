@@ -21,9 +21,8 @@ proxy-protocol = true           # fly.io's proxy_proto handler names each player
 port = 6502
 region = "CHIBA-GRID-7"
 description = "relaxed pace"
-think-exploit = "20,10"         # 10 to 30 s before a bot runs an exploit
-think-buy = "12,5"              # 7 to 17 s before it buys
-timeout = 90                    # and a longer shot clock for the people
+think-exploit = "15,5"          # 10 to 20 s before a bot runs an exploit
+think-buy = "7,2"               # 5 to 9 s before it buys
 abandon = 180                   # drop a game after 3 minutes with nobody connected
 afk = 2                         # two timeouts in a row put a player on autopilot
 
@@ -31,9 +30,8 @@ afk = 2                         # two timeouts in a row put a player on autopilo
 port = 6503
 region = "NEO-KANSAI-1"
 description = "relaxed pace"
-think-exploit = "20,10"
-think-buy = "12,5"
-timeout = 90
+think-exploit = "15,5"
+think-buy = "7,2"
 abandon = 180
 afk = 2
 
