@@ -253,6 +253,7 @@ class Table:
             if self.lobby and seat is self.host:
                 self.host = next((s for s in self.seats if s.online), None)
                 if self.host:
+                    self._new_host()
                     self._send(self.host, self._lobby_prompt())
         self._host_clock()
 
@@ -328,6 +329,7 @@ class Table:
         if seat is self.host:
             self.host = next((s for s in self.seats if s.kind == HUMAN), None)
             if self.host and self.lobby:
+                self._new_host()
                 self._send(self.host, self._lobby_prompt())
 
     def _host_clock(self):
@@ -390,7 +392,14 @@ class Table:
         log.info("table %d: host passes to %s", self.tid, seat.name)
         if old is not None and old is not seat:
             self.resync(old)                # a prompt can't be withdrawn, but a fresh snapshot clears it
+        self._new_host()
         self._host_clock()                  # the new host's countdown and prompt, and the news for the others
+
+    def _new_host(self):
+        """Tell everyone in the lobby who hosts now, so the last countdown line they read isn't the old host's."""
+        line = proto.log_line(self.theme.say("newhost", player=self.host.name))
+        for s in self.seats:
+            self._send(s, line)
 
     def _lobby_prompt(self):
         """The host's `S` prompt, with the time left to start when others are waiting."""

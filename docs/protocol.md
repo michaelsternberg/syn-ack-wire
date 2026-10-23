@@ -133,7 +133,7 @@ with hidden holdings; the format doesn't change.
 | `K` | ctx, mask | `K syn` | Choose one from `mask`. `ctx` 0 = which syndicate survives a tied hivejack; 1 = which tied hive gets absorbed next. |
 | `D` | absorbed, absorber, held, supply | `D sell swap` | Dispose of coin from a hivejacked syndicate. `supply` = absorber coins left in the Darkpool (caps swaps at 2×supply). |
 | `B` | cash[2], flags, price[7], supply[7] | `B b0 b1 b2` | Buy up to 3 coins. `flags` bit 0 = you may call the null-route (end the game); bit 1 = nothing you can afford (only sent with bit 0: otherwise the turn passes without the prompt). |
-| `S` | — | `S seats` | Lobby: you are the host; start when ready. Timeout 0 while you are alone; with others waiting it counts down, and at 0 the host role (and this prompt) passes to the next player. The others get an `l` naming the host and the time left, when the countdown starts and when they arrive. The host gets an `l` whenever the number of clients at the title screen (watching with `I`, not joined) changes, joining included. |
+| `S` | — | `S seats` | Lobby: you are the host; start when ready. Timeout 0 while you are alone; with others waiting it counts down, and at 0 the host role (and this prompt) passes to the next player. The others get an `l` naming the host and the time left, when the countdown starts and when they arrive. When the role passes (or the host leaves), everyone in the lobby first gets an `l` naming the new host. The host gets an `l` whenever the number of clients at the title screen (watching with `I`, not joined) changes, joining included. |
 
 Prompts go only to the seat that must answer. Every other client just sees the results (`x`, `k`, `m`, `l`, …).
 

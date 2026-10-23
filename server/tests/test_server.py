@@ -309,7 +309,9 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
             await b_until(lambda: b.prompt is not None)     # it ran out: KEEN is host now
         self.assertEqual(b.prompt[:2], ("S", 1))
         self.assertTrue(any("host passes to KEEN" in m for m in cm.output))
+        await b_until(lambda: "[*] KEEN IS THE HOST NOW" in b.logs)     # the new host is told too
         await a_until(lambda: "[*] KEEN HAS 1 S TO START" in a.logs)
+        self.assertLess(a.logs.index("[*] KEEN IS THE HOST NOW"), a.logs.index("[*] KEEN HAS 1 S TO START"))
         t = self.server.table(0)
         self.assertIs(t.host, t.seats[b.seat])
         bw.write(b"S\x02")                                 # and can start

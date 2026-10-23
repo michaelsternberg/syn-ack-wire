@@ -55,7 +55,9 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   a countdown of `--host-wait` seconds (default 60); if it runs out, the next human becomes host with a fresh
   countdown, so an absent host can't hold the table. Players on autopilot are skipped (unless everyone waiting
   is), and a host on autopilot hands over at once when an active player arrives. The others are told who may start and for how long
-  (`FRED HAS 60 S TO START`), again at each handoff and on arrival. The log says `host passes to NAME`.
+  (`FRED HAS 60 S TO START`), again at each handoff and on arrival. At each handoff, and when a host leaves the
+  lobby, everyone there, the new host included, first reads `KEEN IS THE HOST NOW` (theme `newhost`). The log says
+  `host passes to NAME`.
 - The host also hears how many players are at the title screen (connected, still typing a handle), each time
   that changes, whether they join or leave: `2 AT THE DOOR`. They don't start the countdown.
 - Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time. Without a token
