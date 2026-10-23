@@ -479,6 +479,7 @@ void display_prompt(void)
             textn((const unsigned char *)seat_name[turn], 8);
             at(ROW_ASK, 33);            /* the instructions, while there's time */
             text("? HELP");             /* (and HELP on an XL/XE: the title says so) */
+            inv = 0;
         } else {
             clear_row(ROW_ASK);
         }
