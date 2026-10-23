@@ -10,6 +10,7 @@ Python 3.11+, standard library only.
 | `acquire/proto.py` | Wire protocol v3 (`docs/protocol.md`): frame encode/decode |
 | `acquire/table.py` | A table: seats, tokens, lobby, shot clock, bot takeover, game loop |
 | `acquire/lobby.py` | Keeps this server's entry up to date in the FujiNet game lobby |
+| `acquire/guard.py` | Connection limits, and short blocks for addresses that keep misbehaving |
 | `serve.py` | The asyncio TCP server |
 | `testclient.py` | Protocol client for a modern PC: interactive, or `--auto` random play from wire data only |
 | `tests/test_rules.py` | Rulebook edge cases |
@@ -25,6 +26,7 @@ python3 serve.py --afk 3                      # autopilot after 3 timeouts in a 
 python3 serve.py --link-timeout 30            # drop a client that vanished without closing after 30 s (default 60)
 python3 serve.py --region NEO-LAGOS-3         # the fictional grid region in the title bar and log (default NEO-KANSAI-1)
 python3 serve.py --no-jack-in                 # newcomers to a game in progress get TABLE FULL, not a bot seat
+python3 serve.py --tables 0,1                 # tables clients may use (default 0; others are refused)
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
 python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr
                                               # list the server in the FujiNet game lobby (see below)
@@ -97,6 +99,27 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.
 - After a game the table returns to the lobby. Bot and away seats stay visible until a new player needs the chair,
   and a reconnecting player is sent the result (`e`) of the last game.
+
+## On the public internet
+A port open to the internet is soon found by scanners. `acquire/guard.py` keeps them from wearing the server down:
+
+- A new connection must send its first frame within 10 s, and it must be `I` or `H` for an allowed table
+  (`--tables`, default 0). A frame's payload must follow its type byte within 10 s. A client does all of this at
+  once; a title screen may then wait as long as its player types.
+- Breaking those rules, sending a token no seat has, or an unknown frame type after joining, is a strike against the
+  address. Three strikes within 5 minutes block it for 15 minutes: its new connections are closed at once, without
+  a reply. The log has a line per strike and one when the block starts, not one per refused connection.
+- At most 12 connections at once from one address (a LAN party behind one router) and 200 in all.
+- Handles are cleaned on arrival to what a client's title screen can type, so a crafted handle can't carry control
+  codes into the log or slip past the one-handle-one-seat check.
+- Nothing a client sends reaches a shell, the filesystem or an interpreter: frames have fixed lengths, unknown types
+  end the connection, and text to clients is limited to the wire character set. `tests/test_guard.py` throws random
+  frames at a running server, in the lobby and in games, and checks it still plays a game and its tables stay
+  consistent.
+
+The limits are constants at the top of `guard.py`. Behind a proxy that hides the client's address (a cloud
+service's TCP proxy, say), every connection seems to come from the proxy, so blocking would shut everyone out: the
+server needs the original address passed on (the PROXY protocol) before it is deployed there.
 
 ## FujiNet game lobby
 With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby

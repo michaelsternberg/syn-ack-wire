@@ -157,6 +157,10 @@ S: i 00 "LOBBY OPEN: 1 WAITING"
 S: i 01 "IN PROGRESS: TAKE OVER A BOT"   (whenever it changes)
 ```
 Two players can see the same last bot seat; the first `H` to arrive gets it, the other gets fault 2 and a fresh `i`.
+
+The first frame must arrive within 10 seconds of connecting, and must be `I` or `H` for a table the server has
+(table 0 unless it was started with `--tables`). Otherwise, or if a payload stalls mid-frame, the server closes the
+connection without a reply; an address that keeps doing it is blocked for a while (`server/README.md`).
 The Atari client remembers what the status showed when Return was pressed, so it can say it was too late.
 
 ### New player

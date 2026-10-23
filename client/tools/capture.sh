@@ -41,17 +41,8 @@ if [ $# -eq 0 ]; then
              "$ROOT/docs/scenarios.toml")
 fi
 
-for sc in "$@"; do
-    rm -rf "$WORK/d"; mkdir "$WORK/d"           # the dumps: $WORK/d/scrNNN.bin, kept short
-    (cd "$ROOT/server" && exec python3 stage.py "$sc" --port "$PORT") > "$WORK/$sc.log" 2>&1 &
-    server=$!
-    sleep 1
-    # BASIC=1: screen memory at $9C40, where it is with the BASIC ROM in, as on an 800 with the cartridge
-    DUMPDIR="$WORK/d" BASIC=1 INSTANCE=$INSTANCE ATARI800="$WORK/a8" timeout "$SECONDS_EACH" \
-        sh tools/run-test.sh "$WORK/b/synack-auto.xex" > "$WORK/$sc.run" 2>&1 || true
-    kill $server 2>/dev/null || true
-    wait $server 2>/dev/null || true
-    python3 - "$ROOT/docs/scenarios.toml" "$sc" "$WORK/d" "$DUMPS" <<'EOF'
+# The dump picker: copies the first dump whose prompt (or info) line starts with the scenario's `capture`.
+cat > "$WORK/pick.py" <<'EOF'
 import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
 from screen2txt import char
@@ -71,6 +62,36 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
 else:
     sys.exit(f"{name}: no screen showed {want!r} (KEEP=1 keeps the dumps and logs)")
 EOF
+
+# Where screen memory is depends on the emulated machine: $9C40 with the BASIC ROM in (BASIC=1), else $BC40.
+# That follows the owner's atari800 settings, so try one, fall back to the other, and keep the one that worked.
+order="1 0"
+run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a dump matched
+    rm -rf "$WORK/d"; mkdir "$WORK/d"           # the dumps: $WORK/d/scrNNN.bin, kept short
+    (cd "$ROOT/server" && exec python3 stage.py "$1" --port "$PORT") > "$WORK/$1.log" 2>&1 &
+    server=$!
+    sleep 1
+    basic=; [ "$2" = 1 ] && basic=1
+    DUMPDIR="$WORK/d" BASIC=$basic INSTANCE=$INSTANCE ATARI800="$WORK/a8" timeout "$SECONDS_EACH" \
+        sh tools/run-test.sh "$WORK/b/synack-auto.xex" > "$WORK/$1.run" 2>&1 || true
+    kill $server 2>/dev/null || true
+    wait $server 2>/dev/null || true
+    python3 "$WORK/pick.py" "$ROOT/docs/scenarios.toml" "$1" "$WORK/d" "$DUMPS"
+}
+
+for sc in "$@"; do
+    found=
+    for b in $order; do
+        if run "$sc" "$b" 2>/dev/null; then
+            found=1
+            order=$b
+            break
+        fi
+    done
+    if [ -z "$found" ]; then
+        echo "$sc: no screen showed its capture line (KEEP=1 keeps the dumps and logs)" >&2
+        exit 1
+    fi
 done
 
 make -s -C "$ROOT/docs/manual/atari" screens

@@ -163,7 +163,8 @@ def parse_info(payload):
 def parse_hello(payload):
     ver, table = payload[0], payload[1]
     token = bytes(payload[2:6])
-    name = payload[6:14].decode("ascii", "replace").strip()
+    # what a client's title screen lets a player type, and nothing else (no spaces, no control codes)
+    name = "".join(ch for ch in payload[6:14].decode("latin-1").upper() if "!" <= ch <= "_")
     return ver, table, token, name
 
 

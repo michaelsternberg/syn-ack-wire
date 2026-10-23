@@ -18,17 +18,21 @@ import socket
 import urllib.parse
 
 from acquire import lobby, proto, theme
+from acquire.guard import Guard
 from acquire.table import Conn, Table
 
 log = logging.getLogger("synack")
 
 REGION_MAX = 12     # the Atari title bar's room for it
 LOBBY_TABLE = 0     # the table clients join (client config.h TABLE)
+HELLO_TIMEOUT = 10.0    # seconds a new connection has to send its first frame (a client sends it at once)
+FRAME_TIMEOUT = 10.0    # seconds a frame's payload may trail its type byte
 
 
 class Server:
     def __init__(self, timeout=60.0, bot_delay=1.0, seed=None, keepalive=10.0, think=None, abandon=600.0,
-                 afk=2, link_timeout=60.0, host_wait=60.0, region=None, jack_in=True):
+                 afk=2, link_timeout=60.0, host_wait=60.0, region=None, jack_in=True, tables=(LOBBY_TABLE,),
+                 guard=None, hello_timeout=HELLO_TIMEOUT, frame_timeout=FRAME_TIMEOUT):
         self.theme = theme.load()
         if region:
             self.theme.game["region"] = region
@@ -42,6 +46,10 @@ class Server:
         self.host_wait = host_wait
         self.jack_in = jack_in
         self.seed = seed
+        self.allowed = frozenset(tables)    # the tables clients may watch or join
+        self.guard = guard or Guard()
+        self.hello_timeout = hello_timeout
+        self.frame_timeout = frame_timeout
         self.tables = {}
         self.lobby = None
 
@@ -64,27 +72,54 @@ class Server:
 
     async def handle(self, reader, writer):
         peer = writer.get_extra_info("peername")
+        addr = peer[0] if peer else "?"
+        if not self.guard.admit(addr):              # blocked, or too many connections: closed without a word
+            writer.close()
+            return
+        try:
+            await self._serve(reader, writer, peer, addr)
+        finally:
+            self.guard.release(addr)
+
+    async def _serve(self, reader, writer, peer, addr):
         conn = Conn(writer)
         self.watch_link(writer)
         seat = table = watched = None
-        beat = asyncio.create_task(self.heartbeat(conn))   # from the title screen on: a dead one is found there too
+        beat = None
+
+        async def payload(n):                       # a frame's payload follows its type byte at once
+            return await asyncio.wait_for(reader.readexactly(n), self.frame_timeout) if n else b""
+
         try:
+            try:                                    # a client says something at once; a scanner may not
+                t = await asyncio.wait_for(reader.readexactly(1), self.hello_timeout)
+            except TimeoutError:
+                self.guard.strike(addr, "said nothing")
+                return
+            beat = asyncio.create_task(self.heartbeat(conn))   # from the title screen on: a dead one is found there too
             while seat is None:
                 # before joining: `I` watches a table's status (a client at its title screen), `H` joins
-                t = await reader.readexactly(1)
+                if t not in (b"I", b"H"):
+                    self.guard.strike(addr, f"opened with {t!r}")
+                    return
                 if t == b"I":
-                    ver, tid = proto.parse_info(await reader.readexactly(proto.CLIENT_LEN[b"I"]))
+                    ver, tid = proto.parse_info(await payload(proto.CLIENT_LEN[b"I"]))
+                    if tid not in self.allowed:
+                        self.guard.strike(addr, f"asked for table {tid}")
+                        return
                     if ver == proto.VERSION:            # otherwise its `H` gets fault 1
                         if watched:
                             watched.unwatch(conn)
                         watched = self.table(tid)
                         watched.watch(conn)
+                    t = await reader.readexactly(1)     # a title screen may wait as long as its player types
                     continue
-                if t != b"H":
-                    return
-                ver, tid, token, name = proto.parse_hello(await reader.readexactly(proto.CLIENT_LEN[b"H"]))
+                ver, tid, token, name = proto.parse_hello(await payload(proto.CLIENT_LEN[b"H"]))
                 if ver != proto.VERSION:
                     conn.send(proto.fault(proto.F_VERSION))
+                    return
+                if tid not in self.allowed:
+                    self.guard.strike(addr, f"asked for table {tid}")
                     return
                 if watched:
                     watched.unwatch(conn)
@@ -93,27 +128,33 @@ class Server:
                 if isinstance(seat, int):
                     conn.send(proto.fault(seat))
                     code, seat = seat, None
+                    if code == proto.F_TOKEN:
+                        self.guard.strike(addr, "sent a token no seat has")
                     if code not in (proto.F_FULL, proto.F_HANDLE):
                         return
                     watched = table                     # back to its title screen: still connected, watching
                     table.watch(conn)
+                    t = await reader.readexactly(1)
             log.info("%s joined table %d as %s", peer, tid, seat.name)
             while True:
                 t = await reader.readexactly(1)
                 n = proto.CLIENT_LEN.get(t)
                 if n is None:
-                    log.warning("%s sent unknown type %r; dropping", peer, t)
+                    self.guard.strike(addr, f"{seat.name} sent unknown type {t!r}")
                     return
-                payload = await reader.readexactly(n) if n else b""
-                log.debug("%s (%s) sent %s %s", peer, seat.name, t.decode(), payload.hex(" "))
-                table.receive(seat, t, payload)
+                data = await payload(n)
+                log.debug("%s (%s) sent %s %s", peer, seat.name, t.decode(), data.hex(" "))
+                table.receive(seat, t, data)
                 await writer.drain()
+        except TimeoutError:                                # a payload that never came
+            self.guard.strike(addr, "stalled in the middle of a frame")
         except (asyncio.IncompleteReadError, OSError):     # OSError: reset, or the link timed out
             pass
         finally:
             if watched:
                 watched.unwatch(conn)
-            beat.cancel()
+            if beat:
+                beat.cancel()
             if seat is not None:
                 log.info("%s (%s) disconnected", peer, seat.name)
                 table.disconnect(seat, conn)
@@ -149,6 +190,16 @@ def think_time(text):
     if jitter < 0 or mean - jitter < 0:
         raise argparse.ArgumentTypeError(f"{text!r}: need 0 <= JITTER <= MEAN")
     return mean, jitter
+
+
+def table_list(text):
+    try:
+        tables = tuple(int(t) for t in text.split(","))
+    except ValueError:
+        tables = ()
+    if not tables or not all(0 <= t <= 255 for t in tables):
+        raise argparse.ArgumentTypeError(f"{text!r}: need table numbers 0-255, separated by commas")
+    return tables
 
 
 def region_name(text):
@@ -239,6 +290,9 @@ async def main():
     ap.add_argument("--no-jack-in", dest="jack_in", action="store_false",
                     help="turn a newcomer away from a game in progress (TABLE FULL) instead of letting them take "
                          "over a bot seat, holdings and all, e.g. for a game among friends")
+    ap.add_argument("--tables", type=table_list, default=(LOBBY_TABLE,), metavar="N,N",
+                    help="the tables clients may join, e.g. 0,1 for clients built with TABLE=1 too; any other "
+                         "table is refused (default: 0)")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     g = ap.add_argument_group("FujiNet game lobby", "list this server in the lobby, so players can pick it from "
                               "their Atari; --lobby and --lobby-client turn it on")
@@ -265,7 +319,7 @@ async def main():
     think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
     server = Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
                     abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
-                    host_wait=a.host_wait, region=a.region, jack_in=a.jack_in)
+                    host_wait=a.host_wait, region=a.region, jack_in=a.jack_in, tables=a.tables)
     srv = await server.serve(a.host, a.port)
     if a.lobby:
         game = server.theme.game

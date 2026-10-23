@@ -17,7 +17,7 @@ HOST = "127.0.0.1"
 
 class ServerTest(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
-        self.server = Server(timeout=5.0, bot_delay=0, seed=42)
+        self.server = Server(timeout=5.0, bot_delay=0, seed=42, tables=(0, 7))   # 7: tables stay apart
         self.srv = await self.server.serve(HOST, 0)
         self.port = self.srv.sockets[0].getsockname()[1]
 
