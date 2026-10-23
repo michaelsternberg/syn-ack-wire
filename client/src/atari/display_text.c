@@ -269,6 +269,8 @@ void display_title_screen(void)
     at(TITLE_END + 8, 4);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
          : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN RETURN");
+    if (refused)
+        band(4);                        /* purple behind it, as behind a question in the game */
     display_title_update();
 }
 

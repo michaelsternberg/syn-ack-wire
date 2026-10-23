@@ -7,7 +7,9 @@
 ;   end of row 18 (the last seat)         back to COLOR2 for the log
 ;   end of row 21 (the last log line)     purple behind the info row and the
 ;                                         question: only while this seat has a
-;                                         decision to make
+;                                         decision to make, or on the title
+;                                         screen behind a refusal (alone, without
+;                                         the other bands)
 ;   end of row 23 (the last row)          back to COLOR2, out of sight
 ; The last one matters: the OS copies COLOR2 to COLPF2 in its vertical blank's
 ; second stage, which it skips when the blank interrupts an IRQ (a key, SIO),
@@ -19,7 +21,8 @@
 ; void dli(void)                            the handler, for VDSLST
 ; void __fastcall__ band(unsigned char m)   the bands: 0 off, 1 on (the
 ;                                           playfield); + 2 the title alert,
-;                                           + 4 the purple at the bottom
+;                                           + 4 the purple at the bottom (alone:
+;                                           the title screen's)
 
         .export _dli, _band
         .importzp ptr1
@@ -71,6 +74,9 @@ _dli:   pha
         lda mode                ; after row 23: next frame's top, if alerting,
         and #2
         bne @info
+        lda mode
+        lsr a
+        bcc @ask                ;   else its row 21, if the bands are off,
 @seats: lda #SEATS              ;   else its row 12
         bne @set
 @ask:   lda mode
@@ -98,6 +104,11 @@ _band:  sta mode
         sta (ptr1),y
         ldy #5 + ROW_LOG - 1
         sta (ptr1),y
+        lda mode
+        and #5
+        cmp #1                  ; carry = the bands or the bottom's purple
+        lda #$04
+        ror a
         ldy #5 + ROW_INFO - 1
         sta (ptr1),y
         ldy #5 + 23
