@@ -509,6 +509,14 @@ class ServerTest(unittest.IsolatedAsyncioTestCase):
         w.close()
         wa.close()
 
+    async def test_title_screen_gets_keepalives(self):
+        self.server.keepalive = 0.05
+        r, w, c, news = await self.watch()
+        await news()                                        # the region and the status
+        data = await asyncio.wait_for(r.read(4096), 5)      # then nothing changes, but the link is kept checked
+        self.assertEqual(data[:1], proto.keepalive())
+        w.close()
+
     async def test_host_hears_who_is_at_the_door(self):
         ra, wa = await self.raw(name="ANN")
         a = testclient.Client()

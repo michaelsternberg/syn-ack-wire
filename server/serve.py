@@ -66,7 +66,8 @@ class Server:
         peer = writer.get_extra_info("peername")
         conn = Conn(writer)
         self.watch_link(writer)
-        seat = table = watched = beat = None
+        seat = table = watched = None
+        beat = asyncio.create_task(self.heartbeat(conn))   # from the title screen on: a dead one is found there too
         try:
             while seat is None:
                 # before joining: `I` watches a table's status (a client at its title screen), `H` joins
@@ -97,7 +98,6 @@ class Server:
                     watched = table                     # back to its title screen: still connected, watching
                     table.watch(conn)
             log.info("%s joined table %d as %s", peer, tid, seat.name)
-            beat = asyncio.create_task(self.heartbeat(conn))
             while True:
                 t = await reader.readexactly(1)
                 n = proto.CLIENT_LEN.get(t)
@@ -113,8 +113,7 @@ class Server:
         finally:
             if watched:
                 watched.unwatch(conn)
-            if beat:
-                beat.cancel()
+            beat.cancel()
             if seat is not None:
                 log.info("%s (%s) disconnected", peer, seat.name)
                 table.disconnect(seat, conn)

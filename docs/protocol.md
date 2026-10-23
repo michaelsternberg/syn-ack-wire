@@ -105,7 +105,7 @@ it needs no mapping table.
 | `i` | len, code, text… | 3+n | you | Table status, before joining (see `I`): what `H` would do now. `code`: 0 lobby, a seat for you; 1 game in progress, you'd take over a bot; 2 full (a dropped player can still rejoin by token or handle). `text` ≤ 28 chars, from theme `[status]`. |
 | `e` | winners | 2 | all | Game over. `winners` = bitmask of seats tied for first. Final cash arrives as `m` messages before this. |
 | `f` | code | 2 | you | Fault. 1 bad version, 2 table full, 3 bad token, 4 illegal answer (a fresh prompt follows), 5 that handle is taken at this table (a player's or a bot's). |
-| `u` | — | 1 | you | Keepalive, every 10 s (`serve.py --keepalive`). Means nothing beyond "the link is up". |
+| `u` | — | 1 | you | Keepalive, every 10 s (`serve.py --keepalive`), from the moment the client connects: at the title screen too. Means nothing beyond "the link is up". |
 
 ### Snapshot `s` (116-byte payload)
 | Offset | Size | Field |
@@ -192,7 +192,9 @@ The server sends `u` every 10 seconds. A link can die without either end being t
 power, or a router drops the session, and FujiNet still reports the connection as open. So the client counts silence
 instead: after 20 seconds with no frame of any kind it shows NO SIGNAL, and at 30 it hangs up and reconnects with its
 token. The server finds dead connections when its keepalives go unacknowledged for its `--link-timeout` (60 s by
-default; it sets `TCP_USER_TIMEOUT`), and the prompt timeout covers the turn in the meantime. v2 added `u`; a v1 client is refused with fault 1. v3 added `I`, `i` and fault 5, and keeps the
+default; it sets `TCP_USER_TIMEOUT`), and the prompt timeout covers the turn in the meantime. Keepalives start as
+soon as a client connects, so a title screen that vanished (an Atari switched off with its FujiNet) also stops
+being watched, and leaves the host's door count, within that time. v2 added `u`; a v1 client is refused with fault 1. v3 added `I`, `i` and fault 5, and keeps the
 connection open after fault 2.
 
 ### Kit management (server-side, no protocol impact)

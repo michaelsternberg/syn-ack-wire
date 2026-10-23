@@ -70,9 +70,10 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   counts).
 - A dropped connection marks the seat away and its bot plays until the token comes back. `Q` (the Atari's Esc, then Y)
   hands the seat to its bot for good, at once: it takes a free bot name, its token is forgotten, and a newcomer
-  can jack in for it (theme `logoff`). A client that vanishes without closing (switched off, Wi-Fi gone) counts as dropped after
-  `--link-timeout` seconds (default 60): the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end
-  the connection. Without that option (it is Linux only) the system's own limit applies, about 15 minutes.
+  can jack in for it (theme `logoff`). A client that vanishes without closing (switched off, Wi-Fi gone) counts as
+  dropped after `--link-timeout` seconds (default 60), at the title screen too: keepalives start as soon as a client
+  connects, and the server sets `TCP_USER_TIMEOUT`, so its unacknowledged keepalives end the connection. Without
+  that option (it is Linux only) the system's own limit applies, about 15 minutes.
 - Someone new joining a game in progress jacks in for a bot seat: the one worth least, cash and crypto at current
   prices. It becomes theirs, holdings and kit included, under their handle. The newcomer is told first (theme
   `takeover`), then everyone gets a log line (`jackin`). Away seats are kept for their owners; with no bot seat
