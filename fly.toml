@@ -1,6 +1,6 @@
 # fly.io: the SYN-ACK WIRE servers on one small machine, always on. server/README.md, "Deploying to fly.io".
 app = "syn-ack-wire"            # your app's name (unique across fly.io); players dial <app>.fly.dev
-primary_region = "ord"          # where the machine runs, e.g. ord (Chicago), iad (Virginia), lhr (London)
+primary_region = "dfw"          # where the machine runs (Dallas); fly platform regions lists the others
 kill_signal = "SIGTERM"         # the server leaves the lobby and closes its connections at once on SIGTERM
 kill_timeout = 10
 
