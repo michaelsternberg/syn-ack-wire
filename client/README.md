@@ -25,10 +25,8 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
-| `test/bakeoff.c`, `test/net_fnlib.c` | Size comparison: raw SIO vs fujinet-lib |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/screen2txt.py` | Shows a screen dump as text |
-| `vendor/` | fujinet-lib 5.0.0, pinned (see its README) |
 
 ## Build
 ```sh
@@ -40,10 +38,8 @@ make HINTS=0                             # move hints start off (the player can 
 make test                                # build/synack-auto.xex: plays by itself, for the emulator
 make atr                                 # build/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
 make pc                                  # build/pc-client: the common code on this PC
-make bakeoff
 ```
-Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. `make bakeoff`
-works with it directly; the 2.19 release can't link fujinet-lib 5.x.
+Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build.
 
 ## Play it in the emulator
 ```sh
@@ -247,9 +243,9 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 117 | the color bands' DLI handler and its display list switch |
-| Bake-off, network added on top of the same test program | | |
+| Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
-| fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in |
+| fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |
 | `wiremon.xex` | 2982 | whole file, including cc65's Atari startup code |
 
 ## Tested (atari800 7.2.1 + FujiNet-PC 1.6 + server, NetSIO)

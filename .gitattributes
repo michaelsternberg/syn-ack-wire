@@ -1,0 +1,11 @@
+# Text files are stored with LF line ends.
+* text=auto eol=lf
+
+# ATASCII: lines end in $9B, not LF, and graphics characters are raw bytes. Never convert them.
+*.atascii       binary
+client/help/**/*.TXT binary
+
+# Atari and document binaries
+*.atr           binary
+*.xex           binary
+*.pdf           binary

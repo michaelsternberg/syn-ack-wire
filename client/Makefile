@@ -4,7 +4,6 @@
 #   make FANCY=1              use the hand-made screens instead of the text ones
 #   make atr                  build/synack.atr: boots the game with PicoBoot, plus the help pages
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
-#   make bakeoff              fujinet-lib size comparison (needs cc65 newer than 2.19)
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -17,7 +16,6 @@ FANCY   ?=
 HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)
 B       = build
-FNLIB   = vendor/fujinet-lib-5.0.0
 # the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25
 BOOT    ?= PicoBoot406
 DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
@@ -93,17 +91,6 @@ endif
 	python3 tools/help_disk.py $@ $(HELP_SECTOR) $(HELP)
 atr: $(B)/synack.atr
 
-# --- size bake-off: raw SIO vs fujinet-lib (fujinet-lib v5 needs cc65 newer than 2.19)
-$(B)/bakeoff.s: test/bakeoff.c | $(B)
-	$(CC) $(CFLAGS) -o $@ $<
-$(B)/net_fnlib.s: test/net_fnlib.c | $(B)
-	$(CC) $(CFLAGS) -I $(FNLIB) -o $@ $<
-bakeoff: $(B)/bakeoff.o $(COMMON) $(NET) $(B)/net_fnlib.o
-	$(LD) -t $(TARGET) -o $(B)/bake_sio.xex $(B)/bakeoff.o $(COMMON) $(NET) $(TARGET).lib
-	$(LD) -t $(TARGET) -o $(B)/bake_fn.xex $(B)/bakeoff.o $(COMMON) $(B)/net_fnlib.o $(B)/ring.o \
-	    $(FNLIB)/fujinet-atari-5.0.0.lib $(TARGET).lib
-	@echo "raw SIO:    $$(stat -c %s $(B)/bake_sio.xex) bytes"
-	@echo "fujinet-lib: $$(stat -c %s $(B)/bake_fn.xex) bytes"
 
 # --- unattended test build: plays by itself and BRKs for screen dumps (see test/autoplay.c)
 $(B)/main-auto.s: src/common/main.c $(HDRS) | $(B)
@@ -123,6 +110,6 @@ pc: $(HDRS) | $(B)
 clean:
 	rm -rf $(B)
 
-.PHONY: all atr bakeoff test pc clean
+.PHONY: all atr test pc clean
 .PRECIOUS: $(B)/%.s $(B)/%.o
 .DELETE_ON_ERROR:
