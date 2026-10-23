@@ -13,31 +13,36 @@ proxy-protocol = true           # fly.io's proxy_proto handler names each player
 # region = "us"
 # url = "https://qalobby.fujinet.online"
 
+# Listed in the lobby by region name when equally busy (busier servers float up), so the names sort in the
+# order wanted: relaxed, relaxed, quicker, fast. The default port, 6502, is relaxed: the kindest landing for a
+# disk booted without the lobby.
+
 [[server]]
 port = 6502
-region = "NEO-KANSAI-1"
-description = "fast pace"
-bot-delay = 0.5
+region = "CHIBA-GRID-7"
+description = "relaxed pace"
+think-exploit = "20,10"         # 10 to 30 s before a bot runs an exploit
+think-buy = "12,5"              # 7 to 17 s before it buys
+timeout = 90                    # and a longer shot clock for the people
 
 [[server]]
 port = 6503
-region = "CHIBA-GRID-7"
-description = "quicker pace"
-think-exploit = "8,4"
-think-buy = "5,2"
+region = "NEO-KANSAI-1"
+description = "relaxed pace"
+think-exploit = "20,10"
+think-buy = "12,5"
+timeout = 90
 
 [[server]]
 port = 6504
 region = "OSAKA-SPRAWL"
-description = "relaxed pace"
-think-exploit = "20,10"
-think-buy = "12,5"
-timeout = 90
+description = "quicker pace"
+think-exploit = "8,4"           # 4 to 12 s
+think-buy = "5,2"               # 3 to 7 s
 
 [[server]]
 port = 6505
 region = "SEOUL-NODE-2"
-description = "relaxed pace"
-think-exploit = "20,10"
-think-buy = "12,5"
-timeout = 90
+description = "fast pace"
+think-exploit = "3,1"           # 2 to 4 s
+think-buy = "2,1"               # 1 to 3 s

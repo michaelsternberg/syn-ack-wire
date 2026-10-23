@@ -119,7 +119,7 @@ with a message naming the server and the setting. Only `--host` and `--trace` go
 ## Deploying to fly.io
 The repository root has what [fly.io](https://fly.io) needs: `Dockerfile` (Python and the server, nothing else),
 `fly.toml` (one small machine, always on, a TCP service per server) and `server/servers.fly.toml` (the four servers:
-one fast, one quicker, two relaxed). Fly builds the image on its own machines, so Docker isn't needed locally.
+two relaxed, one quicker, one fast). Fly builds the image on its own machines, so Docker isn't needed locally.
 Cost at the time of writing: about $2/month for the machine (256 MB) and $2/month for the dedicated IPv4 address a
 raw TCP service needs; the host name `<app>.fly.dev` comes with the app.
 
@@ -133,7 +133,7 @@ raw TCP service needs; the host name `<app>.fly.dev` comes with the app.
    here would be two separate servers behind one address, splitting players between unrelated games.)
    `fly status` should show one machine, started; `fly logs` shows the four servers listening.
 5. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/`. A disk booted directly
-   dials that one server (6502 is the fast one here); the FujiNet lobby gives each server its own port.
+   dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
 6. To list the servers in the lobby, uncomment `[lobby]` in `servers.fly.toml`, set `address` and `client` (where
    the lobby boots `synack.atr` from, e.g. a TNFS host), keep `url` on the QA lobby until a listing looks right,
    and deploy again.
