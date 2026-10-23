@@ -1,0 +1,44 @@
+# Several SYN-ACK WIRE servers in one process:  python3 serve.py --config servers.toml
+#
+# Each [[server]] has its own port, region and pace, and its own entry in the FujiNet lobby, where it shows as
+# "REGION - description". The settings are named like serve.py's options (python3 serve.py --help says what each
+# does); any left out take the same defaults. Players tell servers apart by region, so each needs its own.
+
+host = "0.0.0.0"                # listen on every address (127.0.0.1: this machine only)
+
+# Optional: list every server in the FujiNet game lobby. Leave the section out to stay unlisted.
+# [lobby]
+# address = "wire.example.com"                  # the public host name (or address) players' Ataris dial
+# client = "TNFS://tnfs.example.com/synack.atr" # where the lobby boots the client disk from
+# key = 11                                      # the client's LOBBY_KEY
+# region = "us"                                 # the real-world region, 1-2 letters
+# url = "https://qalobby.fujinet.online"        # the QA lobby, to try it out; default: the public one
+
+[[server]]
+port = 6502
+region = "NEO-KANSAI-1"
+description = "fast pace"
+bot-delay = 0.5
+
+[[server]]
+port = 6503
+region = "CHIBA-GRID-7"
+description = "quicker pace"
+think-exploit = "8,4"           # 4 to 12 s before a bot runs an exploit
+think-buy = "5,2"
+
+[[server]]
+port = 6504
+region = "OSAKA-SPRAWL"
+description = "relaxed pace"
+think-exploit = "20,10"         # 10 to 30 s
+think-buy = "12,5"
+timeout = 90                    # and a longer shot clock for the people
+
+[[server]]
+port = 6505
+region = "SEOUL-NODE-2"
+description = "relaxed pace"
+think-exploit = "20,10"
+think-buy = "12,5"
+timeout = 90

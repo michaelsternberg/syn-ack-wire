@@ -27,6 +27,7 @@ python3 serve.py --link-timeout 30            # drop a client that vanished with
 python3 serve.py --region NEO-LAGOS-3         # the fictional grid region in the title bar and log (default NEO-KANSAI-1)
 python3 serve.py --no-jack-in                 # newcomers to a game in progress get TABLE FULL, not a bot seat
 python3 serve.py --tables 0,1                 # tables clients may use (default 0; others are refused)
+python3 serve.py --config servers.toml        # several servers in one process (see servers.example.toml)
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
 python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr
                                               # list the server in the FujiNet game lobby (see below)
@@ -99,6 +100,21 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   from MEAN-JITTER to MEAN+JITTER. A prompt that timed out is answered at once.
 - After a game the table returns to the lobby. Bot and away seats stay visible until a new player needs the chair,
   and a reconnecting player is sent the result (`e`) of the last game.
+
+## Several servers in one process
+`--config servers.toml` runs several servers, each on its own port with its own region, pace and lobby entry;
+`servers.example.toml` is a commented example with four. The settings are named like the options above, and any
+left out take the same defaults. The file is checked when the server starts: unknown settings, a port or region used
+twice (players tell servers apart by region), a shot clock over 255 s, or a lobby name over 32 characters stop it
+with a message naming the server and the setting. Only `--host` and `--trace` go with `--config`.
+
+- Each server's lobby entry reads `REGION - description` (`description = "relaxed pace"`; `--description` for a
+  single server), at `TCP://<[lobby] address>:<port>/`.
+- They share one guard: an address blocked on one port is blocked on all, and the connection limits count across
+  them.
+- With more than one server, each log line starts with the region of the server it comes from.
+- Ctrl-C or SIGTERM stops at once: the lobby entries are removed, then every connection is closed, games in
+  progress included. (A cloud host sends SIGTERM to redeploy; waiting for the games to end could take hours.)
 
 ## On the public internet
 A port open to the internet is soon found by scanners. `acquire/guard.py` keeps them from wearing the server down:

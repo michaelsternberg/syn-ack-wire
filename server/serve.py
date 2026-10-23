@@ -7,23 +7,39 @@
                     [--lobby TCP://host:port/ --lobby-client TNFS://host/path.atr [--lobby-key 11]
                      [--lobby-region us] [--lobby-url https://lobby.fujinet.online]]
 
+    python3 serve.py --config servers.toml [--host 0.0.0.0] [--trace]
+
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md. With --lobby, the server lists
-table 0 (the one clients join) in the FujiNet game lobby.
+table 0 (the one clients join) in the FujiNet game lobby. With --config, one process runs several servers, each
+on its own port with its own settings and its own lobby entry (servers.example.toml shows how).
 """
 import argparse
 import asyncio
+import contextvars
 import logging
 import signal
 import socket
+import tomllib
 import urllib.parse
+from dataclasses import dataclass, field
 
 from acquire import lobby, proto, theme
 from acquire.guard import Guard
 from acquire.table import Conn, Table
 
 log = logging.getLogger("synack")
+# The server a log line comes from, when one process runs several: set for each connection, and inherited by
+# everything it starts (its table's game loop, timers), so their lines carry it too.
+serving = contextvars.ContextVar("serving", default="")
+
+
+class ServerName(logging.Filter):
+    def filter(self, record):
+        record.server = serving.get()
+        return True
 
 REGION_MAX = 12     # the Atari title bar's room for it
+LOBBY_NAME_MAX = 32 # the lobby's `server` field: the region, " - ", and the description
 LOBBY_TABLE = 0     # the table clients join (client config.h TABLE)
 HELLO_TIMEOUT = 10.0    # seconds a new connection has to send its first frame (a client sends it at once)
 FRAME_TIMEOUT = 10.0    # seconds a frame's payload may trail its type byte
@@ -52,6 +68,7 @@ class Server:
         self.frame_timeout = frame_timeout
         self.tables = {}
         self.lobby = None
+        self.writers = set()        # every open connection, to close them all on shutdown
 
     def table(self, tid):
         if tid not in self.tables:
@@ -71,14 +88,17 @@ class Server:
             self.lobby.players(*table.players())
 
     async def handle(self, reader, writer):
+        serving.set(self.theme.game["region"] + " ")    # this connection's task: its log lines name the server
         peer = writer.get_extra_info("peername")
         addr = peer[0] if peer else "?"
         if not self.guard.admit(addr):              # blocked, or too many connections: closed without a word
             writer.close()
             return
+        self.writers.add(writer)
         try:
             await self._serve(reader, writer, peer, addr)
         finally:
+            self.writers.discard(writer)
             self.guard.release(addr)
 
     async def _serve(self, reader, writer, peer, addr):
@@ -177,7 +197,7 @@ class Server:
 
     async def serve(self, host, port):
         srv = await asyncio.start_server(self.handle, host, port)
-        log.info("listening on %s", ", ".join(str(s.getsockname()) for s in srv.sockets))
+        log.info("%s listening on %s", self.theme.game["region"], ", ".join(str(s.getsockname()) for s in srv.sockets))
         return srv
 
 
@@ -248,6 +268,168 @@ def lobby_region(text):
     return text.lower()
 
 
+def description(text):
+    """What the lobby shows after the region, e.g. relaxed pace: printable ASCII."""
+    if not text or not all(0x20 <= ord(ch) <= 0x7E for ch in text):
+        raise argparse.ArgumentTypeError(f"{text!r}: need printable ASCII")
+    return text
+
+
+def lobby_name(region, desc):
+    """The lobby's `server` field for a server: its region, and its description if it has one."""
+    return f"{region} - {desc}" if desc else region
+
+
+# ---------------------------------------------------------------- several servers: --config servers.toml
+
+@dataclass
+class Spec:
+    """One server to run: its port, Server() arguments, and lobby details."""
+    port: int
+    args: dict = field(default_factory=dict)
+    description: str = ""
+    lobby_url: str = ""         # serverurl, when listed
+
+
+def _seconds(lo=0.0, hi=None):
+    def conv(v):
+        if isinstance(v, bool) or not isinstance(v, (int, float)) or v < lo or (hi is not None and v > hi):
+            raise ValueError(f"need a number of seconds{f' from {lo:g} to {hi:g}' if hi else f', at least {lo:g}'}")
+        return float(v)
+    return conv
+
+
+def _count(v):
+    if isinstance(v, bool) or not isinstance(v, int) or v < 0:
+        raise ValueError("need a whole number, 0 or more")
+    return v
+
+
+def _flag(v):
+    if not isinstance(v, bool):
+        raise ValueError("need true or false")
+    return v
+
+
+def _text(fn):
+    def conv(v):
+        if not isinstance(v, str):
+            raise ValueError("need a string in quotes")
+        try:
+            return fn(v)
+        except argparse.ArgumentTypeError as e:
+            raise ValueError(str(e))
+    return conv
+
+
+def _tables(v):
+    if not isinstance(v, list) or not v or not all(isinstance(t, int) and not isinstance(t, bool) and 0 <= t <= 255
+                                                   for t in v):
+        raise ValueError("need a list of table numbers 0-255, e.g. [0, 1]")
+    return tuple(v)
+
+
+# A server's keys, named like the command-line options: Server() argument and conversion.
+SERVER_KEYS = {
+    "region": ("region", _text(region_name)),
+    "timeout": ("timeout", _seconds(1, 255)),
+    "bot-delay": ("bot_delay", _seconds()),
+    "think-exploit": ("think P", _text(think_time)),
+    "think-buy": ("think B", _text(think_time)),
+    "keepalive": ("keepalive", _seconds(1)),
+    "abandon": ("abandon", _seconds()),
+    "afk": ("afk", _count),
+    "link-timeout": ("link_timeout", _seconds()),
+    "host-wait": ("host_wait", _seconds()),
+    "jack-in": ("jack_in", _flag),
+    "tables": ("tables", _tables),
+}
+LOBBY_KEYS = {
+    "address": _text(lambda t: lobby_address(f"TCP://{t}:1/") and t),   # the host clients dial: name or IP
+    "client": _text(lobby_client),
+    "key": lambda v: _text(lobby_key)(str(v) if isinstance(v, int) and not isinstance(v, bool) else v),
+    "region": _text(lobby_region),
+    "url": _text(str),
+}
+
+
+def load_config(text, default_region):
+    """servers.toml -> (Specs, lobby settings or None, listen address or None). ValueError says what's wrong."""
+    try:
+        cfg = tomllib.loads(text)
+    except tomllib.TOMLDecodeError as e:
+        raise ValueError(f"not valid TOML: {e}")
+    for k in cfg:
+        if k not in ("host", "lobby", "server"):
+            raise ValueError(f"unknown setting {k!r} (expected host, [lobby] and [[server]])")
+    host = cfg.get("host")
+    if host is not None and not isinstance(host, str):
+        raise ValueError("host: need a string in quotes")
+    lob = None
+    if "lobby" in cfg:
+        lob = {"key": 11, "region": "us", "url": "https://lobby.fujinet.online"}
+        for k, v in cfg["lobby"].items():
+            if k not in LOBBY_KEYS:
+                raise ValueError(f"[lobby]: unknown setting {k!r} (expected {', '.join(LOBBY_KEYS)})")
+            try:
+                lob[k] = LOBBY_KEYS[k](v)
+            except ValueError as e:
+                raise ValueError(f"[lobby] {k}: {e}")
+        for k in ("address", "client"):
+            if k not in lob:
+                raise ValueError(f"[lobby]: needs {k}")
+    servers = cfg.get("server")
+    if not isinstance(servers, list) or not servers:
+        raise ValueError("needs at least one [[server]]")
+    specs, ports, regions = [], set(), {}
+    for i, sv in enumerate(servers, 1):
+        where = f"server {i}"
+        port = sv.get("port")
+        if isinstance(port, bool) or not isinstance(port, int) or not 0 <= port <= 65535:
+            raise ValueError(f"{where}: port: need a TCP port number")
+        where = f"server {i} (port {port})"
+        if port and port in ports:
+            raise ValueError(f"{where}: port {port} is used twice")
+        ports.add(port)
+        spec = Spec(port)
+        think = {}
+        for k, v in sv.items():
+            if k in ("port",):
+                continue
+            if k == "description":
+                try:
+                    spec.description = _text(description)(v)
+                except ValueError as e:
+                    raise ValueError(f"{where} description: {e}")
+                continue
+            if k not in SERVER_KEYS:
+                raise ValueError(f"{where}: unknown setting {k!r} (expected port, description, {', '.join(SERVER_KEYS)})")
+            arg, conv = SERVER_KEYS[k]
+            try:
+                value = conv(v)
+            except ValueError as e:
+                raise ValueError(f"{where} {k}: {e}")
+            if arg.startswith("think "):
+                think[arg[-1]] = value
+            else:
+                spec.args[arg] = value
+        if think:
+            spec.args["think"] = think
+        region = spec.args.get("region", default_region)
+        if region in regions:
+            raise ValueError(f"{where}: region {region} is also server {regions[region]}'s: players tell servers "
+                             f"apart by their region")
+        regions[region] = i
+        name = lobby_name(region, spec.description)
+        if len(name) > LOBBY_NAME_MAX:
+            raise ValueError(f"{where}: {name!r} is {len(name)} characters; the lobby shows at most "
+                             f"{LOBBY_NAME_MAX}: shorten the description")
+        if lob:
+            spec.lobby_url = f"TCP://{lob['address']}:{port}/"
+        specs.append(spec)
+    return specs, lob, host
+
+
 async def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--host", default="0.0.0.0", metavar="ADDR",
@@ -287,12 +469,19 @@ async def main():
                     help="the fictional grid region the game is set in, shown in the title bar and the game log, "
                          "so players can name the server they'll meet on, e.g. NEO-LAGOS-3; at most 12 characters "
                          "(default: %s from theme.toml)" % theme.load().game["region"])
+    ap.add_argument("--description", type=description, metavar="TEXT",
+                    help="what the FujiNet lobby shows after the region, e.g. \"relaxed pace\"; region, \" - \" and "
+                         "this at most %d characters" % LOBBY_NAME_MAX)
     ap.add_argument("--no-jack-in", dest="jack_in", action="store_false",
                     help="turn a newcomer away from a game in progress (TABLE FULL) instead of letting them take "
                          "over a bot seat, holdings and all, e.g. for a game among friends")
     ap.add_argument("--tables", type=table_list, default=(LOBBY_TABLE,), metavar="N,N",
                     help="the tables clients may join, e.g. 0,1 for clients built with TABLE=1 too; any other "
                          "table is refused (default: 0)")
+    ap.add_argument("--config", metavar="FILE",
+                    help="run the servers a TOML file describes, each on its own port with its own settings and "
+                         "lobby entry, instead of one from the options above (see servers.example.toml); only "
+                         "--host and --trace go with it")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     g = ap.add_argument_group("FujiNet game lobby", "list this server in the lobby, so players can pick it from "
                               "their Atari; --lobby and --lobby-client turn it on")
@@ -312,27 +501,72 @@ async def main():
                    help="the lobby itself, e.g. https://qalobby.fujinet.online to try a listing out "
                         "(default: %(default)s)")
     a = ap.parse_args()
-    if bool(a.lobby) != bool(a.lobby_client):
-        ap.error("--lobby and --lobby-client go together")
-    logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO, format="%(asctime)s %(message)s")
+    default_region = theme.load().game["region"]
+    if a.config:
+        given = [d for d in vars(a) if d not in ("config", "host", "trace") and getattr(a, d) != ap.get_default(d)]
+        if given:
+            ap.error(f"--config replaces the other options: drop --{given[0].replace('_', '-')}, or set it in the file")
+        try:
+            with open(a.config, encoding="utf-8") as f:
+                specs, lob, host = load_config(f.read(), default_region)
+        except (OSError, ValueError) as e:
+            ap.error(f"{a.config}: {e}")
+        if host and a.host == ap.get_default("host"):
+            a.host = host
+    else:
+        if bool(a.lobby) != bool(a.lobby_client):
+            ap.error("--lobby and --lobby-client go together")
+        if a.description and len(lobby_name(a.region or default_region, a.description)) > LOBBY_NAME_MAX:
+            ap.error(f"--description: the lobby shows at most {LOBBY_NAME_MAX} characters with the region")
+        think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
+        specs = [Spec(a.port, dict(timeout=a.timeout, bot_delay=a.bot_delay, keepalive=a.keepalive, think=think,
+                                   abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout, host_wait=a.host_wait,
+                                   region=a.region, jack_in=a.jack_in, tables=a.tables),
+                      a.description or "", a.lobby or "")]
+        lob = a.lobby and {"client": a.lobby_client, "key": a.lobby_key, "region": a.lobby_region, "url": a.lobby_url}
+    logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO,
+                        format="%(asctime)s %(server)s%(message)s" if len(specs) > 1 else "%(asctime)s %(message)s")
+    for h in logging.getLogger().handlers:
+        h.addFilter(ServerName())
     logging.getLogger("asyncio").setLevel(logging.WARNING)
-    think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
-    server = Server(a.timeout, a.bot_delay, keepalive=a.keepalive, think=think,
-                    abandon=a.abandon, afk=a.afk, link_timeout=a.link_timeout,
-                    host_wait=a.host_wait, region=a.region, jack_in=a.jack_in, tables=a.tables)
-    srv = await server.serve(a.host, a.port)
-    if a.lobby:
-        game = server.theme.game
-        server.list_in(lobby.Lobby(a.lobby_url, lobby.entry(game["title"], game["region"], a.lobby_region,
-                                                             a.lobby, a.lobby_client, a.lobby_key)))
+    servers, srvs = await start(specs, a.host)
+    if lob:
+        list_all(servers, specs, lob)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
     try:
-        async with srv:
-            await srv.serve_forever()
-    finally:                                    # Ctrl-C or SIGTERM: off the lobby's list (DELETE)
-        if server.lobby:
-            await server.lobby.close()
+        await asyncio.Event().wait()            # the servers serve already; wait for Ctrl-C or SIGTERM
+    finally:
+        await stop(servers, srvs)
 
+
+async def start(specs, host):
+    """Start a Server for each Spec, all sharing one Guard (a misbehaving address is blocked on every port, and the
+    connection limits count across them). Returns the Servers and their listening sockets."""
+    guard = Guard()
+    servers = [Server(guard=guard, **spec.args) for spec in specs]
+    srvs = [await server.serve(host, spec.port) for server, spec in zip(servers, specs)]
+    return servers, srvs
+
+
+async def stop(servers, srvs):
+    """Shut down at once, players connected or not: off the lobby's list first (DELETE), then stop listening and
+    close every connection. (Waiting for the connections to close, as asyncio's serve_forever() does when it is
+    cancelled, could take until the last game ends.)"""
+    await asyncio.gather(*(server.lobby.close() for server in servers if server.lobby))
+    for srv in srvs:
+        srv.close()
+    for server in servers:
+        for w in list(server.writers):
+            w.close()
+    log.info("stopped")
+
+
+def list_all(servers, specs, lob):
+    """List each server in the FujiNet lobby `lob` describes, as "REGION - description", at its own address."""
+    for server, spec in zip(servers, specs):
+        game = server.theme.game
+        server.list_in(lobby.Lobby(lob["url"], lobby.entry(game["title"], lobby_name(game["region"], spec.description),
+                                                          lob["region"], spec.lobby_url, lob["client"], lob["key"])))
 
 if __name__ == "__main__":
     try:

@@ -1,0 +1,156 @@
+"""Several servers in one process: servers.toml, checked strictly, and the servers it starts.
+Run from server/:  python3 -m unittest -v"""
+import asyncio
+import json
+import pathlib
+import subprocess
+import sys
+import threading
+import unittest
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import testclient
+from acquire import proto
+from serve import list_all, load_config, lobby_name, start, stop
+
+HOST = "127.0.0.1"
+HERE = pathlib.Path(__file__).resolve().parent.parent
+REGION = "NEO-KANSAI-1"
+
+
+def config(servers, lob=""):
+    return lob + "".join(f"[[server]]\n{s}\n" for s in servers)
+
+
+class ConfigTest(unittest.TestCase):
+    def test_example_loads(self):
+        specs, lob, host = load_config((HERE / "servers.example.toml").read_text(), REGION)
+        self.assertEqual([s.port for s in specs], [6502, 6503, 6504, 6505])
+        self.assertEqual(lobby_name(specs[2].args["region"], specs[2].description), "OSAKA-SPRAWL - relaxed pace")
+        self.assertEqual(specs[2].args["think"], {"P": (20.0, 10.0), "B": (12.0, 5.0)})
+        self.assertEqual(specs[2].args["timeout"], 90.0)
+        self.assertIsNone(lob)
+        self.assertEqual(host, "0.0.0.0")
+
+    def test_lobby_section_gives_each_server_its_address(self):
+        specs, lob, _ = load_config(config(['port = 6502\nregion = "A"', 'port = 6503\nregion = "B"'],
+                                           '[lobby]\naddress = "wire.example.com"\n'
+                                           'client = "TNFS://tnfs.example.com/synack.atr"\n'), REGION)
+        self.assertEqual([s.lobby_url for s in specs], ["TCP://wire.example.com:6502/", "TCP://wire.example.com:6503/"])
+        self.assertEqual(lob["key"], 11)
+        self.assertEqual(lob["url"], "https://lobby.fujinet.online")
+
+    def test_mistakes_are_named(self):
+        cases = {
+            config(['port = 6502\nregion = "A"\ntimout = 9']): "unknown setting 'timout'",
+            config(['port = 6502\nregion = "A"', 'port = 6502\nregion = "B"']): "used twice",
+            config(['port = 6502\nregion = "A"', 'port = 6503\nregion = "a"']): "region A is also server 1's",
+            config(['port = 6502', 'port = 6503']): f"region {REGION} is also",          # both on the default
+            config(['port = 6502\nregion = "A"\ntimeout = 300']): "timeout: need a number of seconds from 1 to 255",
+            config(['port = 6502\nregion = "A"\nthink-buy = "5"']): "think-buy",
+            config(['port = 6502\nregion = "NEO-KANSAI-1"\ndescription = "a much too long description"']):
+                "the lobby shows at most 32",
+            config(['port = 6502\nregion = "A"'], '[lobby]\nclient = "TNFS://t.example.com/s.atr"\n'): "needs address",
+            config(['port = 6502\nregion = "A"\njack-in = "no"']): "need true or false",
+            "": "needs at least one [[server]]",
+            "port = 6502\n": "unknown setting 'port'",
+        }
+        for text, want in cases.items():
+            with self.subTest(want=want):
+                with self.assertRaises(ValueError) as cm:
+                    load_config(text, REGION)
+                self.assertIn(want, str(cm.exception))
+
+    def test_config_replaces_the_other_options(self):
+        r = subprocess.run([sys.executable, "serve.py", "--config", "servers.example.toml", "--timeout", "30"],
+                           cwd=HERE, capture_output=True, text=True, timeout=30)
+        self.assertNotEqual(r.returncode, 0)
+        self.assertIn("drop --timeout", r.stderr)
+
+
+class ServersTest(unittest.IsolatedAsyncioTestCase):
+    async def test_each_server_has_its_settings_and_all_share_a_guard(self):
+        specs, _, _ = load_config(config(['port = 0\nregion = "FAST-1"\nbot-delay = 0',
+                                          'port = 0\nregion = "SLOW-2"\ntimeout = 90\nthink-buy = "12,5"']), REGION)
+        servers, srvs = await start(specs, HOST)
+        try:
+            self.assertIs(servers[0].guard, servers[1].guard)
+            self.assertEqual((servers[0].bot_delay, servers[1].timeout), (0.0, 90.0))
+            self.assertEqual(servers[1].think, {"B": (12.0, 5.0)})
+            for srv, region in zip(srvs, ("FAST-1", "SLOW-2")):
+                r, w = await asyncio.open_connection(HOST, srv.sockets[0].getsockname()[1])
+                w.write(proto.info(0))
+                c = testclient.Client()
+                while c.status is None:
+                    c.feed(await asyncio.wait_for(r.read(4096), 5))
+                self.assertEqual(c.region, region)              # each title screen names its own server
+                w.close()
+        finally:
+            for srv in srvs:
+                srv.close()
+                srv.close_clients()
+                await srv.wait_closed()
+
+    async def test_stop_closes_games_at_once(self):
+        """SIGTERM (a cloud host redeploying, say) must not wait for the games to end."""
+        specs, _, _ = load_config(config(['port = 0\nregion = "A"', 'port = 0\nregion = "B"']), REGION)
+        servers, srvs = await start(specs, HOST)
+        r, w = await asyncio.open_connection(HOST, srvs[0].sockets[0].getsockname()[1])
+        w.write(proto.hello(0, bytes(4), "STAYER"))
+        c = testclient.Client()
+        while c.prompt is None:
+            c.feed(await asyncio.wait_for(r.read(4096), 5))
+        await asyncio.wait_for(stop(servers, srvs), 5)
+        try:
+            while await asyncio.wait_for(r.read(4096), 5):
+                pass                                        # the connection ends, rather than waiting
+        except ConnectionError:
+            pass
+        self.assertEqual(servers[0].writers, set())
+        w.close()
+
+    async def test_lobby_entries_name_region_and_description(self):
+        posts = []
+
+        class FakeLobby(BaseHTTPRequestHandler):
+            def do_POST(self):
+                posts.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+                self.send_response(201)
+                self.end_headers()
+
+            def do_DELETE(self):
+                self.rfile.read(int(self.headers["Content-Length"]))
+                self.send_response(204)
+                self.end_headers()
+
+            def log_message(self, *args):
+                pass
+
+        http = ThreadingHTTPServer((HOST, 0), FakeLobby)
+        threading.Thread(target=http.serve_forever, daemon=True).start()
+        specs, lob, _ = load_config(config(['port = 0\nregion = "OSAKA-SPRAWL"\ndescription = "relaxed pace"',
+                                            'port = 0\nregion = "NEO-KANSAI-1"\ndescription = "fast pace"'],
+                                           f'[lobby]\naddress = "wire.example.com"\n'
+                                           f'client = "TNFS://tnfs.example.com/synack.atr"\n'
+                                           f'url = "http://{HOST}:{http.server_port}"\n'), REGION)
+        servers, srvs = await start(specs, HOST)
+        try:
+            list_all(servers, specs, lob)
+            for _ in range(100):
+                if len({p["server"] for p in posts}) == 2:
+                    break
+                await asyncio.sleep(0.05)
+            self.assertEqual(sorted({p["server"] for p in posts}), ["NEO-KANSAI-1 - fast pace",
+                                                                    "OSAKA-SPRAWL - relaxed pace"])
+            self.assertEqual({p["serverurl"] for p in posts}, {"TCP://wire.example.com:0/"})   # port 0 in a test
+            await asyncio.gather(*(s.lobby.close() for s in servers))
+        finally:
+            http.shutdown()
+            for srv in srvs:
+                srv.close()
+                srv.close_clients()
+                await srv.wait_closed()
+
+
+if __name__ == "__main__":
+    unittest.main()
