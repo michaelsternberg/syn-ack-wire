@@ -1,0 +1,12 @@
+% The Atari's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // ATARI 8-BIT}
+\renewcommand{\PlatformShort}{Atari}                       % as in "on the Atari"
+\newcommand{\PlatformLong}{Atari 8-bit computers}          % the title page
+\newcommand{\PlatformMachines}{ATARI 400 / 800 / XL / XE}  % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar reads \code{NO SIGNAL} and turns purple}  % the link is quiet
+
+% Where the 40 x 24 screen sits in a capture, in image pixels (see \capgeom):
+\makeatletter
+\newcommand{\rendered}{\capgeom{10}{8}{8}{8}{340}{208}}     % client/tools/render_screen.py
+\newcommand{\emulated}{\capgeom{11}{11}{13.7}{16}{570}{408}} % synack_title_screen.png: an emulator window
+\makeatother

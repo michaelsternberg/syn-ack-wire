@@ -28,5 +28,6 @@ def show(data):
     print("+" + "-" * 40 + "+")
 
 
-for f in sys.argv[1:]:
-    show(open(f, "rb").read())
+if __name__ == "__main__":
+    for f in sys.argv[1:]:
+        show(open(f, "rb").read())

@@ -1,0 +1,33 @@
+% "Ending the Game": shared by the rulebook and the platform manuals (docs/manual/*).
+% Each document sets its own heading above this; \atscreen{} marks where the manual shows a screen.
+After placing your \V{spike}, if either of these is true, you may \term{call the \V{nullroute}}:
+
+\begin{itemize}
+  \item \term{\V{totalcompromise}}: any \V{hive} has \Rule{endsize} or more \Vp{node}.
+  \item \term{\V{lockdown}}: every \V{hive} on the \V{grid} is \V{safe}.
+\end{itemize}
+
+Calling it is your choice; you may keep playing instead. If you call it, finish your turn (you may still buy \V{coin}).
+Then the carriers \V{nullroute} the region and the game ends.
+
+\atscreen{nullroute}
+
+\begin{terminal}
+[!] NULL-ROUTE \Game{region}: \Game{endshout}
+\end{terminal}
+
+\begin{note}{\MakeUppercase{\V{stall}}}
+If a full round goes by in which no \V{player} can run an \V{exploit} (every \V{kit} is empty or holds only blocked or
+\V{patched} \Vp{exploit}), the \V{grid} can never change again. The carriers seal the region and the game ends
+at once, without anyone calling it. Go straight to the final \V{cashout}.
+\end{note}
+
+\subsection{The final \V{cashout}}
+\begin{enumerate}
+  \item Pay \V{root} and \V{sudo} bonuses for every \V{hive} still on the \V{grid}, exactly as in a \V{hivejack}.
+  \item Every \V{player} sells all their \V{coin} to the \V{bank} at its current price, starting with the smallest \V{hive}.
+  \item \VC{flatlined} \V{coin} (from syndicates not on the \V{grid}) is worth nothing.
+\end{enumerate}
+The \V{player} with the most \Game{currency} wins. Ties share the win.
+
+\atscreen{final}

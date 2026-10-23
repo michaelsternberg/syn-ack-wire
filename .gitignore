@@ -6,7 +6,7 @@ client/src/common/theme_tab.h
 client/src/common/proto_tab.h
 client/src/atari/title_art.h
 client/src/atari/title_art.inc
-docs/rulebook/theme.tex
+docs/style/theme.tex
 
 # LaTeX leftovers if a build fails
 *.aux

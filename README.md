@@ -83,7 +83,9 @@ portable C, and each platform supplies its network calls, keyboard and display b
 
 | | |
 |---|---|
-| [`docs/rulebook/`](docs/rulebook/) | The rulebook (LaTeX, with a built PDF); `make -C docs/rulebook` regenerates it from `theme.toml` |
+| [`docs/rulebook/`](docs/rulebook/) | The rulebook (LaTeX, with a built PDF) |
+| [`docs/manual/atari/`](docs/manual/atari/) | The user manual for the Atari version, with screen captures |
+| `docs/rules/`, `docs/style/` | The rules text and the style the rulebook and the manuals share; `make -C docs` builds them all from `theme.toml` |
 | [`docs/protocol.md`](docs/protocol.md) | The wire protocol between client and server |
 | [`docs/theme.md`](docs/theme.md) | The setting and the reasoning behind its names |
 | [`server/README.md`](server/README.md) | Server options, the rules engine, tables and the lobby |
@@ -94,9 +96,9 @@ portable C, and each platform supplies its network calls, keyboard and display b
 ```
 client/     the 8-bit client: src/common (portable), src/atari, help pages, tools
 server/     the Python server, bots, tests and simulator
-docs/       rulebook, protocol, theme notes
+docs/       rulebook, platform manuals, their shared rules text and style, protocol, theme notes
 theme/      theme.toml: every name and rule number
-tools/      generators for the client's and the rulebook's tables
+tools/      generators for the client's and the documents' tables
 ```
 
 ## License

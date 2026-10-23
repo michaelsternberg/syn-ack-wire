@@ -1,0 +1,29 @@
+% "What's in the Game": shared by the rulebook and the platform manuals (docs/manual/*).
+% Each document sets its own heading above this.
+\game\ is played on a computer; a game server manages everything below.
+
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[The \VC{grid}] 108 \Vp{node} in \Rule{rows} rows (\node{0}--\node{8}) and \Rule{cols} columns (\node{A}--\node{L}).
+    A \V{node} is named column first, then row: \node{A0} is the top-left corner, \node{L8} the bottom-right.
+  \item[\VCp{exploit}] 108 of them, one for each \V{node}. An \V{exploit} can only be run against the \V{node} it is written for.
+    Each \V{player} holds \Rule{kitsize} \Vp{exploit}, called their \term{\V{kit}}. Your \V{kit} is secret.
+  \item[Syndicates] Seven crime syndicates, each with its own \V{coin}. Only one \V{hive} per syndicate can be on the \V{grid} at a time.
+  \item[\VC{money} (\Game{currency})] The region's currency. Each \V{player} starts with \Y{\Rule{startcash}}.
+  \item[\VCp{coin}] \Rule{coinsupply} of each syndicate's \V{coin}. \VC{coin}'s value in \V{money} increases as \Vp{hive} spread. \VCp{coin} not owned by the \Vp{player} is held by the \V{bank}.
+  \item[The \V{bank}] The bank. It sells \V{coin}, buys it back, and pays out bonuses. There are no loans.
+
+\end{description}
+
+\subsection{Reading the \V{grid}}
+\begin{center}
+\begin{tikzpicture}[scale=0.55]
+  \gridframe
+  \spk{5}{4}
+  \hive{2}{1}{5}\hive{3}{1}{5}\hive{3}{2}{5}
+  \hive{8}{6}{3}\hive{9}{6}{3}
+\end{tikzpicture}
+\end{center}
+{\small Each syndicate is shown by its letter. \texttt{\Glyph{spike}}: a lone \term{\V{spike}} (\node{F4}).
+\texttt{\Syn{5}{letter}}: \Syn{5}{name}, a \V{hive} of 3 \Vp{node} (\node{C1}, \node{D1}, \node{D2}).
+\texttt{\Syn{3}{letter}}: \Syn{3}{name}, a \V{hive} of 2 \Vp{node} (\node{I6}, \node{J6}).
+Only up, down, left and right count as touching; diagonals never do.}

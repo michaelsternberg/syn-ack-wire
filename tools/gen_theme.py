@@ -6,6 +6,7 @@ Usage:
     gen_theme.py tex            print LaTeX macros (docs/rulebook/theme.tex)
     gen_theme.py c              print the 8-bit client's C header (client/src/common/theme_tab.h)
 """
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -109,6 +110,21 @@ def gen_tex(t):
                     f"{tex(s['name'])} & {tex(cap(s['tier']))} & "
                     f"{tex(s['flavor'])} \\\\")
     L.append("\\newcommand{\\SynTableRows}{%\n" + "\n".join(rows) + "}")
+    for i, b in enumerate(t["bots"]["names"]):
+        L.append(setcs(f"th@bot@{i}", tex(b)))
+    # Messages as the players see them: one macro argument per placeholder, in order of first use.
+    for sect in ("log", "status", "errors"):
+        for k, v in t[sect].items():
+            parts, names, out = re.split(r"\{(\w+)\}", v), [], ""
+            for i, part in enumerate(parts):
+                if i % 2 == 0:
+                    out += tex(part)
+                else:
+                    if part not in names:
+                        names.append(part)
+                    out += f"#{names.index(part) + 1}"
+            params = "".join(f"#{i + 1}" for i in range(len(names)))
+            L.append(f"\\expandafter\\def\\csname th@{sect}@{k}\\endcsname{params}{{{out}}}")
     L.append("")
     return "\n".join(L)
 

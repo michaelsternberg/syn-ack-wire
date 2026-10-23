@@ -1,0 +1,118 @@
+% "Hosting, Joining and Leaving": shared by the platform manuals (docs/manual/*); the rulebook may use it too.
+% Each document sets its own heading above this. Times are the server's defaults (serve.py options) and the
+% client's (client/src/common/main.c). Text the client writes itself, not from the theme, is quoted as is.
+% A platform defines \SignalLost (how its screen shows the link is quiet) and may show \atscreen{lobby}.
+A \game\ server holds one game at a time: one region, up to \Rule{maxplayers} seats. Every seat with no
+\V{player} at the keyboard is played by a bot, so a game never waits long on someone who isn't there.
+Times given here are the usual ones; whoever runs the server can change them.
+
+\subsection{The title screen's status}
+The title screen dials the server as soon as it appears, and its status line stays up to date while you
+type your handle.
+
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[\code{\Status{lobby}{2}}] No game yet; 2 \Vp{player} wait to play. \key{Return} takes a seat in the lobby.
+  \item[\code{\Status{jackin}}] A game is on, and a bot holds at least one seat. \key{Return} takes over a bot.
+  \item[\code{\Status{away}}] A game is on, every seat is a \V{player}'s, and some have dropped. Only they get back in.
+  \item[\code{\Status{full}}] \Rule{maxplayers} \Vp{player} are playing. \key{Return} does nothing.
+  \item[\code{NO CARRIER}] The server didn't answer. The game dials again.
+\end{description}
+People at the title screen don't hold a seat yet, and nobody waits for them.
+
+\subsection{Handles}
+Your handle is your name at the table, up to 8 letters and digits. Only one seat can use it: a handle
+already at the table, a bot's included, is refused with \code{THAT HANDLE IS TAKEN}, and you can type another.
+Upper and lower case count as the same. The one exception is coming back to your own seat (see
+\emph{Rejoining}).
+
+\subsection{Hosting}
+\begin{itemize}
+  \item \textbf{Who hosts:} the first \V{player} into an empty lobby. Your prompt line reads
+    \code{START WITH HOW MANY SEATS? \Rule{minplayers}-\Rule{maxplayers}}.
+  \item \textbf{Starting:} press \key{\Rule{minplayers}}--\key{\Rule{maxplayers}}. The game starts at once; seats
+    nobody has joined go to bots, named like \Bot{0} and \Bot{1}. You can't choose fewer seats than there are
+    \Vp{player} waiting: with four in the lobby, the server says \code{\Refusal{seats}{4}{\Rule{maxplayers}}}.
+  \item \textbf{Who might come:} the seat rows show who has joined, and the log counts the people at the title
+    screen, who may be about to: \code{\Say{door}{2}}. It changes as they arrive, join or leave.
+  \item \textbf{No hurry alone:} with nobody else seated, take as long as you like.
+  \item \textbf{The host clock:} once someone else is waiting, you have 60 seconds to either start the game or
+    let the host duty pass to the next \V{player}. Letting it pass is fine: you keep your seat and play when the
+    new host starts. The seconds count down at the right of your prompt line, and the others read
+    \code{\Say{hostclock}{ZER0COOL}{60}}. When the clock runs out, everyone reads \code{\Say{newhost}{MAMBA}},
+    and the new host has a fresh 60 seconds.
+  \item \textbf{An absent host,} on autopilot, hands over at once when an active \V{player} joins. A host who
+    leaves hands over to the next \V{player} in the lobby.
+\end{itemize}
+
+\subsection{Joining a lobby}
+Type your handle and press \key{Return}. You take the next empty seat and appear in everyone's seat rows. If
+the host clock is running, the log tells you how long the host has left. You play when the host starts.
+
+\atscreen{lobby}
+
+\subsection{\VC{jackin}: joining a game in progress}
+A newcomer to a game in progress takes over the bot seat worth least (cash plus \V{coin}), as it stands: its
+\Game{currency}, \V{coin} and \V{kit} are yours now, and your handle replaces the bot's. You read
+\code{\Say{takeover}}, and everyone reads \code{\Say{jackin}{ZER0COOL}{\Bot{4}}}. A decision the bot is already
+making stays the bot's; you play from the next one.
+\begin{itemize}
+  \item Two people going for the last bot seat: the first \key{Return} wins. The other reads
+    \code{TOO LATE: THE LAST SEAT WAS TAKEN} and stays on the title screen.
+  \item The server may turn jacking in off, for a game among friends. A game in progress then shows
+    \code{\Status{full}}.
+\end{itemize}
+
+\subsection{The shot clock}
+\begin{itemize}
+  \item \textbf{The shot clock:} each decision has 60 seconds, counted down at the right of the prompt line. At 0
+    your seat's bot makes that one decision. The seat stays yours.
+  \item \textbf{Autopilot:} after two decisions in a row made by the bot, you are on autopilot. Everyone reads
+    \code{\Say{autopilot}{MAMBA}}, and your seat shows \code{?}. You still get every prompt, but on the bot's
+    clock, about 10 seconds, so the game doesn't drag.
+  \item \textbf{Back from autopilot:} answer one prompt in time. The full clock comes back, and everyone reads
+    \code{\Say{returned}{MAMBA}}.
+\end{itemize}
+
+\subsection{\VC{logoff}: leaving on purpose}
+Any time after joining, \key{Esc} asks \code{\MakeUppercase{\V{logoff}} NOW? Y/N} on the prompt line.
+\begin{itemize}
+  \item \key{Y} leaves for good. In a game, a bot takes your seat at once, under a bot's name, and plays at bot
+    speed: nobody waits on your shot clock. Everyone reads \code{\Say{logoff}{\Bot{5}}{MAMBA}}. Your old seat is now
+    an ordinary bot seat, which anyone, you too, can jack in for. In the lobby, your seat is simply freed.
+  \item Any other key stays, and the question you were answering comes back.
+\end{itemize}
+You land on the title screen with your handle filled in.
+
+\subsection{Switching off, or losing the connection}
+\begin{itemize}
+  \item \textbf{In the lobby:} your seat is freed at once. If you hosted, the next \V{player} does.
+  \item \textbf{In a game:} your seat is kept for you and shown \code{?}; its bot plays every decision until you
+    are back. Your \Game{currency}, \V{coin} and \V{kit} stay with it.
+\end{itemize}
+A server notices a clean disconnect at once. A computer switched off, or a network that just stops, takes it up to
+about a minute; meanwhile the shot clock covers any decision.
+
+\subsection{Rejoining}
+\begin{itemize}
+  \item \textbf{The connection drops:} after 20 seconds with nothing from the server, \SignalLost. At 30 seconds the game hangs up and dials again by itself. Once back, the
+    server sends the whole game again, any decision waiting included. No key needed.
+  \item \textbf{After a reboot:} type the same handle on the title screen and press \key{Return}. You get your
+    own seat back, not a bot's, as long as it is shown away. If the server hasn't noticed the drop yet, your
+    handle is still in use (\code{THAT HANDLE IS TAKEN}): wait a minute and try again.
+\end{itemize}
+
+\subsection{Everybody gone}
+\begin{itemize}
+  \item \textbf{Nobody connected:} the game pauses; bots don't play on for nobody. The first one back finds it as
+    it was.
+  \item \textbf{Paused too long:} after 10 minutes with nobody connected, the game is dropped, with no result,
+    and the region is an empty lobby again.
+  \item \textbf{Everyone on autopilot} for 10 minutes: the game is dropped too. Those still connected land in a
+    fresh lobby, the first of them hosting, and read \code{\Say{abandoned}}.
+\end{itemize}
+
+\subsection{After the \V{nullroute}}
+When the game ends, everyone sees the final \Game{currency} and the top \V{player}. The table is a lobby again,
+with the same host (or the next \V{player} still connected), whose prompt asks for the seats of a rematch.
+\VCp{player} still connected keep their seats; a newcomer may take any other chair. A \V{player} who rejoins
+after the end sees the result.

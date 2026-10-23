@@ -1,0 +1,74 @@
+# Staged games for the manuals' captures, the same for every platform: server/stage.py sets the table up as one of these, then (if it
+# has one) makes the scenario's move, so the client opens on the moment the rules describe.
+#
+#   seats    the netrunners in seat order; seat 0 is the Atari being captured (its handle is replaced)
+#   cash     new yen, per seat
+#   hives    syndicate letter = its nodes; spikes = lone spikes
+#   coins    per netrunner: syndicate letter = crypto held (the Darkpool holds the rest)
+#   kit      seat 0's exploits, in key order (1-6); any left out are dealt at random
+#   play     the node seat 0 runs as the game starts (seat 0 has the turn); "" = none: the turn just opens
+#   end      true: after the move, seat 0 buys nothing and calls the null-route
+#   capture  the moment to capture: how the prompt line (or the info line above it) starts, as on screen
+#   like     start from that scenario, and change what is given here
+#
+# Names and numbers follow the example they illustrate; change both together.
+
+[tied-root]
+about = "Playing a Turn, hivejack: the example 'A tied ROOT'. Lotus-12 (4) takes Iron Vector (3)."
+seats = ["ZER0COOL", "MAMBA", "RAZORGRL"]
+cash = [3200, 4100, 2800]
+spikes = ["B6", "K0"]
+kit = ["K8", "C6", "E1", "G3", "J7", "B1"]   # 1-4: the drawing's targets, so the hints match its numbers
+play = "G3"
+capture = "CASH OUT HOW MANY?"
+
+[tied-root.hives]          # as in the Grid drawing under "1. Spike a node"
+L = ["D2", "E2", "F2", "F3"]
+I = ["H3", "H4", "I4"]
+
+[tied-root.coins]
+ZER0COOL = { I = 4, L = 2 }
+MAMBA = { I = 4, L = 3 }
+RAZORGRL = { I = 2, L = 1 }
+
+[spike]
+about = "Playing a Turn, 1. Spike a node: the drawing's four targets are the hints 1-4 in the kit."
+like = "tied-root"
+play = ""
+capture = "RUN WHICH EXPLOIT? PRESS 1-6"
+
+[infiltration]
+about = "Playing a Turn, infiltration: target 2, C6 touches the lone spike on B6."
+like = "tied-root"
+play = "C6"
+capture = "PRESS A SYNDICATE LETTER"
+
+[spread-buy]
+about = "Playing a Turn, buy crypto: target 3, E1 spreads Lotus-12 to 5 nodes, and its price is up already."
+like = "tied-root"
+play = "E1"
+capture = "LETTERS, DELETE, RETURN TO BUY"
+
+[nullroute]
+about = "Ending the Game: ZER0COOL's spike on H2 wraps the last hive in Black ICE (Lockdown); the null-route question."
+seats = ["ZER0COOL", "MAMBA", "RAZORGRL"]
+cash = [100, 4500, 7200]       # too little for any crypto: the prompt is the question alone
+spikes = ["G4", "J4", "E4", "F7", "K6", "H8"]
+play = "H2"
+capture = "NULL-ROUTE AND END THE GAME? Y/N"
+
+[nullroute.hives]          # a late board: two Black ICE hives and one about to be
+L = ["A0", "B0", "C0", "D0", "E0", "A1", "B1", "C1", "D1", "E1", "A2", "B2", "C2", "D2", "E2"]
+G = ["A6", "B6", "C6", "D6", "A7", "B7", "C7", "D7", "A8", "B8", "C8", "D8"]
+D = ["H0", "I0", "J0", "K0", "L0", "H1", "I1", "J1", "K1", "L1"]
+
+[nullroute.coins]
+ZER0COOL = { L = 8, G = 5, D = 6 }
+MAMBA = { L = 6, G = 9, D = 2 }
+RAZORGRL = { L = 3, G = 2, D = 9 }
+
+[game-over]
+about = "Ending the Game, the final cash out: as nullroute, and ZER0COOL calls it."
+like = "nullroute"
+end = true
+capture = "GAME OVER. TOP NETRUNNER"   # the info line; below it, the host's prompt for a rematch

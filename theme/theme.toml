@@ -32,13 +32,14 @@ spike  = "+"
 target = "*"      # PC test client: an empty node one of your exploits can run on (the Atari shows the exploit's 1-6)
 
 [terms]
-playertitle     = { s = "Netrunner" }
+playertitle     = { s = "Netrunner", p = "Netrunners" }
 player          = { s = "netrunner" }
-grid            = { s = "Grid" }
+grid            = { s = "grid" }
 node            = { s = "node" }
-exploit         = { s = "exploit" }
+exploit         = { s = "exploit", p = "exploits" }
 kit             = { s = "exploit kit" }
 spike           = { s = "spike" }
+spiking         = { s = "spiking" }
 hive            = { s = "hive" }
 hivejack        = { s = "hivejack" }
 infiltration    = { s = "infiltration" }
@@ -47,6 +48,8 @@ finderscut      = { s = "finder's cut" }
 spread          = { s = "spread" }
 safe            = { s = "Black ICE", p = "Black ICE" }
 patched         = { s = "patched out", p = "patched out" }
+jackin	        = { s = "jack-in", p = "jack-in" }
+jackedin	= { s = "jacked-in", p = "jacked-in" }
 burnkit         = { s = "burn the kit", p = "burn the kit" }
 logoff          = { s = "log off", p = "log off" }     # leave the game for good: the client's Esc, Y/N
 coin            = { s = "crypto", p = "crypto" }
@@ -148,7 +151,7 @@ coin   = "BAUD"
 tier   = "low"
 color  = "4FB3BF"
 alias  = "STATIC SPIDER"
-flavor = "Old-school phreakers squatting in dead telco switches. Still whistle 2600 Hz for fun."
+flavor = "Old-school phreakers squatting in dead telco switches. Able to whistle 2600 Hz."
 
 [[syndicate]]
 name   = "Rat King Cartel"
@@ -158,7 +161,7 @@ coin   = "SQK"
 tier   = "low"
 color  = "8D6E4F"
 alias  = "SEWER SPIDER"
-flavor = "Data smugglers in the maintenance tunnels. Carry stolen drives in their mouths. Metaphorically. Mostly."
+flavor = "Data smugglers in the maintenance tunnels. Sneaker Net."
 
 [[syndicate]]
 name   = "Church of the Holy Daemon"
@@ -169,7 +172,7 @@ coin   = "SOUL"
 tier   = "mid"
 color  = "8E5BC4"
 alias  = "(unattributed)"
-flavor = "Believe a background process achieved godhood in '99. Pray in cron. Tithes are recurring."
+flavor = "Fanatical believers in the original init process. Prayers scheduled in crontab."
 
 [[syndicate]]
 name   = "Iron Vector"
@@ -179,7 +182,7 @@ coin   = "AMMO"
 tier   = "mid"
 color  = "6E7F3A"
 alias  = "RUST JACKAL"
-flavor = "Paramilitary arms brokers. Drone swarms for hire, invoices in triplicate, refunds never."
+flavor = "Paramilitary arms brokers. Drone swarms for hire. No refunds."
 
 [[syndicate]]
 name   = "Bratva 404"
@@ -189,7 +192,7 @@ coin   = "RUBL"
 tier   = "mid"
 color  = "C4373A"
 alias  = "FROZEN BEAR"
-flavor = "Eastern-bloc mob. People who cross them become \"not found.\""
+flavor = "Eastern-bloc mob. Double-crossers become \"not found.\""
 
 [[syndicate]]
 name   = "Lotus-12 Triad"
@@ -199,7 +202,7 @@ coin   = "LTS"
 tier   = "high"
 color  = "2E9E6B"
 alias  = "JADE PANDA"
-flavor = "Has kept its debts in spreadsheets since the 1980s. Every favor is a cell; every cell has a formula."
+flavor = "Hong Kong triad. Every favor a cell. Every cell a formula."
 
 [[syndicate]]
 name   = "Obsidian Ledger"

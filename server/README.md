@@ -53,7 +53,7 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   prompt `S`; `S n` starts with `n` seats, and bots fill the empty ones.
 - A host alone in the lobby can take as long as they like. Once another human is waiting, the host's prompt shows
   a countdown of `--host-wait` seconds (default 60); if it runs out, the next human becomes host with a fresh
-  countdown, so an absent host can't hold the table. Players on autopilot are skipped (unless everyone waiting
+  countdown, so an absent host can't hold the table; the old host keeps their seat. Players on autopilot are skipped (unless everyone waiting
   is), and a host on autopilot hands over at once when an active player arrives. The others are told who may start and for how long
   (`FRED HAS 60 S TO START`), again at each handoff and on arrival. At each handoff, and when a host leaves the
   lobby, everyone there, the new host included, first reads `KEEN IS THE HOST NOW` (theme `newhost`). The log says
@@ -62,9 +62,10 @@ leaves the state untouched. Money is in units of 100, like the protocol.
   that changes, whether they join or leave: `2 AT THE DOOR`. They don't start the countdown.
 - Once a game starts, new players get fault 2 (table full). A token reclaims a seat at any time. Without a token
   (the Atari was switched off, say), joining under the handle of a seat that is away reclaims it, and `w` hands
-  the client that seat's token. A connected player's seat, or one handed to the bot with `Q`, can't be taken
+  the client that seat's token. Under any other handle the player joins as someone new. A connected player's seat, or one handed to the bot with `Q`, can't be taken
   this way.
-- A prompt that times out is answered by that seat's bot; the seat stays human. After `--afk` timeouts in a row
+- Each prompt has `--timeout` seconds (default 60), the clock shown on the client's prompt line. A prompt that
+  times out is answered by that seat's bot; the seat stays human. After `--afk` timeouts in a row
   (default 2, a whole turn) the player is on autopilot: shown as away (`?`) to everyone, still prompted, but on the
   bot's clock (its thinking time, at least 10 s, never more than `--timeout`). Answering one in time ends it.
   Everyone gets a log line when autopilot starts and when it ends (theme `autopilot`, `returned`).

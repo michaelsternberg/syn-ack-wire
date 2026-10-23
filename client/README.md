@@ -27,6 +27,8 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/screen2txt.py` | Shows a screen dump as text |
+| `tools/render_screen.py` | Draws a screen dump as the screen looks, for the manual's captures |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800 |
 
 ## Build
 ```sh

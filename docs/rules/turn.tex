@@ -1,0 +1,133 @@
+% "Playing a Turn": shared by the rulebook and the platform manuals (docs/manual/*).
+% Each document sets its own heading above this; \atscreen{} marks where the manual shows a screen.
+On your turn, do these three things in order:
+
+\begin{enumerate}
+  \item \textbf{\VC{spike} a \V{node}.} Run one \V{exploit} from your \V{kit} and place a \V{spike} on its \V{node}.
+  \item \textbf{Buy \V{coin}.} Use \V{money} (\Game{currency}) in your account to buy up to \Rule{maxbuy} \Vp{coin} from the \V{bank} (optional). If your balance is too low, you won't see this option.
+  \item \textbf{Pick up a fresh \V{exploit}.} Draw a new \V{exploit} to bring your \V{kit} back to \Rule{kitsize}. If you have no playable \V{exploit}s, a fresh \V{kit} will be provided.
+\end{enumerate}
+
+\subsection{1. \VC{spike} a \V{node}}
+Where your \V{spike} lands decides what happens. It will do exactly one of these:
+
+\begin{center}
+\begin{tikzpicture}[scale=0.55]
+  \gridframe
+  \spk{1}{6}
+  \spk{10}{0}
+  \hive{3}{2}{5}\hive{4}{2}{5}\hive{5}{2}{5}\hive{5}{3}{5}
+  \hive{7}{3}{3}\hive{7}{4}{3}\hive{8}{4}{3}
+  \target{10}{8}{1}
+  \target{2}{6}{2}
+  \target{4}{1}{3}
+  \target{6}{3}{4}
+\end{tikzpicture}
+\end{center}
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=1.6em]
+  \item \textbf{Nothing.} \node{K8} touches nothing. The \V{spike} just sits there.
+  \item \textbf{\VC{infiltration}.} \node{C6} touches the lone \V{spike} on \node{B6}. A new \V{hive} is born.
+  \item \textbf{\VC{spread}.} \node{E1} touches the \Syn{5}{name} \V{hive}. It grows to 5 \Vp{node}.
+  \item \textbf{\VC{hivejack}.} \node{G3} touches both \Syn{5}{name} (4 \Vp{node}) and \Syn{3}{name} (3 \Vp{node}).
+    \Syn{5}{name} absorbs \Syn{3}{name}.
+\end{enumerate}
+
+\atscreen{spike}
+
+\subsection{\VC{infiltration}: founding a \V{hive}}
+If your \V{spike} touches one or more lone \Vp{spike}, and no \V{hive}, you have founded a new \term{\V{hive}}.
+Choose any syndicate that does not have a \V{hive} on the \V{grid} and \term{\V{broker}} the \V{hive} to it. Your \V{spike} and every lone
+\V{spike} connected to it become that syndicate's \V{hive}.
+
+As your \term{\V{finderscut}}, take 1 \V{coin} of that syndicate from the \V{bank} for free. If the \V{bank} has none left,
+you get nothing.
+
+\atscreen{broker}
+
+\begin{note}{BLOCKED \MakeUppercase{\Vp{exploit}}}
+If all seven syndicates already have \Vp{hive} on the \V{grid}, an \V{exploit} that would found an eighth \V{hive} cannot be run.
+It stays in your \V{kit} until a syndicate leaves the \V{grid}. The game marks these for you.
+\end{note}
+
+\subsection{\VC{spread}: growing a \V{hive}}
+If your \V{spike} touches exactly one \V{hive}, it joins that \V{hive}. Any lone \Vp{spike} connected to your \V{spike} join too.
+The \V{hive} is now bigger, and its \V{coin} is worth more.
+
+\subsection{\VC{hivejack}: merging \Vp{hive}}
+If your \V{spike} touches two or more different \Vp{hive}, they collide and the biggest one \term{\Vp{hivejack}} the
+others. Your new \V{spike} does not count toward any \V{hive}'s size while deciding this. Work through these steps:
+
+\begin{enumerate}[label=\textbf{\arabic*.},leftmargin=1.6em]
+  \item \textbf{Who absorbs whom.} The \V{hive} with more \Vp{node} is the \term{\V{absorber}}; the smaller is \term{\V{absorbed}}.
+    If they are the same size, you choose which syndicate survives.
+  \item \textbf{Find the \V{root} and \V{sudo}.} Look at who holds the \V{absorbed} syndicate's \V{coin}. The \V{player} with the most is
+    \term{\V{root}}; the one with the second most is \term{\V{sudo}}.
+  \item \textbf{Payouts.} The \V{bank} pays the \V{root} and \V{sudo} bonuses from the reference chart, using the \V{absorbed} \V{hive}'s
+    size just before the \V{hivejack}. See \emph{Splitting payouts} below for ties.
+  \item \textbf{\VC{coin} decisions.} Starting with you and going around the table, every \V{player} holding the \V{absorbed}
+    syndicate's \V{coin} chooses what to do with it, in any mix:
+    \begin{itemize}
+      \item \term{\VC{cashout}}: sell \Vp{coin} to the \V{bank} at the \V{absorbed} syndicate's price (its size before the \V{hivejack}).
+      \item \term{\VC{swap}}: trade 2 \V{absorbed} \Vp{coin} for 1 \V{coin} of the \V{absorber}, as long as the \V{bank} has \V{absorber} \V{coin} left.
+      \item \term{\V{hodl}}: keep the \V{coin}. It is now \term{\V{flatlined}} and worthless, unless that syndicate is brokered a new
+        \V{hive} later, when it comes \term{\V{revived}}.
+    \end{itemize}
+  \item \textbf{Clean up.} The \V{absorbed} \V{hive}'s \Vp{node}, your \V{spike}, and any connected lone \Vp{spike} all join the \V{absorber}.
+    The \V{absorbed} syndicate leaves the \V{grid} and can be brokered again later.
+\end{enumerate}
+
+\atscreen{hivejack}
+
+\begin{example}[: A TIED \V{root}]
+\Syn{3}{name} (3 \Vp{node}, mid tier) is \V{hivejack}ed. At 3 \Vp{node}, mid-tier \V{coin} is \Y{400}, so the \V{root} bonus is
+\Y{4,000} and \V{sudo} is \Y{2,000}. MAMBA and ZER0COOL each hold 4 \Syn{3}{name} \V{coin}; RAZORGRL holds 2.
+
+MAMBA and ZER0COOL tie for \V{root}, so they share \V{root} + \V{sudo}: \Y{6,000} split two ways, \Y{3,000} each.
+Nobody is paid \V{sudo}, so RAZORGRL gets nothing.
+
+Then, in turn order, MAMBA chooses to \V{cashout} 2 of them for \Y{800} and \V{swap} the other 2 for
+1 \Syn{5}{name} \V{coin}.
+\end{example}
+
+\subsection{Splitting payouts}
+\begin{itemize}
+  \item \textbf{Tie for \V{root}:} add the \V{root} and \V{sudo} bonuses together and split them evenly among the tied \Vp{player},
+    rounding each share \emph{up} to the next \Y{100}. No \V{sudo} bonus is paid.
+  \item \textbf{Tie for \V{sudo}:} split the \V{sudo} bonus evenly among the tied \Vp{player}, rounding each share up to the next \Y{100}.
+  \item \textbf{One \V{player} is the only holder:} they collect both \V{root} and \V{sudo}.
+  \item \textbf{Nobody holds the \V{coin}:} nothing is paid.
+\end{itemize}
+
+\begin{example}[: ROUNDING UP]
+A 2-\V{node} mid-tier \V{hive} is \V{absorbed} (\V{root} \Y{3,000}, \V{sudo} \Y{1,500}). Two \Vp{player} tie for \V{root}:
+\Y{4,500} split two ways is \Y{2,250}, rounded up to \Y{2,300} each.
+\end{example}
+
+\subsection{\V{safe}: safe \Vp{hive}}
+Once a \V{hive} reaches \textbf{\Rule{safesize} or more \Vp{node}}, its syndicate wraps it in \term{\V{safe}}. A \V{safe} \V{hive}
+can never be \V{absorbed}. It can still absorb smaller \Vp{hive} that are not \V{safe}.
+
+An \V{exploit} that would join two \V{safe} \Vp{hive} can never be run. It is \term{\V{patched}}. The game marks it for you.
+
+\subsection{Multi-way \Vp{hivejack}}
+If your \V{spike} touches three or four \Vp{hive} at once, resolve them one at a time. The largest \V{hive} absorbs the second
+largest (do all five steps), then the now-bigger \V{absorber} takes on the next largest, and so on. If two of the smaller
+\Vp{hive} are tied in size, you choose which is \V{absorbed} first. If the two largest are tied, you choose the \V{absorber}.
+
+\subsection{2. Buy \V{coin}}
+After placing your \V{spike}, you may buy up to \Rule{maxbuy} \Vp{coin} from the \V{bank}, in any mix of syndicates. You can only buy
+\V{coin} of syndicates that have a \V{hive} on the \V{grid}. The price is set by the \V{hive}'s current size (see the reference
+chart), so a \V{spread} or \V{hivejack} you just caused changes the price before you buy.
+
+You cannot buy more than the \V{bank} has, and you cannot spend money you do not have. There are no loans.
+
+\atscreen{buy}
+
+\subsection{3. Pick up a fresh \V{exploit}}
+Draw one \V{exploit} so your \V{kit} is back to \Rule{kitsize}. If no \Vp{exploit} are left to draw, skip this step.
+
+\begin{note}{\MakeUppercase{\V{burnkit}}}
+If, at the start of your turn, none of the \Vp{exploit} in your \V{kit} can be run, reveal your \V{kit}, discard it, and draw
+\Rule{kitsize} new \Vp{exploit}. Then take your turn as normal. The game does this automatically.
+\end{note}
