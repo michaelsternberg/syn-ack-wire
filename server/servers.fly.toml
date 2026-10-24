@@ -11,7 +11,7 @@ address = "syn-ack-wire.fly.dev"
 client = "TNFS://syn-ack-wire.fly.dev/synack.atr"       # the disk this machine serves (tnfsd)
 key = 11
 region = "us"
-url = "https://qalobby.fujinet.online"                  # the QA lobby for now
+url = "https://lobby.fujinet.online"                  # the QA lobby for now
 
 # The short links in the game disks' QR codes (fly.toml's https service): https://syn-ack-wire.fly.dev/ATARI
 # redirects to the Atari manual, any platform the same way by its docs/manual/ folder; / to the project.
@@ -29,7 +29,7 @@ port = 6502
 region = "CHIBA-GRID-7"
 description = "relaxed pace"
 think-exploit = "15,5"          # 10 to 20 s before a bot runs an exploit
-think-buy = "7,2"               # 5 to 9 s before it buys
+think-buy = "5,2"               # 3 to 7 s before it buys
 abandon = 180                   # drop a game after 3 minutes with nobody connected
 afk = 2                         # two timeouts in a row put a player on autopilot
 
@@ -38,7 +38,7 @@ port = 6503
 region = "NEO-KANSAI-1"
 description = "relaxed pace"
 think-exploit = "15,5"
-think-buy = "7,2"
+think-buy = "5,2"
 abandon = 180
 afk = 2
 
