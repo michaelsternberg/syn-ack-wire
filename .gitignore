@@ -15,3 +15,6 @@ docs/style/theme.tex
 
 # publisher's rulebook (large, copyrighted)
 acquire_rules.pdf
+
+# one person's own notes for Claude (CLAUDE.md says)
+CLAUDE.local.md
