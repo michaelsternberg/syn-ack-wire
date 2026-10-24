@@ -654,7 +654,8 @@ def list_all(servers, specs, lob):
     """List each server in the FujiNet lobby `lob` describes, as "REGION - description", at its own address."""
     for server, spec in zip(servers, specs):
         game = server.theme.game
-        server.list_in(lobby.Lobby(lob["url"], lobby.entry(game["title"], lobby_name(game["region"], spec.description),
+        server.list_in(lobby.Lobby(lob["url"], lobby.entry(game.get("name", game["title"]),
+                                                          lobby_name(game["region"], spec.description),
                                                           lob["region"], spec.lobby_url, lob["client"], lob["key"])))
 
 if __name__ == "__main__":

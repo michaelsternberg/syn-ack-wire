@@ -10,7 +10,7 @@ import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import testclient
-from acquire import proto
+from acquire import proto, theme
 from serve import list_all, load_config, lobby_name, start, stop
 
 HOST = "127.0.0.1"
@@ -170,6 +170,7 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(sorted({p["server"] for p in posts}), ["NEO-KANSAI-1 - fast pace",
                                                                     "OSAKA-SPRAWL - relaxed pace"])
             self.assertEqual({p["serverurl"] for p in posts}, {"TCP://wire.example.com:0/"})   # port 0 in a test
+            self.assertEqual({p["game"] for p in posts}, {theme.load().game["name"]})       # mixed case, like the rest
             await asyncio.gather(*(s.lobby.close() for s in servers))
         finally:
             http.shutdown()
