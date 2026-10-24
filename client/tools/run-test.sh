@@ -3,17 +3,17 @@
 # loads the program itself (-run); FujiNet's config disk is turned off. Your own
 # fnconfig.ini is not touched: a scratch copy is used.
 #
-#   tools/run-test.sh build/synack.xex               emulator window
-#   HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex   no window, no sound
-#   ATARI800=/path/to/atari800 tools/run-test.sh ...      another emulator build
-#   DUMPDIR=/tmp/shots tools/run-test.sh build/synack-auto.xex
+#   tools/run-test.sh build/atari/synack.xex                    emulator window
+#   HEADLESS=1 tools/run-test.sh build/atari/wiremon-auto.xex   no window, no sound
+#   ATARI800=/path/to/atari800 tools/run-test.sh ...            another emulator build
+#   DUMPDIR=/tmp/shots tools/run-test.sh build/atari/synack-auto.xex
 #       headless; every BRK the program executes saves the text screen to
 #       DUMPDIR/scrNNN.bin (tools/screen2txt.py shows them)
-#   tools/run-test.sh build/synack.atr               boot a disk image from FujiNet D1,
+#   tools/run-test.sh build/atari/synack.atr                    boot a disk image from FujiNet D1,
 #       as the lobby would (works with HEADLESS and DUMPDIR too)
-#   BASIC=1 tools/run-test.sh build/synack.atr        boot with the BASIC ROM on, as a real
+#   BASIC=1 tools/run-test.sh build/atari/synack.atr            boot with the BASIC ROM on, as a real
 #       XL/XE does unless OPTION is held (screen memory moves down to $9C40)
-#   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
+#   INSTANCE=1 tools/run-test.sh build/atari/synack.xex         a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
 # Start the server first:  cd ../server && python3 serve.py --trace

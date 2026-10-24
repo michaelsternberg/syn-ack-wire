@@ -1,9 +1,9 @@
 # SYN-ACK WIRE client (Atari for now).
-#   make                      build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
+#   make                      build/atari/synack.xex (the game), build/atari/wiremon.xex, wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
-#   make atr                  build/synack.atr: boots the game with PicoBoot, plus the help pages
-#   make atrtest              build/local/synack.atr: the same disk dialing a server on this machine (LOCAL_URL)
+#   make atr                  build/atari/synack.atr: boots the game with PicoBoot, plus the help pages
+#   make atrtest              build/atari/local/synack.atr: the same disk dialing a server on this machine (LOCAL_URL)
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
 #   make clean
 CC65    ?=
@@ -17,7 +17,7 @@ LOCAL_URL ?= N:TCP://localhost:6502/
 FANCY   ?=
 HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)
-B       = build
+B       = build/atari
 # the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25
 BOOT    ?= PicoBoot406
 # your DOS 2.5 disk image, for BOOT=Dos25 (DOS.SYS comes from it)
@@ -112,13 +112,14 @@ $(B)/synack-auto.xex: $(AUTO) $(COMMON) $(NET) src/atari/game.cfg
 	$(LD) -C src/atari/game.cfg -m $(B)/synack-auto.map -o $@ $(AUTO) $(COMMON) $(NET) $(TARGET).lib
 test: $(B)/synack-auto.xex
 
-# --- the common code on a PC (gcc), against a real server: make pc && build/pc-client
-pc: $(HDRS) | $(B)
-	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=0 -o $(B)/pc-client \
+# --- the common code on a PC (gcc), against a real server: make pc && build/pc/pc-client
+pc: $(HDRS)
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=0 -o build/pc/pc-client \
 	    src/common/main.c src/common/game.c src/common/proto.c test/autoplay.c test/pc_harness.c
 
 clean:
-	rm -rf $(B)
+	rm -rf build
 
 .PHONY: all atr atrtest test pc clean
 .PRECIOUS: $(B)/%.s $(B)/%.o

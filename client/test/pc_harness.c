@@ -2,7 +2,7 @@
  * sockets instead of FujiNet, a display that prints what it would draw, and
  * test/autoplay.c's keys. Finds logic bugs without an emulator.
  *
- *   make pc && build/pc-client [host] [port]
+ *   make pc && build/pc/pc-client [host] [port]
  */
 #include <stdio.h>
 #include <stdlib.h>

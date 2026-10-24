@@ -1,4 +1,4 @@
-/* Test hooks for an unattended client (make test builds build/synack-auto.xex):
+/* Test hooks for an unattended client (make test builds build/atari/synack-auto.xex):
  * auto_key() stands in for in_key(): it types a handle, then presses keys a
  * player might press for each prompt, wrong ones included, so the local checks
  * and the server's refusals both get exercised. When a new prompt opens, and

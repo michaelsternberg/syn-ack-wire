@@ -1,6 +1,6 @@
 # The SYN-ACK WIRE server as a container: what `fly deploy` builds (fly.toml), or any container host. Two programs
 # (deploy/start.sh): the game servers in server/servers.fly.toml, which need only Python's standard library, and
-# tnfsd, which serves the client disk (client/build/synack.atr, as built when you deploy) to the FujiNet lobby.
+# tnfsd, which serves the client disk (client/build/atari/synack.atr, as built when you deploy) to the FujiNet lobby.
 
 # tnfsd from upstream at a fixed release, with deploy/tnfsd-bind-address.patch (fly.io's UDP needs it).
 FROM python:3.13-slim AS tnfsd
@@ -17,7 +17,7 @@ FROM python:3.13-slim
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
 RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin synack
 COPY --from=tnfsd /src/bin/tnfsd /usr/local/bin/tnfsd
-COPY client/build/synack.atr /srv/tnfs/
+COPY client/build/atari/synack.atr /srv/tnfs/
 WORKDIR /app
 COPY theme/theme.toml theme/
 COPY server/ server/

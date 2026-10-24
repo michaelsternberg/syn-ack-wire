@@ -132,7 +132,7 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    FujiNet's `N:TCP://` is neither.)
 4. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` (the default URL is this
    project's own app, syn-ack-wire.fly.dev). The image takes
-   `client/build/synack.atr` as it is when you deploy, and serves it at `TNFS://<app>.fly.dev/synack.atr`. A disk
+   `client/build/atari/synack.atr` as it is when you deploy, and serves it at `TNFS://<app>.fly.dev/synack.atr`. A disk
    booted directly dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own
    port.
 5. Deploy, as **one** machine: `fly deploy --ha=false`. (By default fly.io starts two machines for redundancy, which

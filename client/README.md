@@ -32,22 +32,22 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 
 ## Build
 ```sh
-make                                     # build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
+make                                     # build/atari/synack.xex (the game), build/atari/wiremon.xex, build/atari/wiremon-auto.xex
 make URL=N:TCP://192.168.1.20:6502/      # aim them at another server (default: syn-ack-wire.fly.dev:6502)
-make atrtest                             # build/local/synack.atr: the disk, dialing localhost:6502
+make atrtest                             # build/atari/local/synack.atr: the disk, dialing localhost:6502
 make LOBBY_KEY=0                         # ignore the game lobby's AppKeys (see below)
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
-make test                                # build/synack-auto.xex: plays by itself, for the emulator
-make atr                                 # build/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
-make pc                                  # build/pc-client: the common code on this PC
+make test                                # build/atari/synack-auto.xex: plays by itself, for the emulator
+make atr                                 # build/atari/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
+make pc                                  # build/pc/pc-client: the common code on this PC
 ```
 Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build.
 
 ## Play it in the emulator
 ```sh
-cd ../server && python3 serve.py --trace           # terminal 1
-cd ../client && tools/run-test.sh build/synack.xex  # terminal 2
+cd ../server && python3 serve.py --trace                  # terminal 1
+cd ../client && tools/run-test.sh build/atari/synack.xex  # terminal 2
 ```
 `run-test.sh` starts FujiNet-PC from `$FUJINET_DIR` (default: your `fujinet-firmware/build/dist`) with a scratch copy of
 its `fnconfig.ini`, with the config disk turned off, then runs `atari800 -xl -nobasic -netsio -run <xex>`. The emulator
@@ -77,9 +77,9 @@ never finds any.
 
 **Two Ataris at one table:** give each emulator its own instance number, so each gets its own FujiNet-PC ports.
 ```sh
-cd ../server && python3 serve.py                              # terminal 1
-cd ../client && tools/run-test.sh build/synack.xex            # terminal 2: the first to connect hosts
-cd ../client && INSTANCE=1 tools/run-test.sh build/synack.xex # terminal 3
+cd ../server && python3 serve.py                                     # terminal 1
+cd ../client && tools/run-test.sh build/atari/synack.xex             # terminal 2: the first to connect hosts
+cd ../client && INSTANCE=1 tools/run-test.sh build/atari/synack.xex  # terminal 3
 ```
 Type a handle and press Return on both. Once the host's screen lists both players, the host presses **2**–**6** to
 start; bots take any seats beyond the humans. Both must join before the host starts.
@@ -180,12 +180,12 @@ The disk boots with **PicoBoot** (`dir2atr -b PicoBoot406`), the smallest member
 in the 3 boot sectors and loads the first file on the disk, `SYNACK.XEX`, at standard SIO speed (it has no
 high-speed code). There is no DOS, and the game needs none. Measured through FujiNet-PC: 87 sectors in 7.2 s,
 against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unless OPTION is held at power-on; the game runs either way
-(`BASIC=1 tools/run-test.sh build/synack.atr` boots with the BASIC ROM on).
+(`BASIC=1 tools/run-test.sh build/atari/synack.atr` boots with the BASIC ROM on).
 
 `make clean && make atr BOOT=Dos25` builds the DOS 2.5 disk instead (the game as `AUTORUN.SYS`). It takes `DOS.SYS`
 from your own DOS 2.5 disk image (`DOS25=path/to/disk.atr`, on the command line or in the environment)
 with `atr`.
-`tools/run-test.sh build/synack.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
+`tools/run-test.sh build/atari/synack.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
 
 ### Fancy screens
 `display.h` is the whole interface. `display_title_screen()` is switched by `FANCY_TITLE`; everything else by
@@ -195,19 +195,19 @@ declared in `src/common/game.h`. Nothing in `common/` changes.
 
 ## Wiremon
 ```sh
-tools/run-test.sh build/wiremon.xex
+tools/run-test.sh build/atari/wiremon.xex
 ```
 Keys: **2–6** start a game with that many seats (host only), **R** resync, **Q** leave. Every frame prints as its
 type letter and payload in hex; log lines (`l`) print as text. The top lines count frames, bytes and bad frames. At
 connect it asks for 10 full resyncs to push a few KB through the ring. `wiremon-auto.xex` also starts a 3-seat game by
 itself and sends `Q` when it is over, or on the first bad frame. So a run can be read from the server's `--trace`
-log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
+log with no screen: `HEADLESS=1 tools/run-test.sh build/atari/wiremon-auto.xex`.
 
 ## Testing without watching
-- **`make pc && build/pc-client [host] [port]`** runs `main.c`, `game.c` and `proto.c` compiled with gcc against a
+- **`make pc && build/pc/pc-client [host] [port]`** runs `main.c`, `game.c` and `proto.c` compiled with gcc against a
   real server, pressing autoplay keys and printing prompts, logs and what it sends. It is the quickest way to find a
   logic bug, and gdb works on it.
-- **`DUMPDIR=dir tools/run-test.sh build/synack-auto.xex`** runs the real Atari build headless. It executes `BRK` when
+- **`DUMPDIR=dir tools/run-test.sh build/atari/synack-auto.xex`** runs the real Atari build headless. It executes `BRK` when
   a new prompt opens and every 4 seconds; atari800 `-bbrk` stops in its monitor, which saves screen memory to
   `dir/scrNNN.bin` and continues. `tools/screen2txt.py dir/scr042.bin` shows one as text.
 

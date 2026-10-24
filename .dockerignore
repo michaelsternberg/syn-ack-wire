@@ -2,7 +2,7 @@
 *
 !server/
 !theme/theme.toml
-!client/build/synack.atr
+!client/build/atari/synack.atr
 !deploy/
 server/tests/
 **/__pycache__

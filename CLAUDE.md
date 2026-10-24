@@ -32,8 +32,8 @@ players: a summary, not a specification.
 
 ```sh
 cd server && python3 -m unittest -q && python3 sim.py 2000   # rules and server; soak test
-cd client && make && make atr                                # build/synack.xex, build/synack.atr (public server)
-cd client && make atrtest                                    # build/local/synack.atr, dialing localhost:6502
+cd client && make && make atr                                # build/atari/synack.xex, build/atari/synack.atr (public server)
+cd client && make atrtest                                    # build/atari/local/synack.atr, dialing localhost:6502
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
 ```
@@ -50,7 +50,7 @@ client/tools/capture.sh                                      # redo the staged c
 - Bind scratch servers to this machine (`--host 127.0.0.1`).
 - Never post to the FujiNet lobby, public or QA, unless asked. Never echo a token or other secret.
 - `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked. The disk it
-  serves is `client/build/synack.atr` as it is at deploy time (`server/README.md`, "Deploying to fly.io").
+  serves is `client/build/atari/synack.atr` as it is at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else
