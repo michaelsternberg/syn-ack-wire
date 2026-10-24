@@ -27,7 +27,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/apple2/input.c` | Keyboard latch, Open-/Closed-Apple, and `ticks()` from FujiNet's clock |
 | `src/apple2/help.s` | The instruction pages on text page 2, read with the ProDOS MLI |
 | `src/apple2/sound.s` | Chords as short notes on the speaker |
-| `src/apple2/ring.s`, `game.cfg` | `rx_ring` at $0C00; cc65's `apple2.cfg` with the program at $1100, above page 2 |
+| `src/apple2/ring.s`, `game.cfg` | `rx_ring` at $0C00; cc65's `apple2-system.cfg`: a ProDOS system file at $2000 |
 | `src/apple2/title.txt` | The Apple title logo, plain text; `title_art.h` is **generated** by `tools/title_text.py` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
@@ -258,13 +258,15 @@ IIgs (cc65's `apple2` target, so a plain 6502 IIe works). Text mode, because the
 there: hi-res text artifacts into colour on an NTSC monitor (`tools/apple2_preview.py` shows how), so
 `apple2_hgr` and `apple2_dhgr` versions are for later, over the same platform layer.
 ```sh
-make apple2_text                                         # build/apple2_text/synack (AppleSingle)
+make apple2_text                                         # build/apple2_text/synack (AppleSingle, ProDOS type SYS)
 make apple2_text-po PRODOS=path/to/ProDOS-2.4-disk AC="java -jar path/to/ac.jar"
                                                          # build/apple2_text/synack.po: a ProDOS disk that boots it
 ```
 The disk holds `PRODOS` and its boot block (both from your own ProDOS disk image: AppleCommander's own boot block
-only shows a notice, so `tools/prodos_boot.py` copies the real one), cc65's `loader.system` as `SYNACK.SYSTEM`
-(ProDOS runs the first `.SYSTEM` file, which loads `SYNACK`), the game, and `SYNACK.HLP`, the instruction pages.
+only shows a notice, so `tools/prodos_boot.py` copies the real one), the game as `SYNACK.SYSTEM`, and `SYNACK.HLP`,
+the instruction pages. The game is a ProDOS system file at $2000, which ProDOS loads and runs itself, as most
+ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting from FujiNet over TNFS, after
+`Loading SYNACK...`, though it ran in FujiNet Go and from a floppy in MAME's //c.)
 
 - **Network:** fujinet-lib (`lib/fujinet-lib/`), not hand-written SmartPort code: 3.4 KB, against 386 bytes
   for the Atari's raw SIO, for one library every later platform can share. `net_poll` is one status call, then
@@ -282,10 +284,12 @@ only shows a notice, so `tools/prodos_boot.py` copies the real one), cc65's `loa
   no yen glyph: money shows as `Y3200`. Only the 40 bytes of each row are ever written, never the screen holes
   (the peripheral cards' scratch memory, the FujiNet's included).
 - **Keys:** as the Atari's, except **Open-Apple** (alone) for move hints and **Closed-Apple** for sound, where
-  the Atari has OPTION and SELECT; **Delete** or **←** undoes a letter; **?** opens the instructions, **→** /
+  the Atari has OPTION and SELECT. Those two aren't latched like the other keys: they count only while held when
+  the loop looks, once a pass, so a press counts on the first look that sees it (a 64-pass settle time, then a
+  two-look rule, missed presses on a real //c, where a pass waits on SmartPort calls); **Delete** or **←** undoes a letter; **?** opens the instructions, **→** /
   **←** (or **>** / **<**) turn their pages.
 - **Instructions:** on text page 2 ($0800), so the game keeps drawing on page 1 underneath and is there again on
-  Esc, as on the Atari. The program starts at $1100 to leave page 2 free, and the display turns 80STORE off, or
+  Esc, as on the Atari. The program starts at $2000, leaving page 2 free, and the display turns 80STORE off, or
   the page switch would select auxiliary memory. The pages are `help/apple2/screen/HELP01.TXT`...: plain ASCII,
   24 lines of 40, `{` and `}` around inverse text, checked and turned into 1024-byte screen images by
   `tools/help_apple2.py`. `help.s` reads a page straight onto page 2 with four ProDOS MLI calls (open, set mark,
@@ -308,12 +312,12 @@ only shows a notice, so `tools/prodos_boot.py` copies the real one), cc65's `loa
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
 | **apple2_text** (2026-10-24) | | |
-| `synack` | 15287 | whole AppleSingle file; loads at $1100; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `synack` | 15271 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
 | `display_text.c` | 3594 | + 909 rodata (screen words, the 48-byte row table, 186 of title art), 28 bss/data |
 | fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
 | cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
 | `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
-| `input.c` | 255 | keys, the Apple keys, and `ticks()` from FujiNet's clock |
+| `input.c` | 239 | keys, the Apple keys, and `ticks()` from FujiNet's clock |
 | `help.s` | 184 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2 |
 | `sound.s` | 75 | + 42 rodata (7 chords of up to 3 notes) |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |

@@ -122,8 +122,8 @@ pc: $(HDRS)
 
 # --- Apple II, text mode (apple2_text): FujiNet through fujinet-lib (a pinned copy in lib/).
 # The disk takes PRODOS (the system file) and its boot block from your own ProDOS 2.4 disk image
-# (PRODOS=path), cc65's loader.system as SYNACK.SYSTEM (ProDOS runs the first .SYSTEM file; it loads SYNACK),
-# the game, and the help pages. AC runs AppleCommander 1.6 or later.
+# (PRODOS=path), the game as SYNACK.SYSTEM (a ProDOS system file: ProDOS runs the first one it finds), and
+# the help pages. AC runs AppleCommander 1.6 or later.
 A2      = build/apple2_text
 A2LIB   = lib/fujinet-lib/apple2-5.0.0
 A2FLAGS = -t apple2 -O -Or -Cl -I $(A2LIB)/include -DDISPLAY_IDLE=1
@@ -162,8 +162,7 @@ $(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	python3 tools/prodos_boot.py "$(PRODOS)" $@
 	$(AC) -g "$(PRODOS)" PRODOS $(A2)/prodos
 	$(AC) -p $@ PRODOS SYS 0x2000 < $(A2)/prodos
-	$(AC) -p $@ SYNACK.SYSTEM SYS 0x2000 < $$(cl65 --print-target-path)/apple2/util/loader.system
-	$(AC) -as $@ SYNACK < $(A2)/synack
+	$(AC) -as $@ SYNACK.SYSTEM < $(A2)/synack
 	$(AC) -p $@ SYNACK.HLP BIN 0 < $(A2)/synack.hlp
 	$(AC) -ls $@
 apple2_text-po: $(A2)/synack.po

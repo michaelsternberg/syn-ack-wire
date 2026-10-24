@@ -15,26 +15,23 @@
 #define OAPPLE  (*(volatile unsigned char *)0xC061)   /* bit 7 = held */
 #define CAPPLE  (*(volatile unsigned char *)0xC062)
 
-#define SETTLE  64                      /* polls to ignore the Apple keys after a change: contact bounce */
-
-static unsigned char k, held, pressed, settle;
+static unsigned char k, held, pressed;
 static unsigned char now[8], sec = 0xFF, count, spin;
 
 unsigned char in_key(void)
 {
-    if (settle)
-        --settle;
-    else {
-        k = (OAPPLE >> 7) | (CAPPLE >> 7 << 1);       /* bit 0 Open-Apple, bit 1 Closed-Apple */
-        if (k != held) {
-            settle = SETTLE;
-            pressed = k & ~held;
-            held = k;
-            if (pressed & 2)
-                snd_toggle();
-            if (pressed & 1)
-                return K_OPTION;
-        }
+    /* The Apple keys aren't latched: they count only while held when this
+     * looks, once a pass of the game loop, so a press counts on the first look
+     * that sees it. Contact bounce is over long before the next look: there are
+     * SmartPort calls between them. */
+    k = (OAPPLE >> 7) | (CAPPLE >> 7 << 1);           /* bit 0 Open-Apple, bit 1 Closed-Apple */
+    if (k != held) {
+        pressed = k & ~held;
+        held = k;
+        if (pressed & 2)
+            snd_toggle();
+        if (pressed & 1)
+            return K_OPTION;
     }
     k = KBD;
     if (!(k & 0x80))
