@@ -2,11 +2,11 @@
 #   make                      build/atari/synack.xex (the game), build/atari/wiremon.xex, wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
-#   make atr                  build/atari/synack.atr: boots the game with PicoBoot, plus the help pages
-#   make atrtest              build/atari/local/synack.atr: the same disk dialing a server on this machine (LOCAL_URL)
+#   make atr                  build/atari/syn-ack-wire-atari.atr: boots the game with PicoBoot, plus the help pages
+#   make atrtest              build/atari/local/syn-ack-wire-atari.atr: the same disk dialing this machine (LOCAL_URL)
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
 #   make apple2_text          build/apple2_text/synack: the Apple II client, text mode (IIe, IIc, IIgs)
-#   make apple2_text-po PRODOS=disk   build/apple2_text/synack.po: a ProDOS disk that boots it
+#   make apple2_text-po PRODOS=disk   build/apple2_text/syn-ack-wire-apple2.po: a ProDOS disk that boots it
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -87,18 +87,20 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 $(B)/dos.sys: | $(B)
 	@test -n "$(DOS25)" || { echo "BOOT=Dos25 needs DOS25=path/to/your/DOS-2.5-disk.atr" >&2; exit 1; }
 	atr "$(DOS25)" get dos.sys $@
-$(B)/%.atr: $(B)/%.xex $(HELP) tools/help_disk.py tools/qr.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
+# The disk is named for the game and the platform, as the manuals are, so platforms sharing an extension can't clash.
+ATR     = $(B)/syn-ack-wire-atari.atr
+$(ATR): $(B)/synack.xex $(HELP) tools/help_disk.py tools/qr.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
 	python3 tools/help_disk.py --qr "$(QR_URL)" --check $(HELP)
-	rm -rf $(B)/disk-$* && mkdir $(B)/disk-$*
+	rm -rf $(B)/disk && mkdir $(B)/disk
 ifeq ($(BOOT),Dos25)
-	cp $(B)/dos.sys $(B)/disk-$*/DOS.SYS
-	cp $< $(B)/disk-$*/AUTORUN.SYS
+	cp $(B)/dos.sys $(B)/disk/DOS.SYS
+	cp $< $(B)/disk/AUTORUN.SYS
 else
-	cp $< $(B)/disk-$*/SYNACK.XEX
+	cp $< $(B)/disk/SYNACK.XEX
 endif
-	dir2atr -b $(BOOT) $@ $(B)/disk-$* >/dev/null
+	dir2atr -b $(BOOT) $@ $(B)/disk >/dev/null
 	python3 tools/help_disk.py --qr "$(QR_URL)" $@ $(HELP_SECTOR) $(HELP)
-atr: $(B)/synack.atr
+atr: $(ATR)
 # its own build folder, so the local and public builds never share objects
 atrtest:
 	$(MAKE) B=$(B)/local URL=$(LOCAL_URL) atr
@@ -157,7 +159,8 @@ apple2_text: $(A2)/synack
 
 $(A2)/synack.hlp: $(A2HELP) tools/help_apple2.py | $(A2)
 	python3 tools/help_apple2.py --qr "$(A2_QR_URL)" $@ $(A2HELP)
-$(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
+PO      = $(A2)/syn-ack-wire-apple2.po
+$(PO): $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	@test -n "$(PRODOS)" || { echo "the disk needs PRODOS=path/to/your/ProDOS-2.4-disk" >&2; exit 1; }
 	rm -f $@
 	$(AC) -pro140 $@ SYNACK
@@ -167,7 +170,7 @@ $(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	$(AC) -as $@ SYNACK.SYSTEM < $(A2)/synack
 	$(AC) -p $@ SYNACK.HLP BIN 0 < $(A2)/synack.hlp
 	$(AC) -ls $@
-apple2_text-po: $(A2)/synack.po
+apple2_text-po: $(PO)
 
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]

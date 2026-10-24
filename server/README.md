@@ -29,8 +29,8 @@ python3 serve.py --no-jack-in                 # newcomers to a game in progress 
 python3 serve.py --tables 0,1                 # tables clients may use (default 0; others are refused)
 python3 serve.py --config servers.toml        # several servers in one process (see servers.example.toml)
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
-python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr \
-                 --lobby-client apple2=TNFS://tnfs.example.com/synack.po
+python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/syn-ack-wire-atari.atr \
+                 --lobby-client apple2=TNFS://tnfs.example.com/syn-ack-wire-apple2.po
                                               # list the server in the FujiNet game lobby (see below)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
@@ -133,10 +133,11 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    FujiNet's `N:TCP://` is neither.)
 4. Build the game disks for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` and
    `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` (the default URL is this project's own app,
-   syn-ack-wire.fly.dev). The image takes `client/build/atari/synack.atr` and `client/build/apple2_text/synack.po`
-   as they are when you deploy, and serves them at `TNFS://<app>.fly.dev/synack.atr` and `.../synack.po`. A disk
-   booted directly dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own
-   port.
+   syn-ack-wire.fly.dev). The image takes `client/build/atari/syn-ack-wire-atari.atr` and
+   `client/build/apple2_text/syn-ack-wire-apple2.po` as they are when you deploy, and serves them at
+   `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr` and `.../syn-ack-wire-apple2.po`, and under their old names,
+   `synack.atr` and `synack.po` (v0.2.0 and before), for links saved then. A disk booted directly dials that one
+   server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
 5. Deploy, as **one** machine: `fly deploy --ha=false`, or `deploy/deploy.sh`, which does it only while no one
    is playing: no players on this app's servers in the lobby, and no game activity in `fly logs` for 10 minutes
    (`--check` only reports). (By default fly.io starts two machines for redundancy, which
@@ -191,9 +192,10 @@ the server with the proxy's PROXY protocol header turned on and `--proxy-protoco
 With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby
 (https://lobby.fujinet.online, from github.com/FujiNetWIFI/fujinet-lobby), so players can pick it from the lobby
 program on their Atari or Apple II. The lobby boots the client disk for the player's platform from
-`--lobby-client` (a TNFS URL to `synack.atr`; `apple2=` and a TNFS URL to `synack.po` for the Apple, the option
-once for each platform; `clients` in a `--config` file's `[lobby]`) and saves `--lobby` (`TCP://host:port/`, the
-server's public address) in an AppKey; the client reads it and dials `N:` + it (client/README.md).
+`--lobby-client` (a TNFS URL to `syn-ack-wire-atari.atr`; `apple2=` and a TNFS URL to `syn-ack-wire-apple2.po`
+for the Apple, the option once for each platform; `clients` in a `--config` file's `[lobby]`) and saves `--lobby`
+(`TCP://host:port/`, the server's public address) in an AppKey; the client reads it and dials `N:` + it
+(client/README.md).
 - The entry: game `SYN-ACK WIRE` (theme title), server name = the `--region`, real-world region `--lobby-region`
   (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`), appkey `--lobby-key` (default
   11; it must match the clients' `LOBBY_KEY`). Each server process is its own entry, so four regions are four

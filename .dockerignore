@@ -2,8 +2,8 @@
 *
 !server/
 !theme/theme.toml
-!client/build/atari/synack.atr
-!client/build/apple2_text/synack.po
+!client/build/atari/syn-ack-wire-atari.atr
+!client/build/apple2_text/syn-ack-wire-apple2.po
 !deploy/
 server/tests/
 **/__pycache__

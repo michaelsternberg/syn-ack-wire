@@ -9,9 +9,9 @@
 #   DUMPDIR=/tmp/shots tools/run-test.sh build/atari/synack-auto.xex
 #       headless; every BRK the program executes saves the text screen to
 #       DUMPDIR/scrNNN.bin (tools/screen2txt.py shows them)
-#   tools/run-test.sh build/atari/synack.atr                    boot a disk image from FujiNet D1,
+#   tools/run-test.sh build/atari/syn-ack-wire-atari.atr                    boot a disk image from FujiNet D1,
 #       as the lobby would (works with HEADLESS and DUMPDIR too)
-#   BASIC=1 tools/run-test.sh build/atari/synack.atr            boot with the BASIC ROM on, as a real
+#   BASIC=1 tools/run-test.sh build/atari/syn-ack-wire-atari.atr            boot with the BASIC ROM on, as a real
 #       XL/XE does unless OPTION is held (screen memory moves down to $9C40)
 #   INSTANCE=1 tools/run-test.sh build/atari/synack.xex         a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)

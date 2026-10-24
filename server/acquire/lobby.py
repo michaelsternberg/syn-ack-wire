@@ -23,7 +23,7 @@ log = logging.getLogger("synack")
 
 def entry(game, server, region, address, clients, key):
     """The lobby's GameServer record, online with nobody here yet. `clients`: platform -> client disk URL,
-    e.g. {"atari": "TNFS://host/synack.atr", "apple2": "TNFS://host/synack.po"}."""
+    e.g. {"atari": "TNFS://host/syn-ack-wire-atari.atr", "apple2": "TNFS://host/syn-ack-wire-apple2.po"}."""
     return {"game": game, "appkey": key, "server": server, "region": region, "serverurl": address,
             "status": "online", "maxplayers": proto.SEATS, "curplayers": 0,
             "clients": [{"platform": p, "url": u} for p, u in clients.items()]}

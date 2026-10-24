@@ -36,9 +36,10 @@ class ConfigTest(unittest.TestCase):
     def test_lobby_section_gives_each_server_its_address(self):
         specs, lob, _, _ = load_config(config(['port = 6502\nregion = "A"', 'port = 6503\nregion = "B"'],
                                            '[lobby]\naddress = "wire.example.com"\n'
-                                           'client = "TNFS://tnfs.example.com/synack.atr"\n'), REGION)
+                                           'client = "TNFS://t.example.com/syn-ack-wire-atari.atr"\n'), REGION)
         self.assertEqual([s.lobby_url for s in specs], ["TCP://wire.example.com:6502/", "TCP://wire.example.com:6503/"])
-        self.assertEqual(lob["clients"], {"atari": "TNFS://tnfs.example.com/synack.atr"})  # `client`: the Atari disk
+        # `client`: the Atari disk
+        self.assertEqual(lob["clients"], {"atari": "TNFS://t.example.com/syn-ack-wire-atari.atr"})
         self.assertEqual(lob["key"], 11)
         self.assertEqual(lob["url"], "https://lobby.fujinet.online")
 
@@ -177,8 +178,8 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
         specs, lob, _, _ = load_config(config(['port = 0\nregion = "OSAKA-SPRAWL"\ndescription = "relaxed pace"',
                                             'port = 0\nregion = "NEO-KANSAI-1"\ndescription = "fast pace"'],
                                            f'[lobby]\naddress = "wire.example.com"\n'
-                                           f'clients = {{ atari = "TNFS://t.example.com/synack.atr", '
-                                           f'apple2 = "TNFS://t.example.com/synack.po" }}\n'
+                                           f'clients = {{ atari = "TNFS://t.example.com/syn-ack-wire-atari.atr", '
+                                           f'apple2 = "TNFS://t.example.com/syn-ack-wire-apple2.po" }}\n'
                                            f'url = "http://{HOST}:{http.server_port}"\n'), REGION)
         servers, srvs = await start(specs, HOST)
         try:
@@ -191,8 +192,9 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
                                                                     "OSAKA-SPRAWL - relaxed pace"])
             self.assertEqual({p["serverurl"] for p in posts}, {"TCP://wire.example.com:0/"})   # port 0 in a test
             self.assertEqual({p["game"] for p in posts}, {theme.load().game["name"]})       # mixed case, like the rest
-            self.assertEqual(posts[0]["clients"], [{"platform": "atari", "url": "TNFS://t.example.com/synack.atr"},
-                                                   {"platform": "apple2", "url": "TNFS://t.example.com/synack.po"}])
+            self.assertEqual(posts[0]["clients"],
+                             [{"platform": "atari", "url": "TNFS://t.example.com/syn-ack-wire-atari.atr"},
+                              {"platform": "apple2", "url": "TNFS://t.example.com/syn-ack-wire-apple2.po"}])
             await asyncio.gather(*(s.lobby.close() for s in servers))
         finally:
             http.shutdown()

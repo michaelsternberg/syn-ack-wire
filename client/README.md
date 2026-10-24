@@ -46,12 +46,12 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 ```sh
 make                                     # build/atari/synack.xex (the game), build/atari/wiremon.xex, build/atari/wiremon-auto.xex
 make URL=N:TCP://192.168.1.20:6502/      # aim them at another server (default: syn-ack-wire.fly.dev:6502)
-make atrtest                             # build/atari/local/synack.atr: the disk, dialing localhost:6502
+make atrtest                             # build/atari/local/syn-ack-wire-atari.atr: the disk, dialing localhost:6502
 make LOBBY_KEY=0                         # ignore the game lobby's AppKeys (see below)
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/atari/synack-auto.xex: plays by itself, for the emulator
-make atr                                 # build/atari/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
+make atr                                 # build/atari/syn-ack-wire-atari.atr: the game disk (PicoBoot, game, help pages)
 make pc                                  # build/pc/pc-client: the common code on this PC
 make pc-apple2                           # build/pc/pc-apple2: the same with the Apple II's display, for captures
 ```
@@ -193,12 +193,12 @@ The disk boots with **PicoBoot** (`dir2atr -b PicoBoot406`), the smallest member
 in the 3 boot sectors and loads the first file on the disk, `SYNACK.XEX`, at standard SIO speed (it has no
 high-speed code). There is no DOS, and the game needs none. Measured through FujiNet-PC: 87 sectors in 7.2 s,
 against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unless OPTION is held at power-on; the game runs either way
-(`BASIC=1 tools/run-test.sh build/atari/synack.atr` boots with the BASIC ROM on).
+(`BASIC=1 tools/run-test.sh build/atari/syn-ack-wire-atari.atr` boots with the BASIC ROM on).
 
 `make clean && make atr BOOT=Dos25` builds the DOS 2.5 disk instead (the game as `AUTORUN.SYS`). It takes `DOS.SYS`
 from your own DOS 2.5 disk image (`DOS25=path/to/disk.atr`, on the command line or in the environment)
 with `atr`.
-`tools/run-test.sh build/atari/synack.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
+`tools/run-test.sh build/atari/syn-ack-wire-atari.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
 
 ### Fancy screens
 `display.h` is the whole interface. `display_title_screen()` is switched by `FANCY_TITLE`; everything else by
@@ -267,7 +267,7 @@ there: hi-res text artifacts into colour on an NTSC monitor (`tools/apple2_previ
 ```sh
 make apple2_text                                         # build/apple2_text/synack (AppleSingle, ProDOS type SYS)
 make apple2_text-po PRODOS=path/to/ProDOS-2.4-disk AC="java -jar path/to/ac.jar"
-                                                         # build/apple2_text/synack.po: a ProDOS disk that boots it
+                                                         # build/apple2_text/syn-ack-wire-apple2.po: a boot disk
 ```
 The disk holds `PRODOS` and its boot block (both from your own ProDOS disk image: AppleCommander's own boot block
 only shows a notice, so `tools/prodos_boot.py` copies the real one), the game as `SYNACK.SYSTEM`, and `SYNACK.HLP`,

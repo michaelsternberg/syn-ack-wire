@@ -9,11 +9,13 @@ host = "0.0.0.0"                # listen on every address (127.0.0.1: this machi
 # Optional: list every server in the FujiNet game lobby. Leave the section out to stay unlisted.
 # [lobby]
 # address = "wire.example.com"                  # the public host name (or address) players' machines dial
-# clients = { atari = "TNFS://tnfs.example.com/synack.atr", apple2 = "TNFS://tnfs.example.com/synack.po" }
-#                                               # where each platform's lobby boots the client disk from
 # key = 11                                      # the client's LOBBY_KEY
 # region = "us"                                 # the real-world region, 1-2 letters
 # url = "https://qalobby.fujinet.online"        # the QA lobby, to try it out; default: the public one
+#
+# [lobby.clients]                               # where each platform's lobby boots the client disk from
+# atari = "TNFS://tnfs.example.com/syn-ack-wire-atari.atr"
+# apple2 = "TNFS://tnfs.example.com/syn-ack-wire-apple2.po"
 
 # Optional: answer the short links in the game disks' QR codes (client Makefile QR_URL): GET /ATARI redirects to
 # `manual` with {platform} = atari, any platform alike; GET / to `home`. Plain HTTP: put TLS in front of it.

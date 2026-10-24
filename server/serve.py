@@ -401,7 +401,8 @@ SERVER_KEYS = {
 def _clients(v):
     """[lobby] clients: a table of platform = client disk URL."""
     if not isinstance(v, dict) or not v:
-        raise ValueError('need a table like { atari = "TNFS://host/synack.atr", apple2 = "TNFS://host/synack.po" }')
+        raise ValueError('need a table of platform = disk URL, e.g. [lobby.clients] with '
+                         'atari = "TNFS://host/syn-ack-wire-atari.atr"')
     return {_text(lobby_platform)(p): _text(lobby_client)(u) for p, u in v.items()}
 
 
@@ -606,7 +607,8 @@ async def main():
                         "TCP://wire.example.com:6502/")
     g.add_argument("--lobby-client", type=lobby_client_arg, action="append", metavar="[PLATFORM=]URL",
                    help="where the lobby boots a platform's client disk from, once for each platform, e.g. "
-                        "apple2=TNFS://tnfs.example.com/synack.po; a bare URL is the Atari disk (synack.atr)")
+                        "apple2=TNFS://tnfs.example.com/syn-ack-wire-apple2.po; a bare URL is the Atari disk "
+                        "(syn-ack-wire-atari.atr)")
     g.add_argument("--lobby-key", type=lobby_key, default=11, metavar="N",
                    help="the game's AppKey number in the lobby, 1-255; it must match the client's LOBBY_KEY "
                         "(default: %(default)s)")
