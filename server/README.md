@@ -137,14 +137,16 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    as they are when you deploy, and serves them at `TNFS://<app>.fly.dev/synack.atr` and `.../synack.po`. A disk
    booted directly dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own
    port.
-5. Deploy, as **one** machine: `fly deploy --ha=false`. (By default fly.io starts two machines for redundancy, which
+5. Deploy, as **one** machine: `fly deploy --ha=false`, or `deploy/deploy.sh`, which does it only while no one
+   is playing: no players on this app's servers in the lobby, and no game activity in `fly logs` for 10 minutes
+   (`--check` only reports). (By default fly.io starts two machines for redundancy, which
    here would be two separate servers behind one address, splitting players between unrelated games.)
    `fly status` should show one machine, started; `fly logs` shows `tnfsd` and the four servers listening.
 6. To list the servers in the lobby, uncomment `[lobby]` in `servers.fly.toml`, set `address` and `clients` (the
    disks above, one for each platform), keep `url` on the QA lobby until a listing looks right, and deploy again.
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
-`fly deploy`; to change a disk, `make atr` or `make apple2_text-po` and `fly deploy`. A deploy restarts the machine: games in progress end,
+`deploy/deploy.sh`; to change a disk, `make atr` or `make apple2_text-po` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s

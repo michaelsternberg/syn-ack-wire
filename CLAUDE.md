@@ -50,9 +50,9 @@ client/tools/capture.sh                                      # redo the staged c
   checksum is unchanged afterwards (`capture.sh` does this).
 - Bind scratch servers to this machine (`--host 127.0.0.1`).
 - Never post to the FujiNet lobby, public or QA, unless asked. Never echo a token or other secret.
-- `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked. The disks it
-  serves are `client/build/atari/synack.atr` and `client/build/apple2_text/synack.po` as they are at deploy time
-  (`server/README.md`, "Deploying to fly.io").
+- `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked, and with
+  `deploy/deploy.sh`, which first checks no one is playing. The disks it serves are `client/build/atari/synack.atr`
+  and `client/build/apple2_text/synack.po` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else
