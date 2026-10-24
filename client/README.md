@@ -34,6 +34,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 ```sh
 make                                     # build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
 make URL=N:TCP://192.168.1.20:6502/      # aim them at another server (default: syn-ack-wire.fly.dev:6502)
+make atrtest                             # build/local/synack.atr: the disk, dialing localhost:6502
 make LOBBY_KEY=0                         # ignore the game lobby's AppKeys (see below)
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)
@@ -182,8 +183,8 @@ against 125 sectors in 11.2 s with DOS 2.5. Like DOS 2.5, it leaves BASIC on unl
 (`BASIC=1 tools/run-test.sh build/synack.atr` boots with the BASIC ROM on).
 
 `make clean && make atr BOOT=Dos25` builds the DOS 2.5 disk instead (the game as `AUTORUN.SYS`). It takes `DOS.SYS`
-from your own DOS 2.5 disk image (`DOS25=path`, default
-`~/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr`) with `atr`.
+from your own DOS 2.5 disk image (`DOS25=path/to/disk.atr`, on the command line or in the environment)
+with `atr`.
 `tools/run-test.sh build/synack.atr` boots the disk from FujiNet-PC's D1, the way the lobby will.
 
 ### Fancy screens

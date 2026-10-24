@@ -16,12 +16,13 @@
 #   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
+# FUJINET_DIR is your FujiNet-PC build: the folder with run-fujinet and fnconfig.ini.
 # Start the server first:  cd ../server && python3 serve.py --trace
 # Closing the emulator (or Ctrl-C) stops FujiNet-PC as well.
 set -e
 XEX=$(realpath "$1")
 ATARI800=${ATARI800:-atari800}
-FUJINET_DIR=${FUJINET_DIR:-$HOME/Nextcloud/Projects/computers/atari8/Source/FujiNetWIFI/fujinet-firmware/build/dist}
+FUJINET_DIR=${FUJINET_DIR:?set FUJINET_DIR to your FujiNet-PC build (the folder with run-fujinet and fnconfig.ini)}
 INSTANCE=${INSTANCE:-0}
 NETSIO=$((9997 + INSTANCE))
 WEB=$((8000 + INSTANCE))

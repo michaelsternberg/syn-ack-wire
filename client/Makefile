@@ -3,6 +3,7 @@
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
 #   make atr                  build/synack.atr: boots the game with PicoBoot, plus the help pages
+#   make atrtest              build/local/synack.atr: the same disk dialing a server on this machine (LOCAL_URL)
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
 #   make clean
 CC65    ?=
@@ -12,13 +13,15 @@ LD      = $(if $(CC65),$(CC65)/,)ld65
 TARGET  = atari
 CFLAGS  = -t $(TARGET) -O -Or -Cl
 URL     ?= N:TCP://syn-ack-wire.fly.dev:6502/
+LOCAL_URL ?= N:TCP://localhost:6502/
 FANCY   ?=
 HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)
 B       = build
 # the disk's boot (dir2atr -b): PicoBoot406, no DOS; or Dos25
 BOOT    ?= PicoBoot406
-DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v2.5_1984_Atari.atr
+# your DOS 2.5 disk image, for BOOT=Dos25 (DOS.SYS comes from it)
+DOS25   ?=
 HELP    = $(sort $(wildcard help/atari/screen/HELP*.TXT))
 # the help pages' first sector on the disk, 8 sectors a page (help.s and help_disk.py)
 HELP_SECTOR ?= 600
@@ -80,6 +83,7 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 # dir2atr writes the image, then help_disk.py writes the help pages as raw sectors from
 # HELP_SECTOR (help.s reads them).
 $(B)/dos.sys: | $(B)
+	@test -n "$(DOS25)" || { echo "BOOT=Dos25 needs DOS25=path/to/your/DOS-2.5-disk.atr" >&2; exit 1; }
 	atr "$(DOS25)" get dos.sys $@
 $(B)/%.atr: $(B)/%.xex $(HELP) tools/help_disk.py tools/qr.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
 	python3 tools/help_disk.py --qr "$(QR_URL)" --check $(HELP)
@@ -93,6 +97,9 @@ endif
 	dir2atr -b $(BOOT) $@ $(B)/disk-$* >/dev/null
 	python3 tools/help_disk.py --qr "$(QR_URL)" $@ $(HELP_SECTOR) $(HELP)
 atr: $(B)/synack.atr
+# its own build folder, so the local and public builds never share objects
+atrtest:
+	$(MAKE) B=$(B)/local URL=$(LOCAL_URL) atr
 
 
 # --- unattended test build: plays by itself and BRKs for screen dumps (see test/autoplay.c)
@@ -113,6 +120,6 @@ pc: $(HDRS) | $(B)
 clean:
 	rm -rf $(B)
 
-.PHONY: all atr test pc clean
+.PHONY: all atr atrtest test pc clean
 .PRECIOUS: $(B)/%.s $(B)/%.o
 .DELETE_ON_ERROR:
