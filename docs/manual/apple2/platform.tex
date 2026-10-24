@@ -1,0 +1,11 @@
+% The Apple II's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // APPLE II}
+\renewcommand{\PlatformShort}{Apple II}                    % as in "on the Apple II"
+\newcommand{\PlatformLong}{Apple II computers}             % the title page
+\newcommand{\PlatformMachines}{APPLE IIe / IIc / IIgs}     % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar reads \code{NO SIGNAL}}  % the link is quiet
+
+% Where the 40 x 24 screen sits in a capture, in image pixels (see \capgeom):
+\makeatletter
+\newcommand{\rendered}{\capgeom{10}{8}{7}{8}{300}{208}}     % client/tools/render_apple2.py
+\makeatother
