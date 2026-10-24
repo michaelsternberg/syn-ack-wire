@@ -48,9 +48,16 @@
 #define ROW_INFO    22
 #define ROW_ASK     23
 
-#define COL_HINTS   27                  /* ON/OFF after "OPEN-APPLE  MOVE HINTS" */
+/* The title's lines sit low, as on the Atari, whatever the logo's height */
+#define ROW_REGION  15                  /* then STATUS and HANDLE */
+#define ROW_KEYS    19                  /* OPEN-APPLE, CLOSED-APPLE, ? */
+#define COL_KEYS    18                  /* what each key does */
+#define COL_HINTS   (COL_KEYS + 11)     /* ON/OFF after "MOVE HINTS" */
 
 #include "title_art.h"                  /* title_art[], TITLE_END */
+#if TITLE_END >= ROW_REGION - 1
+#error "the title logo runs into the title's lines: at most rows 0-13"
+#endif
 
 #define R(n) ((unsigned char *)(0x400 + ((n) & 7) * 0x80 + ((n) >> 3) * 40))
 static unsigned char *const row[24] = {
@@ -180,22 +187,25 @@ void display_title_screen(void)
     clear_screen();
     for (p = title_art; *p != 0xFF; p += 3 + p[2])
         memcpy(row[*p] + p[1], p + 3, p[2]);
-    at(TITLE_END + 2, 4);
+    at(ROW_REGION, 4);
     text("REGION");                     /* from the server, once it answers */
-    at(TITLE_END + 3, 4);
+    at(ROW_REGION + 1, 4);
     text("STATUS");                     /* what joining would do, from the server */
-    at(TITLE_END + 4, 4);
+    at(ROW_REGION + 2, 4);
     text("HANDLE");
-    at(TITLE_END + 6, 4);
     mode = INV;
+    at(ROW_KEYS, 4);
     text("OPEN-APPLE");                 /* the key flips it */
-    mode = NORMAL;
-    text("  MOVE HINTS");
-    at(TITLE_END + 7, 4);
-    mode = INV;
+    at(ROW_KEYS + 1, 4);
+    text("CLOSED-APPLE");
+    at(ROW_KEYS + 2, 4);
     put('?');
     mode = NORMAL;
-    at(TITLE_END + 7, 16);
+    at(ROW_KEYS, COL_KEYS);
+    text("MOVE HINTS");
+    at(ROW_KEYS + 1, COL_KEYS);
+    text("TOGGLE SOUND");
+    at(ROW_KEYS + 2, COL_KEYS);
     text("INSTRUCTIONS, ANY TIME");
     if (refused)
         mode = INV;                     /* a refusal stands out at the foot */
@@ -210,10 +220,10 @@ void display_title_screen(void)
 /* Each field is padded to its widest, so drawing over the last one leaves nothing behind. */
 void display_title_update(void)
 {
-    at(TITLE_END + 2, 12);
+    at(ROW_REGION, 12);
     textn(region, region_len);
     spaces(sizeof region - region_len);
-    at(TITLE_END + 3, 12);
+    at(ROW_REGION + 1, 12);
     n = 0;
     if (status_len) {
         n = status_len - 1;
@@ -223,13 +233,13 @@ void display_title_update(void)
         text("NO CARRIER");
     }
     spaces(sizeof status - 2 - n);      /* 28: to the end of the row */
-    at(TITLE_END + 4, 12);
+    at(ROW_REGION + 2, 12);
     textn(edit, edit_len);
     mode = INV;
     put(' ');                           /* cursor */
     mode = NORMAL;
     spaces(8 - edit_len);
-    at(TITLE_END + 6, COL_HINTS);
+    at(ROW_KEYS, COL_HINTS);
     mode = INV;
     text(hints ? "ON" : "OFF");
     mode = NORMAL;

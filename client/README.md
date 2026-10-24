@@ -295,13 +295,14 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
   `tools/help_apple2.py`. `help.s` reads a page straight onto page 2 with four ProDOS MLI calls (open, set mark,
   read, close), no cc65 file code. The two pages there now only try the mechanism out.
 - **Title:** the logo is `src/apple2/title.txt`, any printable ASCII including `|` (normal video only for
-  lower case and `|`); `tools/title_text.py` makes the header.
+  lower case and `|`), in rows 0-13; `tools/title_text.py` makes the header. Under it, low on the screen as on
+  the Atari: REGION, STATUS and HANDLE (rows 15-17), then the keys, OPEN-APPLE, CLOSED-APPLE and ? (19-21).
 
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
 | `synack.xex` | 12266 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
-| `display_text.c` | 3716 | + 1052 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `display_text.c` | 3628 | + 845 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
 | `main.c` | 1149 | + 130 rodata |
 | `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
@@ -312,8 +313,8 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
 | **apple2_text** (2026-10-24) | | |
-| `synack` | 15183 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
-| `display_text.c` | 3594 | + 821 rodata (screen words, the 48-byte row table, 98 of title art), 28 bss/data |
+| `synack` | 15241 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `display_text.c` | 3628 | + 845 rodata (screen words, the 48-byte row table, 98 of title art), 28 bss/data |
 | fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
 | cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
 | `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
