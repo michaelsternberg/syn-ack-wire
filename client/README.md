@@ -323,8 +323,8 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
 | **apple2_text** (2026-10-24) | | |
-| `synack` | 15268 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
-| `display_text.c` | 3628 | + 845 rodata (screen words, the 48-byte row table, 98 of title art), 28 bss/data |
+| `synack` | 15271 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `display_text.c` | 3628 | + 845 rodata (screen words, the 48-byte row table, 101 of title art), 28 bss/data |
 | fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
 | cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
 | `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
