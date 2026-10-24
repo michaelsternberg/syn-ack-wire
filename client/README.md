@@ -33,7 +33,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 ## Build
 ```sh
 make                                     # build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
-make URL=N:TCP://192.168.1.20:6502/      # aim them at another server
+make URL=N:TCP://192.168.1.20:6502/      # aim them at another server (default: syn-ack-wire.fly.dev:6502)
 make LOBBY_KEY=0                         # ignore the game lobby's AppKeys (see below)
 make FANCY=1                             # hand-made screens instead of text (once they exist)
 make HINTS=0                             # move hints start off (the player can still turn them on)

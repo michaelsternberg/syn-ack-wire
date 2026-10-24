@@ -59,7 +59,7 @@ An Atari 8-bit program in C and 6502 assembly, built with [cc65](https://cc65.gi
 
 ```sh
 cd client
-make                                     # build/synack.xex
+make                                     # build/synack.xex, dialing the public server (syn-ack-wire.fly.dev)
 make URL=N:TCP://192.168.1.20:6502/      # point it at your server
 make atr                                 # build/synack.atr: a bootable disk, with the instructions
 make pc                                  # the common code on a PC, for testing against the server

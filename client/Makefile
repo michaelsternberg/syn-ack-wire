@@ -1,6 +1,6 @@
 # SYN-ACK WIRE client (Atari for now).
 #   make                      build/synack.xex (the game), build/wiremon.xex, build/wiremon-auto.xex
-#   make URL=N:TCP://192.168.1.20:6502/    point them at another server
+#   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
 #   make atr                  build/synack.atr: boots the game with PicoBoot, plus the help pages
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
@@ -11,7 +11,7 @@ AS      = $(if $(CC65),$(CC65)/,)ca65
 LD      = $(if $(CC65),$(CC65)/,)ld65
 TARGET  = atari
 CFLAGS  = -t $(TARGET) -O -Or -Cl
-URL     ?= N:TCP://localhost:6502/
+URL     ?= N:TCP://syn-ack-wire.fly.dev:6502/
 FANCY   ?=
 HINTS   ?=
 DEFS    = -DURL='"$(URL)"' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)

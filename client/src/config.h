@@ -22,7 +22,7 @@
  * the number the server registers with the lobby as its `appkey` (1-255).
  * LOBBY_KEY 0: always dial URL and leave the handle empty. */
 #ifndef URL
-#define URL "N:TCP://localhost:6502/"
+#define URL "N:TCP://syn-ack-wire.fly.dev:6502/"
 #endif
 #ifndef LOBBY_KEY
 #define LOBBY_KEY 11

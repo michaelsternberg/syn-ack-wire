@@ -130,7 +130,8 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    `fly apps create <app>`.
 3. Give it a dedicated IPv4 address: `fly ips allocate-v4`. (The free shared address only carries HTTP and TLS;
    FujiNet's `N:TCP://` is neither.)
-4. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/`. The image takes
+4. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` (the default URL is this
+   project's own app, syn-ack-wire.fly.dev). The image takes
    `client/build/synack.atr` as it is when you deploy, and serves it at `TNFS://<app>.fly.dev/synack.atr`. A disk
    booted directly dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own
    port.
