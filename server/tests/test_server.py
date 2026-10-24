@@ -635,13 +635,15 @@ class LobbyTest(unittest.IsolatedAsyncioTestCase):
         try:
             server.list_in(lobby.Lobby(f"http://{HOST}:{http.server_port}",
                                        lobby.entry("SYN-ACK WIRE", "NEO-LAGOS-3", "eu", "TCP://wire.example.com:6502/",
-                                                   "TNFS://tnfs.example.com/synack.atr", 11)))
+                                                   {"atari": "TNFS://tnfs.example.com/synack.atr",
+                                                    "apple2": "TNFS://tnfs.example.com/synack.po"}, 11)))
             path, e = await listed(curplayers=0)
             self.assertEqual(path, "/server")
             self.assertEqual(e, {"game": "SYN-ACK WIRE", "appkey": 11, "server": "NEO-LAGOS-3", "region": "eu",
                                  "serverurl": "TCP://wire.example.com:6502/", "status": "online",
                                  "maxplayers": 6, "curplayers": 0,
-                                 "clients": [{"platform": "atari", "url": "TNFS://tnfs.example.com/synack.atr"}]})
+                                 "clients": [{"platform": "atari", "url": "TNFS://tnfs.example.com/synack.atr"},
+                                             {"platform": "apple2", "url": "TNFS://tnfs.example.com/synack.po"}]})
             r, w = await asyncio.open_connection(HOST, srv.sockets[0].getsockname()[1])
             w.write(proto.hello(0, bytes(4), "ANN"))
             await listed(curplayers=1, maxplayers=6)

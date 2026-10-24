@@ -1,8 +1,9 @@
-# The image needs the server, the theme, the client disk and deploy/.
+# The image needs the server, the theme, the client disks and deploy/.
 *
 !server/
 !theme/theme.toml
 !client/build/atari/synack.atr
+!client/build/apple2_text/synack.po
 !deploy/
 server/tests/
 **/__pycache__

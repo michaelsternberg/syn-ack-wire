@@ -1,5 +1,6 @@
 """Several servers in one process: servers.toml, checked strictly, and the servers it starts.
 Run from server/:  python3 -m unittest -v"""
+import argparse
 import asyncio
 import json
 import pathlib
@@ -11,7 +12,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import testclient
 from acquire import proto, theme
-from serve import list_all, load_config, lobby_name, start, stop
+from serve import list_all, load_config, lobby_client_arg, lobby_name, start, stop
 
 HOST = "127.0.0.1"
 HERE = pathlib.Path(__file__).resolve().parent.parent
@@ -37,8 +38,21 @@ class ConfigTest(unittest.TestCase):
                                            '[lobby]\naddress = "wire.example.com"\n'
                                            'client = "TNFS://tnfs.example.com/synack.atr"\n'), REGION)
         self.assertEqual([s.lobby_url for s in specs], ["TCP://wire.example.com:6502/", "TCP://wire.example.com:6503/"])
+        self.assertEqual(lob["clients"], {"atari": "TNFS://tnfs.example.com/synack.atr"})  # `client`: the Atari disk
         self.assertEqual(lob["key"], 11)
         self.assertEqual(lob["url"], "https://lobby.fujinet.online")
+
+    def test_lobby_client_option(self):
+        self.assertEqual(lobby_client_arg("TNFS://t.example.com/s.atr"), ("atari", "TNFS://t.example.com/s.atr"))
+        self.assertEqual(lobby_client_arg("apple2=TNFS://t.example.com/s.po"), ("apple2", "TNFS://t.example.com/s.po"))
+        with self.assertRaises(argparse.ArgumentTypeError):
+            lobby_client_arg("Apple=TNFS://t.example.com/s.po")
+
+    def test_lobby_clients_one_disk_a_platform(self):
+        _, lob, _, _ = load_config(config(['port = 6502\nregion = "A"'],
+                                          '[lobby]\naddress = "wire.example.com"\nclient = "TNFS://t.example.com/s.atr"\n'
+                                          'clients = { apple2 = "TNFS://t.example.com/s.po" }\n'), REGION)
+        self.assertEqual(lob["clients"], {"atari": "TNFS://t.example.com/s.atr", "apple2": "TNFS://t.example.com/s.po"})
 
     def test_proxy_protocol_reaches_every_server(self):
         specs, _, _, _ = load_config("proxy-protocol = true\n" + config(['port = 6502\nregion = "A"',
@@ -56,6 +70,11 @@ class ConfigTest(unittest.TestCase):
             config(['port = 6502\nregion = "NEO-KANSAI-1"\ndescription = "a much too long description"']):
                 "the lobby shows at most 32",
             config(['port = 6502\nregion = "A"'], '[lobby]\nclient = "TNFS://t.example.com/s.atr"\n'): "needs address",
+            config(['port = 6502\nregion = "A"'], '[lobby]\naddress = "w.example.com"\n'): "needs clients",
+            config(['port = 6502\nregion = "A"'], '[lobby]\naddress = "w.example.com"\n'
+                   'clients = { "Apple II" = "TNFS://t.example.com/s.po" }\n'): "platform name",
+            config(['port = 6502\nregion = "A"'], '[lobby]\naddress = "w.example.com"\nclient = "TNFS://t.example.com/s.atr"\n'
+                   'clients = { atari = "TNFS://t.example.com/s.atr" }\n'): "both name the Atari disk",
             config(['port = 6502\nregion = "A"\njack-in = "no"']): "need true or false",
             "": "needs at least one [[server]]",
             '[web]\nport = 8080\n' + config(['port = 6502\nregion = "A"']): "[web]: needs manual",
@@ -158,7 +177,8 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
         specs, lob, _, _ = load_config(config(['port = 0\nregion = "OSAKA-SPRAWL"\ndescription = "relaxed pace"',
                                             'port = 0\nregion = "NEO-KANSAI-1"\ndescription = "fast pace"'],
                                            f'[lobby]\naddress = "wire.example.com"\n'
-                                           f'client = "TNFS://tnfs.example.com/synack.atr"\n'
+                                           f'clients = {{ atari = "TNFS://t.example.com/synack.atr", '
+                                           f'apple2 = "TNFS://t.example.com/synack.po" }}\n'
                                            f'url = "http://{HOST}:{http.server_port}"\n'), REGION)
         servers, srvs = await start(specs, HOST)
         try:
@@ -171,6 +191,8 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
                                                                     "OSAKA-SPRAWL - relaxed pace"])
             self.assertEqual({p["serverurl"] for p in posts}, {"TCP://wire.example.com:0/"})   # port 0 in a test
             self.assertEqual({p["game"] for p in posts}, {theme.load().game["name"]})       # mixed case, like the rest
+            self.assertEqual(posts[0]["clients"], [{"platform": "atari", "url": "TNFS://t.example.com/synack.atr"},
+                                                   {"platform": "apple2", "url": "TNFS://t.example.com/synack.po"}])
             await asyncio.gather(*(s.lobby.close() for s in servers))
         finally:
             http.shutdown()

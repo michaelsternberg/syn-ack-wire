@@ -29,7 +29,8 @@ python3 serve.py --no-jack-in                 # newcomers to a game in progress 
 python3 serve.py --tables 0,1                 # tables clients may use (default 0; others are refused)
 python3 serve.py --config servers.toml        # several servers in one process (see servers.example.toml)
 python3 serve.py --host-wait 120              # a host keeping others waiting has 2 min to start (default 60; 0 = never)
-python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr
+python3 serve.py --lobby TCP://wire.example.com:6502/ --lobby-client TNFS://tnfs.example.com/synack.atr \
+                 --lobby-client apple2=TNFS://tnfs.example.com/synack.po
                                               # list the server in the FujiNet game lobby (see below)
 python3 testclient.py --name ALICE            # play by hand; first to join is host and picks seat count
 python3 testclient.py --name BOB --auto       # a second human, playing randomly
@@ -118,7 +119,7 @@ with a message naming the server and the setting. Only `--host` and `--trace` go
 
 ## Deploying to fly.io
 The repository root has what [fly.io](https://fly.io) needs: `Dockerfile` (Python and the server, plus `tnfsd` to
-serve the client disk to the FujiNet lobby), `fly.toml` (one small machine, always on, a TCP service per server and a
+serve the client disks to the FujiNet lobby), `fly.toml` (one small machine, always on, a TCP service per server and a
 UDP one for `tnfsd`, and an HTTPS one for the QR codes' short links) and `server/servers.fly.toml` (the four servers: two relaxed, one quicker, one fast). Fly builds
 the image on its own machines, so Docker isn't needed locally. Cost at the time of writing: about $2/month for the
 machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UDP services need; the host name
@@ -130,19 +131,20 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    `fly apps create <app>`.
 3. Give it a dedicated IPv4 address: `fly ips allocate-v4`. (The free shared address only carries HTTP and TLS;
    FujiNet's `N:TCP://` is neither.)
-4. Build the game disk for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` (the default URL is this
-   project's own app, syn-ack-wire.fly.dev). The image takes
-   `client/build/atari/synack.atr` as it is when you deploy, and serves it at `TNFS://<app>.fly.dev/synack.atr`. A disk
+4. Build the game disks for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` and
+   `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` (the default URL is this project's own app,
+   syn-ack-wire.fly.dev). The image takes `client/build/atari/synack.atr` and `client/build/apple2_text/synack.po`
+   as they are when you deploy, and serves them at `TNFS://<app>.fly.dev/synack.atr` and `.../synack.po`. A disk
    booted directly dials that one server (6502 is a relaxed one here); the FujiNet lobby gives each server its own
    port.
 5. Deploy, as **one** machine: `fly deploy --ha=false`. (By default fly.io starts two machines for redundancy, which
    here would be two separate servers behind one address, splitting players between unrelated games.)
    `fly status` should show one machine, started; `fly logs` shows `tnfsd` and the four servers listening.
-6. To list the servers in the lobby, uncomment `[lobby]` in `servers.fly.toml`, set `address` and `client` (the
-   disk above), keep `url` on the QA lobby until a listing looks right, and deploy again.
+6. To list the servers in the lobby, uncomment `[lobby]` in `servers.fly.toml`, set `address` and `clients` (the
+   disks above, one for each platform), keep `url` on the QA lobby until a listing looks right, and deploy again.
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
-`fly deploy`; to change the disk, `make atr` and `fly deploy`. A deploy restarts the machine: games in progress end,
+`fly deploy`; to change a disk, `make atr` or `make apple2_text-po` and `fly deploy`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s
@@ -186,12 +188,15 @@ the server with the proxy's PROXY protocol header turned on and `--proxy-protoco
 ## FujiNet game lobby
 With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby
 (https://lobby.fujinet.online, from github.com/FujiNetWIFI/fujinet-lobby), so players can pick it from the lobby
-program on their Atari. The lobby boots the client disk from `--lobby-client` (a TNFS URL to `synack.atr`) and
-saves `--lobby` (`TCP://host:port/`, the server's public address) in an AppKey; the client reads it and dials
-`N:` + it (client/README.md).
+program on their Atari or Apple II. The lobby boots the client disk for the player's platform from
+`--lobby-client` (a TNFS URL to `synack.atr`; `apple2=` and a TNFS URL to `synack.po` for the Apple, the option
+once for each platform; `clients` in a `--config` file's `[lobby]`) and saves `--lobby` (`TCP://host:port/`, the
+server's public address) in an AppKey; the client reads it and dials `N:` + it (client/README.md).
 - The entry: game `SYN-ACK WIRE` (theme title), server name = the `--region`, real-world region `--lobby-region`
-  (1-2 letters, default `us`), platform `atari`, appkey `--lobby-key` (default 11; it must match the client's
-  `LOBBY_KEY`). Each server process is its own entry, so four regions are four `serve.py` on four ports.
+  (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`), appkey `--lobby-key` (default
+  11; it must match the clients' `LOBBY_KEY`). Each server process is its own entry, so four regions are four
+  `serve.py` on four ports. One entry serves both platforms: each platform's lobby program lists the entries with a
+  disk for it, so Apple and Atari players meet at the same tables.
 - PLAYERS shows table 0, the one clients join. In the lobby: humans here of 6. In a game: the seats humans hold
   (away ones too) of the seats playing, the rest being bots a newcomer can jack in for; with `--no-jack-in` a game
   shows full.

@@ -4,7 +4,8 @@
     python3 serve.py [--host 0.0.0.0] [--port 6502] [--timeout 60] [--bot-delay 1.0]
                     [--think-exploit 20,10] [--think-buy 12,5] [--keepalive 10] [--abandon 600] [--afk 2]
                     [--link-timeout 60] [--host-wait 60] [--region NEO-KANSAI-1] [--no-jack-in] [--trace]
-                    [--lobby TCP://host:port/ --lobby-client TNFS://host/path.atr [--lobby-key 11]
+                    [--lobby TCP://host:port/ --lobby-client TNFS://host/path.atr
+                     [--lobby-client apple2=TNFS://host/path.po] [--lobby-key 11]
                      [--lobby-region us] [--lobby-url https://lobby.fujinet.online]]
 
     python3 serve.py --config servers.toml [--host 0.0.0.0] [--trace]
@@ -288,6 +289,21 @@ def lobby_client(text):
     return text
 
 
+def lobby_platform(text):
+    """A platform as the lobby names it, e.g. atari or apple2: lower-case letters and digits."""
+    if not 1 <= len(text) <= 16 or not text.isascii() or not text.isalnum() or text != text.lower():
+        raise argparse.ArgumentTypeError(f"{text!r}: need a platform name like atari or apple2")
+    return text
+
+
+def lobby_client_arg(text):
+    """--lobby-client: PLATFORM=URL, or a bare URL for the Atari disk -> (platform, URL)."""
+    platform, sep, url = text.partition("=")
+    if not sep or ":" in platform:          # no platform before the URL
+        platform, url = "atari", text
+    return lobby_platform(platform), lobby_client(url)
+
+
 def lobby_key(text):
     """The lobby's appkey number for the game: 1-255."""
     try:
@@ -382,9 +398,17 @@ SERVER_KEYS = {
     "jack-in": ("jack_in", _flag),
     "tables": ("tables", _tables),
 }
+def _clients(v):
+    """[lobby] clients: a table of platform = client disk URL."""
+    if not isinstance(v, dict) or not v:
+        raise ValueError('need a table like { atari = "TNFS://host/synack.atr", apple2 = "TNFS://host/synack.po" }')
+    return {_text(lobby_platform)(p): _text(lobby_client)(u) for p, u in v.items()}
+
+
 LOBBY_KEYS = {
     "address": _text(lambda t: lobby_address(f"TCP://{t}:1/") and t),   # the host clients dial: name or IP
-    "client": _text(lobby_client),
+    "clients": _clients,
+    "client": _text(lobby_client),          # the Atari disk alone, as before `clients`
     "key": lambda v: _text(lobby_key)(str(v) if isinstance(v, int) and not isinstance(v, bool) else v),
     "region": _text(lobby_region),
     "url": _text(str),
@@ -438,9 +462,16 @@ def load_config(text, default_region):
                 lob[k] = LOBBY_KEYS[k](v)
             except ValueError as e:
                 raise ValueError(f"[lobby] {k}: {e}")
-        for k in ("address", "client"):
-            if k not in lob:
-                raise ValueError(f"[lobby]: needs {k}")
+        if "address" not in lob:
+            raise ValueError("[lobby]: needs address")
+        clients = lob.pop("clients", {})
+        if "client" in lob:
+            if "atari" in clients:
+                raise ValueError("[lobby]: client and clients.atari both name the Atari disk: keep one")
+            clients = {"atari": lob.pop("client"), **clients}
+        if not clients:
+            raise ValueError("[lobby]: needs clients, a client disk for each platform")
+        lob["clients"] = clients
     servers = cfg.get("server")
     if not isinstance(servers, list) or not servers:
         raise ValueError("needs at least one [[server]]")
@@ -569,13 +600,13 @@ async def main():
                          "--host and --trace go with it")
     ap.add_argument("--trace", action="store_true", help="log every frame a client sends, as well as the game log")
     g = ap.add_argument_group("FujiNet game lobby", "list this server in the lobby, so players can pick it from "
-                              "their Atari; --lobby and --lobby-client turn it on")
+                              "their Atari or Apple II; --lobby and --lobby-client turn it on")
     g.add_argument("--lobby", type=lobby_address, metavar="TCP://HOST:PORT/",
                    help="the public address players' Ataris dial, as the lobby gives it to the client, e.g. "
                         "TCP://wire.example.com:6502/")
-    g.add_argument("--lobby-client", type=lobby_client, metavar="URL",
-                   help="where the lobby boots the Atari client disk (synack.atr) from, e.g. "
-                        "TNFS://tnfs.example.com/synack.atr")
+    g.add_argument("--lobby-client", type=lobby_client_arg, action="append", metavar="[PLATFORM=]URL",
+                   help="where the lobby boots a platform's client disk from, once for each platform, e.g. "
+                        "apple2=TNFS://tnfs.example.com/synack.po; a bare URL is the Atari disk (synack.atr)")
     g.add_argument("--lobby-key", type=lobby_key, default=11, metavar="N",
                    help="the game's AppKey number in the lobby, 1-255; it must match the client's LOBBY_KEY "
                         "(default: %(default)s)")
@@ -601,6 +632,9 @@ async def main():
     else:
         if bool(a.lobby) != bool(a.lobby_client):
             ap.error("--lobby and --lobby-client go together")
+        clients = dict(a.lobby_client or ())
+        if len(clients) < len(a.lobby_client or ()):
+            ap.error("--lobby-client: one disk for each platform")
         if a.description and len(lobby_name(a.region or default_region, a.description)) > LOBBY_NAME_MAX:
             ap.error(f"--description: the lobby shows at most {LOBBY_NAME_MAX} characters with the region")
         think = {k: t for k, t in (("P", a.think_exploit), ("B", a.think_buy)) if t}
@@ -609,7 +643,7 @@ async def main():
                                    region=a.region, jack_in=a.jack_in, tables=a.tables,
                                    proxy_protocol=a.proxy_protocol),
                       a.description or "", a.lobby or "")]
-        lob = a.lobby and {"client": a.lobby_client, "key": a.lobby_key, "region": a.lobby_region, "url": a.lobby_url}
+        lob = a.lobby and {"clients": clients, "key": a.lobby_key, "region": a.lobby_region, "url": a.lobby_url}
         web = None
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO,
                         format="%(asctime)s %(server)s%(message)s" if len(specs) > 1 else "%(asctime)s %(message)s")
@@ -656,7 +690,7 @@ def list_all(servers, specs, lob):
         game = server.theme.game
         server.list_in(lobby.Lobby(lob["url"], lobby.entry(game.get("name", game["title"]),
                                                           lobby_name(game["region"], spec.description),
-                                                          lob["region"], spec.lobby_url, lob["client"], lob["key"])))
+                                                          lob["region"], spec.lobby_url, lob["clients"], lob["key"])))
 
 if __name__ == "__main__":
     try:

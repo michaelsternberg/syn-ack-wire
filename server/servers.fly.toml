@@ -5,13 +5,14 @@ host = "0.0.0.0"
 proxy-protocol = true           # fly.io's proxy_proto handler names each player: required behind its proxy
 
 # List every server in the FujiNet game lobby. Try the QA lobby first; leave the section commented out to stay
-# unlisted. `address` is the name players' Ataris dial: <app>.fly.dev, or your own domain pointing at the app.
+# unlisted. `address` is the name players' Ataris and Apples dial: <app>.fly.dev, or your own domain pointing at the
+# app. `clients`: the disk each platform's lobby boots, both served by this machine (tnfsd, Dockerfile).
 [lobby]
 address = "syn-ack-wire.fly.dev"
-client = "TNFS://syn-ack-wire.fly.dev/synack.atr"       # the disk this machine serves (tnfsd)
+clients = { atari = "TNFS://syn-ack-wire.fly.dev/synack.atr", apple2 = "TNFS://syn-ack-wire.fly.dev/synack.po" }
 key = 11
 region = "us"
-url = "https://lobby.fujinet.online"                  # the QA lobby for now
+url = "https://lobby.fujinet.online"                  # the public lobby
 
 # The short links in the game disks' QR codes (fly.toml's https service): https://syn-ack-wire.fly.dev/ATARI
 # redirects to the Atari manual, any platform the same way by its docs/manual/ folder; / to the project.

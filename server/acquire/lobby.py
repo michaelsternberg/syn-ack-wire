@@ -3,7 +3,8 @@
 The lobby is a registry. A game server POSTs its entry to /server; the lobby program on an 8-bit machine lists the
 entries for its platform. When a player picks one, the lobby program stores the entry's address in an AppKey
 (creator 1, app 1, key = the entry's `appkey`), then boots the client disk from the entry's client URL; the client
-reads the key and dials that address (client/README.md).
+reads the key and dials that address (client/README.md). One entry serves every platform: it lists a client
+disk for each (`clients`), and each platform's lobby program shows the entries that have one for it.
 
 The lobby never ages an entry out: it shows how long ago the server last posted. So we post whenever the player
 count changes (at most once a second) and every few minutes regardless, and DELETE the entry on shutdown.
@@ -20,11 +21,12 @@ KEEPALIVE = 300.0   # seconds between posts when nothing changes
 log = logging.getLogger("synack")
 
 
-def entry(game, server, region, address, client, key):
-    """The lobby's GameServer record, online with nobody here yet."""
+def entry(game, server, region, address, clients, key):
+    """The lobby's GameServer record, online with nobody here yet. `clients`: platform -> client disk URL,
+    e.g. {"atari": "TNFS://host/synack.atr", "apple2": "TNFS://host/synack.po"}."""
     return {"game": game, "appkey": key, "server": server, "region": region, "serverurl": address,
             "status": "online", "maxplayers": proto.SEATS, "curplayers": 0,
-            "clients": [{"platform": "atari", "url": client}]}
+            "clients": [{"platform": p, "url": u} for p, u in clients.items()]}
 
 
 class Lobby:
