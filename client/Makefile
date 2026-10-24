@@ -35,7 +35,7 @@ NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
 
 GAME    = $(B)/main.o $(B)/game.o $(B)/display_text.o $(B)/input.o $(B)/help.o $(B)/sound.o $(B)/snow.o $(B)/dli.o
-HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h
+HDRS    = src/common/proto_tab.h src/common/theme_tab.h src/common/game.h src/display.h src/platform.h src/config.h Makefile
 
 all: $(B)/synack.xex $(B)/wiremon.xex $(B)/wiremon-auto.xex
 

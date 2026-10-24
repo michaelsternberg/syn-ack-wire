@@ -311,10 +311,10 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 12391 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
+| `synack.xex` | 12394 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
 | `display_text.c` | 3830 | + 1052 rodata (screen words, 364 of title art), 77 bss, 1K font, 1K player memory; the last move's blink |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 1149 | + 130 rodata; with the `display_idle()` call (the last move's blink) |
+| `main.c` | 1152 | + 130 rodata; with the `display_idle()` call (the last move's blink) |
 | `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
