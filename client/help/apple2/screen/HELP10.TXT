@@ -1,24 +1,24 @@
-{ CREDITS                          10/10 }
- SYN-ACK WIRE
-
- Concept, Direction, Testing
-   Michael Sternberg
- Code
-   Claude (Anthropic)
-
- The rules are Sid Sackson's
- ACQUIRE (1964), rethemed.
-
- Made with and for
-   FujiNet     fujinet.online
-   cc65        6502 C compiler
-   MyPicoDos   boot, Matthias Reichl
-   tnfsd       Dylan Smith and the
-               FujiNet team
+[QR]
 
 
- Free software, GPL-3.0:
- github.com/michaelsternberg/
-   syn-ack-wire
 
-{<- PREV         ESC:EXIT                }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{ FULL USER MANUAL (PDF)           10/11 }
+ SYN-ACK-WIRE.FLY.DEV/APPLE2
+
+{<- PREV         ESC:EXIT         NEXT ->}

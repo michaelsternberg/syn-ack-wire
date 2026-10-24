@@ -130,6 +130,8 @@ A2FLAGS = -t apple2 -O -Or -Cl -I $(A2LIB)/include -DDISPLAY_IDLE=1
 PRODOS  ?=
 AC      ?= ac
 A2HELP  = $(sort $(wildcard help/apple2/screen/HELP*.TXT))
+# what an Apple help page's [QR] marker links to: the Apple II manual, by the fly.io server's short link
+A2_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/APPLE2
 A2GAME  = $(A2)/main.o $(A2)/game.o $(A2)/proto.o $(A2)/display_text.o $(A2)/input.o $(A2)/net_fn.o \
           $(A2)/help.o $(A2)/sound.o $(A2)/ring.o
 
@@ -154,7 +156,7 @@ $(A2)/synack: $(A2GAME) src/apple2/game.cfg $(A2LIB)/fujinet-apple2-5.0.0.lib
 apple2_text: $(A2)/synack
 
 $(A2)/synack.hlp: $(A2HELP) tools/help_apple2.py | $(A2)
-	python3 tools/help_apple2.py $@ $(A2HELP)
+	python3 tools/help_apple2.py --qr "$(A2_QR_URL)" $@ $(A2HELP)
 $(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	@test -n "$(PRODOS)" || { echo "the disk needs PRODOS=path/to/your/ProDOS-2.4-disk" >&2; exit 1; }
 	rm -f $@

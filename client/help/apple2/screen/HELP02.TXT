@@ -1,4 +1,4 @@
-{ THE GAME AND YOUR TURN            2/10 }
+{ THE GAME AND YOUR TURN            2/11 }
   ABCDEFGHIJKL 
 0 ..+......... Spiked node at C0
 1 ............

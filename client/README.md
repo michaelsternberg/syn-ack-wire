@@ -300,7 +300,10 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
   the page switch would select auxiliary memory. The pages are `help/apple2/screen/HELP01.TXT`...: plain ASCII,
   24 lines of 40, `{` and `}` around inverse text, checked and turned into 1024-byte screen images by
   `tools/help_apple2.py`. `help.s` reads a page straight onto page 2 with four ProDOS MLI calls (open, set mark,
-  read, close), no cc65 file code. The two pages there now only try the mechanism out.
+  read, close), no cc65 file code. A page with `[QR]` on it is a lo-res page in mixed mode: the tool draws a QR
+  code for `A2_QR_URL` (the Makefile's; the Apple manual by the fly.io short link) in the 40 x 40 blocks of
+  graphics, at the highest error correction that fits (3-H for the default), lines 21-24 stay text, and a flag in
+  the page's first screen hole tells `help.s` to show it in lo-res; closing always goes back to text.
 - **Title:** the logo is `src/apple2/title.txt`, any printable ASCII including `|` (normal video only for
   lower case and `|`), in rows 0-13; `tools/title_text.py` makes the header. Under it, low on the screen as on
   the Atari: REGION, STATUS and HANDLE (rows 15-17), then the keys, OPEN-APPLE, CLOSED-APPLE and ? (19-21).
@@ -320,13 +323,13 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
 | **apple2_text** (2026-10-24) | | |
-| `synack` | 15241 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `synack` | 15268 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
 | `display_text.c` | 3628 | + 845 rodata (screen words, the 48-byte row table, 98 of title art), 28 bss/data |
 | fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
 | cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
 | `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
 | `input.c` | 239 | keys, the Apple keys, and `ticks()` from FujiNet's clock |
-| `help.s` | 184 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2 |
+| `help.s` | 211 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2; lo-res for a QR page |
 | `sound.s` | 75 | + 42 rodata (7 chords of up to 3 notes) |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | Bake-off (2026-10-18), network added on top of the same test program | | |

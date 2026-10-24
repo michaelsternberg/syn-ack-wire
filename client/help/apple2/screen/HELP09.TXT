@@ -1,11 +1,11 @@
-{ THE SCREEN AND KEYS               9/10 }
+{ THE SCREEN AND KEYS               9/11 }
 
  .     empty node
  +     lone spike
  {G}     hive (syndicate letter)
  1-6   where that exploit can run
 
- Last move: its node flips inverse
+ Last move: its node flashes a moment
 
 > = you   inverse name = whose turn
 * = bot   ? = away

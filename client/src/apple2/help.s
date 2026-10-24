@@ -11,15 +11,26 @@
 ; The program starts above page 2 (game.cfg), and display_text.c turns 80STORE
 ; off, without which PAGE2 would select auxiliary memory.
 ;
+; A page with LORES in its first screen hole ($0878, never shown) is a lo-res
+; page in mixed mode: 40 x 40 blocks of graphics (a QR code) over 4 lines of
+; text. The mode follows the page on screen: on opening and after each page
+; turn. Closing always goes back to text, so the game screen comes back as it
+; was.
+;
 ; void help_open(void)
 ; unsigned char __fastcall__ help_key(unsigned char k)  0 = they closed
 
         .export _help_open, _help_key
 
 MLI     = $BF00
+TXTCLR  = $C050         ; graphics (lo-res here)
+TXTSET  = $C051         ; text
+MIXSET  = $C053         ; graphics with 4 lines of text under them
 PAGE1   = $C054
 PAGE2   = $C055
 SCREEN2 = $0800
+LORES   = $4C           ; tools/help_apple2.py: a lo-res page
+HOLE    = SCREEN2 + $78
 OPEN    = $C8           ; MLI calls
 READ    = $CA
 CLOSE   = $CC
@@ -80,7 +91,18 @@ _help_open:
         sta SCREEN2,x
         dex
         bpl :-
-show:   bit PAGE2
+show:   jsr mode
+        bit PAGE2
+        rts
+
+; Text, or lo-res in mixed mode if the page on screen 2 says so.
+mode:   lda HOLE
+        cmp #LORES
+        bne :+
+        bit TXTCLR
+        bit MIXSET
+        rts
+:       bit TXTSET
         rts
 
 _help_key:
@@ -104,14 +126,16 @@ prev:   cpx #2
         dex
         txa
         jsr load
-        jmp stay
+        jmp turned
 next:   inx
         txa
         jsr load
+turned: jsr mode                ; the page on screen now, turned or not
 stay:   lda #1
         ldx #0
         rts
-close:  bit PAGE1
+close:  bit TXTSET
+        bit PAGE1
         lda #0
         tax
         rts
