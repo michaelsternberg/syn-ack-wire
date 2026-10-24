@@ -244,14 +244,14 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 12235 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
+| `synack.xex` | 12266 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
 | `display_text.c` | 3716 | + 1052 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 1135 | + 130 rodata |
+| `main.c` | 1149 | + 130 rodata |
 | `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |
-| `input.c` | 139 | + 64-byte key table |
+| `input.c` | 156 | + 64-byte key table; `ticks_per_sec()` tells PAL (50) from NTSC (60) by GTIA's PAL register |
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
@@ -264,6 +264,8 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/wiremon-auto.xex`.
 - **Game client:** the autoplay build played for four minutes as host with two bots. It sent 75 answers covering
   every prompt kind, and the server rejected none. 156 screen dumps checked by eye. The PC build played a whole game
   to the end (47 answers, 0 rejected).
+- **PAL:** atari800 `-pal` plays the same. Its countdowns run at 50 frames a second, so they reach 0 when the
+  server's clock does (measured 4.8 per 240 frames, against 4 on NTSC); chords decay 20% slower, harmlessly.
 - **Connect and hello:** wiremon gets its seat.
 - **Ring stress:** 9 back-to-back resyncs, then a whole 3-seat game, with every frame parsed and 0 bad frames.
 - **PROCEED:** over a one-minute game there were 163 status calls and 145 reads. Polling blindly at 15 Hz would have

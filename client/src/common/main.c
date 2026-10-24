@@ -18,6 +18,7 @@ unsigned char token[4], leaving;
 static unsigned char handle[8], handle_len;
 
 static unsigned char c, e, t0, secs, q0, quiet, helping;
+static unsigned char tps;                /* frames a second: 60, or 50 on a PAL machine */
 
 #define NO_SIGNAL   20                  /* seconds without a frame: say so */
 #define REDIAL      30                  /* ...and hang up and dial again */
@@ -143,7 +144,7 @@ static void connect(void)
         while ((e = dial()) != 0) {
             display_message("NO CARRIER. REDIALING...");
             net_close();
-            wait_ticks(2 * TICKS_PER_SEC);
+            wait_ticks(2 * tps);
         }
     }
     hello();
@@ -170,7 +171,7 @@ static void redial(const char *why)
     link(0);                            /* also tells connect() to dial */
     display_message(why);
     net_close();
-    wait_ticks(2 * TICKS_PER_SEC);
+    wait_ticks(2 * tps);
     connect();
 }
 
@@ -222,8 +223,8 @@ static void play(void)
                 t0 = ticks();
             }
         }
-        if ((unsigned char)(ticks() - q0) >= TICKS_PER_SEC) {
-            q0 += TICKS_PER_SEC;
+        if ((unsigned char)(ticks() - q0) >= tps) {
+            q0 += tps;
             ++quiet;
             if (quiet == NO_SIGNAL)
                 link(0);
@@ -254,8 +255,8 @@ static void play(void)
             continue;
         if (c)
             game_key(c);
-        if (secs && (unsigned char)(ticks() - t0) >= TICKS_PER_SEC) {
-            t0 += TICKS_PER_SEC;
+        if (secs && (unsigned char)(ticks() - t0) >= tps) {
+            t0 += tps;
             display_clock(--secs);
             if (!secs)
                 game_clear_prompt();    /* time's up: the seat's bot answers */
@@ -265,6 +266,7 @@ static void play(void)
 
 void main(void)
 {
+    tps = ticks_per_sec();
     snd_init();
 #if LOBBY_KEY
     net_appkey(0);                      /* the player's lobby name starts the handle */

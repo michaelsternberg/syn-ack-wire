@@ -84,6 +84,11 @@ unsigned char ticks(void)
     return (unsigned char)((tv.tv_sec * 1000000LL + tv.tv_usec) / 16667);
 }
 
+unsigned char ticks_per_sec(void)
+{
+    return 60;
+}
+
 void snd_init(void) {}
 void play_chord(unsigned char n) { (void)n; }
 void snd_toggle(void) {}

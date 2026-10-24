@@ -12,6 +12,7 @@
 #define RTCLOK  (*(volatile unsigned char *)0x14)
 #define CONSOL  (*(volatile unsigned char *)0xD01F)  /* bit clear = key held */
 #define HELPFG  (*(volatile unsigned char *)0x2DC)
+#define PAL     (*(volatile unsigned char *)0xD014)  /* GTIA: low bits %0001 on PAL, %1111 on NTSC */
 
 /* Atari key code (low 6 bits) -> ASCII; 0 = a key the game doesn't use */
 static const unsigned char keymap[64] = {
@@ -55,4 +56,9 @@ unsigned char in_key(void)
 unsigned char ticks(void)
 {
     return RTCLOK;
+}
+
+unsigned char ticks_per_sec(void)
+{
+    return PAL & 0x0E ? 60 : 50;
 }

@@ -34,10 +34,9 @@ unsigned char __fastcall__ net_appkey(unsigned char key);
 #define K_OPTION 0x01                   /* toggles move hints (Atari: the OPTION key) */
 #define K_HELP   0x02                   /* instructions (Atari: the HELP key, XL/XE) */
 #define K_ESC    0x1B
-#define TICKS_PER_SEC 60                /* PAL machines tick at 50: clocks run 20% slow */
-
 unsigned char in_key(void);             /* next key as uppercase ASCII, or 0 if none */
 unsigned char ticks(void);              /* free-running 8-bit frame counter */
+unsigned char ticks_per_sec(void);      /* how fast it runs: 60 a second, 50 on a PAL machine */
 
 /* ------------------------------------------------------------------ sound
  * A short chord for a board event. A chord that is still sounding is only cut
