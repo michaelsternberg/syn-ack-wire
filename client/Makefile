@@ -13,7 +13,7 @@ CC      = $(if $(CC65),$(CC65)/,)cc65
 AS      = $(if $(CC65),$(CC65)/,)ca65
 LD      = $(if $(CC65),$(CC65)/,)ld65
 TARGET  = atari
-CFLAGS  = -t $(TARGET) -O -Or -Cl
+CFLAGS  = -t $(TARGET) -O -Or -Cl -DDISPLAY_IDLE=1     # display_idle(): the last move's blink
 URL     ?= N:TCP://syn-ack-wire.fly.dev:6502/
 LOCAL_URL ?= N:TCP://localhost:6502/
 FANCY   ?=

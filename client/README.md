@@ -121,7 +121,7 @@ prompt line is the seconds left before your seat's bot answers for you.
   ABCDEFGHIJKL   HIVES  SYNDICATES
 0 .ggg..ggg.dd   g 11   GHOST//MODEM       hives: inverse letters; + spike; . empty
 2 rr...g.2....   d  2   HOLY DAEMON        1-6 = that exploit in your kit can run here (move hints)
-...                                        the last move: its highlight flipped
+...                                        the last move: blinks for 5 seconds
 8 6oo..l4l...+ LAST: D6                    each hive's size by its letter; inverse = Black ICE
                                            during a buy: HIVES    PRICE LEFT
 
@@ -311,10 +311,10 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
-| `synack.xex` | 12266 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
-| `display_text.c` | 3628 | + 845 rodata (screen words, 364 of title art), 73 bss, 1K font, 1K player memory |
+| `synack.xex` | 12391 | whole file; loads at $2000, the 1K font at $5400, the 1K player memory at $5800 and the help screen at $5C00 (all bss) |
+| `display_text.c` | 3830 | + 1052 rodata (screen words, 364 of title art), 77 bss, 1K font, 1K player memory; the last move's blink |
 | `game.c` | 2800 | + 382 rodata, 312 bss (the game state) |
-| `main.c` | 1149 | + 130 rodata |
+| `main.c` | 1149 | + 130 rodata; with the `display_idle()` call (the last move's blink) |
 | `help.s` | 302 | + 44 rodata, 131 bss, 960 its screen: the instruction pages, read with SIO (was 779 for `help.c` + `cio.s` through DOS) |
 | `net_sio.s` | 372 | + 14 rodata, 26 bss, 8 data. 222 before PROCEED/SOUNDR, 318 before AppKeys |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]`; hand assembly could roughly halve it |

@@ -1,6 +1,7 @@
 /* The text-only display for the Atari: the OS's 40x24 text screen, written
- * straight to screen memory. Hives are inverse letters; the last move, the
- * player whose turn it is and the prompt line are inverse too.
+ * straight to screen memory. Hives are inverse letters; the player whose turn
+ * it is and the prompt line are inverse too. The last move blinks for 5 seconds,
+ * then shows as usual (display_idle).
  *
  *  row  0    NEO-KANSAI-1:CONNECTED    SYN-ACK WIRE   (or NO SIGNAL)
  *  row  1    ABCDEFGHIJKL   HIVES  SYNDICATES
@@ -92,6 +93,7 @@ unsigned char pm[1024];                 /* players from pm + $200, 128 bytes eac
 static unsigned char *row[24];
 static unsigned char *cur;
 static unsigned char inv, ready, i, j, n, v;
+static unsigned char half;              /* frames in half a second: the last move's blink */
 static unsigned char field;             /* the playfield is up: the title bar may draw */
 
 static const unsigned char yen[8] = { 0x00, 0x66, 0x66, 0x3C, 0x7E, 0x18, 0x7E, 0x18 };
@@ -122,6 +124,7 @@ static void setup(void)
     VDSLST = dli;
     NMIEN = 0xC0;                       /* DLIs too; they fire only where the display list asks */
     CRSINH = 1;
+    half = ticks_per_sec() >> 1;
     COLOR2 = 0xC0;                      /* green on near-black */
     COLOR1 = 0x0C;
     COLOR4 = 0x00;
@@ -307,6 +310,11 @@ void display_title_update(void)
 #if !FANCY_PLAYFIELD
 /* ---------------------------------------------------------------- playfield */
 
+/* The last move blinks, inverse and back each half second (display_idle), for BLINKS halves from when it is
+ * first drawn; then it shows as usual. */
+#define BLINKS 10
+static unsigned char blink = NONE, blink_t, flips, lit;
+
 /* The key ('1'-'6') of the exploit in my kit that can run on `node` now, or 0. */
 static unsigned char target(unsigned char node)
 {
@@ -334,13 +342,31 @@ void display_node(unsigned char node)
     else
         v = (syn_letter[v - 2] - 0x20) | INV;
     if (node == last_node) {
-        v ^= INV;
+        if (blink != node) {
+            blink = node;
+            blink_t = ticks();
+            flips = 0;
+            lit = INV;
+        }
+        if (flips < BLINKS)
+            v ^= lit;
         at(ROW_BOARD + 7 + 1, COL_PANEL);
         text("LAST: ");
         node_name(node);
         at(ROW_BOARD + r, COL_BOARD + c);
-    }
+    } else if (node == blink)
+        blink = NONE;                   /* no longer the last move (a newer one, or a new game) */
     *cur = v;
+}
+
+void display_idle(void)
+{
+    if (blink == NONE || flips == BLINKS || (unsigned char)(ticks() - blink_t) < half)
+        return;
+    blink_t += half;
+    lit ^= INV;
+    ++flips;
+    display_node(blink);
 }
 
 void display_hives(void)
