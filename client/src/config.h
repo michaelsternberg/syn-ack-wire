@@ -31,4 +31,10 @@
 #define TABLE 0
 #endif
 
+/* 1 = the game loop calls display_idle() on every pass, for a display that
+ * changes with time (apple2_text: the last move flashes for a few seconds). */
+#ifndef DISPLAY_IDLE
+#define DISPLAY_IDLE 0
+#endif
+
 #endif

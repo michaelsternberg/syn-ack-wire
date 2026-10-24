@@ -7,7 +7,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 |---|---|
 | `src/platform.h` | The contract each platform implements: network calls, the receive ring, keys, a tick counter |
 | `src/display.h` | Everything the game shows. One text version per platform; hand-made screens can replace it |
-| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `LOBBY_KEY`, `TABLE` |
+| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `LOBBY_KEY`, `TABLE`, `DISPLAY_IDLE` |
 | `src/common/main.c` | Title (with the table's status), connect, the main loop, reconnect with the seat token |
 | `src/common/game.c` | Game state from server frames; keys → prompt answers, checked locally first |
 | `src/common/proto.c` | Frame assembler: bytes in `rx_ring` → one whole frame in `msg[]` |
@@ -22,12 +22,23 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/atari/net_sio.s` | Network calls for the Atari: FujiNet `N1:` ($71) over raw SIO |
 | `src/atari/ring.s` | `rx_ring` = page 6 ($0600): page-aligned, so the 8-bit indexes wrap for free |
 | `src/atari/game.cfg` | cc65's `atari.cfg` plus 1K-aligned `FONT` and `PM` segments |
+| `src/apple2/display_text.c` | Apple II text screens (apple2_text): 40×24, page 1, normal/inverse/flash |
+| `src/apple2/net_fn.c` | Network calls for the Apple II: FujiNet over SmartPort, through fujinet-lib |
+| `src/apple2/input.c` | Keyboard latch, Open-/Closed-Apple, and `ticks()` from FujiNet's clock |
+| `src/apple2/help.s` | The instruction pages on text page 2, read with the ProDOS MLI |
+| `src/apple2/sound.s` | Chords as short notes on the speaker |
+| `src/apple2/ring.s`, `game.cfg` | `rx_ring` at $0C00; cc65's `apple2.cfg` with the program at $1100, above page 2 |
+| `src/apple2/title.txt` | The Apple title logo, plain text; `title_art.h` is **generated** by `tools/title_text.py` |
+| `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/screen2txt.py` | Shows a screen dump as text |
 | `tools/render_screen.py` | Draws a screen dump as the screen looks, for the manual's captures |
+| `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
+| `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
+| `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
 | `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800 |
 
 ## Build
@@ -241,6 +252,47 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/atari/wiremon-auto.xex`.
   it's your turn and two more when it's time to buy, and a series for the null-route. Each fades out; a chord
   still sounding is only cut off by a more important one.
 
+## Apple II (apple2_text)
+The same common code with an Apple II platform layer (`src/apple2/`) and a text-mode display: the IIe, IIc and
+IIgs (cc65's `apple2` target, so a plain 6502 IIe works). Text mode, because the Apple turns its colour burst off
+there: hi-res text artifacts into colour on an NTSC monitor (`tools/apple2_preview.py` shows how), so
+`apple2_hgr` and `apple2_dhgr` versions are for later, over the same platform layer.
+```sh
+make apple2_text                                         # build/apple2_text/synack (AppleSingle)
+make apple2_text-po PRODOS=path/to/ProDOS-2.4-disk AC="java -jar path/to/ac.jar"
+                                                         # build/apple2_text/synack.po: a ProDOS disk that boots it
+```
+The disk holds `PRODOS` and its boot block (both from your own ProDOS disk image: AppleCommander's own boot block
+only shows a notice, so `tools/prodos_boot.py` copies the real one), cc65's `loader.system` as `SYNACK.SYSTEM`
+(ProDOS runs the first `.SYSTEM` file, which loads `SYNACK`), the game, and `SYNACK.HLP`, the instruction pages.
+
+- **Network:** fujinet-lib (`lib/fujinet-lib/`), not hand-written SmartPort code: 3.4 KB, against 386 bytes
+  for the Atari's raw SIO, for one library every later platform can share. `net_poll` is one status call, then
+  one read of what fits in the ring, as on the Atari. Two SmartPort quirks (FujiNet 1.6): a missing AppKey reads
+  as a success, 64 zero bytes, so its length is counted to the first NUL; and a failed open answers fine, so
+  `net_open` asks for the status at once and reports "not connected" as the failure.
+- **The shot clock** runs on FujiNet's clock device, in whole seconds (`ticks_per_sec()` is 1). Counting video
+  frames would run slow whenever a SmartPort call blocks past one, and then promise more time than the server
+  gives; whole seconds can only err the other way.
+- **Screen:** as the Atari's, in the three modes of the primary character set. Hives, the title bar, whose turn
+  it is and Black ICE sizes are inverse. The last move **flashes** for 5 seconds, then shows as usual (the game
+  loop calls `display_idle()` for that: `DISPLAY_IDLE=1`). Rows 22-23 are normal while others play and
+  **inverse while this seat has a decision to make**; inside them, what is normally inverse (an exploit that
+  can't run, a syndicate letter) shows normal. A refusal at the foot of the title screen is inverse. There is
+  no yen glyph: money shows as `Y3200`. Only the 40 bytes of each row are ever written, never the screen holes
+  (the peripheral cards' scratch memory, the FujiNet's included).
+- **Keys:** as the Atari's, except **Open-Apple** (alone) for move hints and **Closed-Apple** for sound, where
+  the Atari has OPTION and SELECT; **Delete** or **←** undoes a letter; **?** opens the instructions, **→** /
+  **←** (or **>** / **<**) turn their pages.
+- **Instructions:** on text page 2 ($0800), so the game keeps drawing on page 1 underneath and is there again on
+  Esc, as on the Atari. The program starts at $1100 to leave page 2 free, and the display turns 80STORE off, or
+  the page switch would select auxiliary memory. The pages are `help/apple2/screen/HELP01.TXT`...: plain ASCII,
+  24 lines of 40, `{` and `}` around inverse text, checked and turned into 1024-byte screen images by
+  `tools/help_apple2.py`. `help.s` reads a page straight onto page 2 with four ProDOS MLI calls (open, set mark,
+  read, close), no cc65 file code. The two pages there now only try the mechanism out.
+- **Title:** the logo is `src/apple2/title.txt`, any printable ASCII including `|` (normal video only for
+  lower case and `|`); `tools/title_text.py` makes the header.
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -255,6 +307,16 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/atari/wiremon-auto.xex`.
 | `sound.s` | 177 | + 55 rodata (11 chords), 10 bss/data: chords from the deferred VBI |
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
+| **apple2_text** (2026-10-24) | | |
+| `synack` | 15287 | whole AppleSingle file; loads at $1100; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `display_text.c` | 3594 | + 909 rodata (screen words, the 48-byte row table, 186 of title art), 28 bss/data |
+| fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
+| cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
+| `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
+| `input.c` | 255 | keys, the Apple keys, and `ticks()` from FujiNet's clock |
+| `help.s` | 184 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2 |
+| `sound.s` | 75 | + 42 rodata (7 chords of up to 3 notes) |
+| `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |

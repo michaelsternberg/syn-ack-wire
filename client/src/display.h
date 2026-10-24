@@ -23,5 +23,6 @@ void display_clock(unsigned char secs); /* seconds left to answer */
 void display_message(const char *s);    /* one-line notice: connecting, faults... */
 void display_game_over(void);           /* winners are in `winners` */
 void display_link(void);                /* region and link_up, in the title bar */
+void display_idle(void);                /* every pass of the game loop, if DISPLAY_IDLE */
 
 #endif

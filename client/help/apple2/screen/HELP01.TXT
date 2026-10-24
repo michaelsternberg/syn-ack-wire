@@ -1,0 +1,24 @@
+{ SYN-ACK WIRE: INSTRUCTIONS         1/2 }
+
+ A FIRST PAGE, TO TRY THE PAGES OUT.
+ THE REAL ONES ARE STILL TO BE WRITTEN.
+
+ KEYS
+ {RETURN}          JACK IN, ANSWER
+ {1}-{6}             RUN AN EXPLOIT
+ {G} {R} {D} ...       PICK A SYNDICATE
+ {DELETE} {<-}       UNDO A LETTER (BUY)
+ {ESC}             LOG OFF (THEN Y)
+ {OPEN-APPLE}      MOVE HINTS ON/OFF
+ {CLOSED-APPLE}    SOUND ON/OFF
+ {?}               THESE PAGES, ANY TIME
+
+
+
+
+
+
+
+
+
+                  {ESC}:EXIT    NEXT {->}

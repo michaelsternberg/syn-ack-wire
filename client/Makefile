@@ -5,6 +5,8 @@
 #   make atr                  build/atari/synack.atr: boots the game with PicoBoot, plus the help pages
 #   make atrtest              build/atari/local/synack.atr: the same disk dialing a server on this machine (LOCAL_URL)
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
+#   make apple2_text          build/apple2_text/synack: the Apple II client, text mode (IIe, IIc, IIgs)
+#   make apple2_text-po PRODOS=disk   build/apple2_text/synack.po: a ProDOS disk that boots it
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -118,9 +120,57 @@ pc: $(HDRS)
 	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=0 -o build/pc/pc-client \
 	    src/common/main.c src/common/game.c src/common/proto.c test/autoplay.c test/pc_harness.c
 
+# --- Apple II, text mode (apple2_text): FujiNet through fujinet-lib (a pinned copy in lib/).
+# The disk takes PRODOS (the system file) and its boot block from your own ProDOS 2.4 disk image
+# (PRODOS=path), cc65's loader.system as SYNACK.SYSTEM (ProDOS runs the first .SYSTEM file; it loads SYNACK),
+# the game, and the help pages. AC runs AppleCommander 1.6 or later.
+A2      = build/apple2_text
+A2LIB   = lib/fujinet-lib/apple2-5.0.0
+A2FLAGS = -t apple2 -O -Or -Cl -I $(A2LIB)/include -DDISPLAY_IDLE=1
+PRODOS  ?=
+AC      ?= ac
+A2HELP  = $(sort $(wildcard help/apple2/screen/HELP*.TXT))
+A2GAME  = $(A2)/main.o $(A2)/game.o $(A2)/proto.o $(A2)/display_text.o $(A2)/input.o $(A2)/net_fn.o \
+          $(A2)/help.o $(A2)/sound.o $(A2)/ring.o
+
+src/apple2/title_art.h: src/apple2/title.txt tools/title_text.py
+	python3 tools/title_text.py $< > $@
+$(A2)/display_text.s: src/apple2/title_art.h
+
+$(A2):
+	mkdir -p $@
+$(A2)/%.s: src/common/%.c $(HDRS) | $(A2)
+	$(CC) $(A2FLAGS) $(DEFS) -o $@ $<
+$(A2)/%.s: src/apple2/%.c $(HDRS) | $(A2)
+	$(CC) $(A2FLAGS) $(DEFS) -o $@ $<
+$(A2)/%.o: src/apple2/%.s | $(A2)
+	$(AS) -t apple2 -o $@ $<
+$(A2)/%.o: $(A2)/%.s
+	$(AS) -t apple2 -o $@ $<
+
+$(A2)/synack: $(A2GAME) src/apple2/game.cfg $(A2LIB)/fujinet-apple2-5.0.0.lib
+	$(LD) -C src/apple2/game.cfg -m $(A2)/synack.map -o $@ $(A2GAME) $(A2LIB)/fujinet-apple2-5.0.0.lib apple2.lib
+	@echo "$@: $$(stat -c %s $@) bytes"
+apple2_text: $(A2)/synack
+
+$(A2)/synack.hlp: $(A2HELP) tools/help_apple2.py | $(A2)
+	python3 tools/help_apple2.py $@ $(A2HELP)
+$(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
+	@test -n "$(PRODOS)" || { echo "the disk needs PRODOS=path/to/your/ProDOS-2.4-disk" >&2; exit 1; }
+	rm -f $@
+	$(AC) -pro140 $@ SYNACK
+	python3 tools/prodos_boot.py "$(PRODOS)" $@
+	$(AC) -g "$(PRODOS)" PRODOS $(A2)/prodos
+	$(AC) -p $@ PRODOS SYS 0x2000 < $(A2)/prodos
+	$(AC) -p $@ SYNACK.SYSTEM SYS 0x2000 < $$(cl65 --print-target-path)/apple2/util/loader.system
+	$(AC) -as $@ SYNACK < $(A2)/synack
+	$(AC) -p $@ SYNACK.HLP BIN 0 < $(A2)/synack.hlp
+	$(AC) -ls $@
+apple2_text-po: $(A2)/synack.po
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc clean
-.PRECIOUS: $(B)/%.s $(B)/%.o
+.PHONY: all atr atrtest test pc apple2_text apple2_text-po clean
+.PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o
 .DELETE_ON_ERROR:

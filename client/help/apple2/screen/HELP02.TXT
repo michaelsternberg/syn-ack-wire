@@ -1,0 +1,24 @@
+{ SYN-ACK WIRE: INSTRUCTIONS         2/2 }
+
+ THE GAME KEEPS UP UNDERNEATH WHILE
+ THESE PAGES ARE UP. ESC GOES BACK.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+{<-} PREV     {ESC}:EXIT

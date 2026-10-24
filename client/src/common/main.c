@@ -233,6 +233,9 @@ static void play(void)
                 continue;
             }
         }
+#if DISPLAY_IDLE
+        display_idle();
+#endif
         c = key();                      /* always read, so no stale key answers the next prompt */
         if (c == K_OPTION) {
             game_toggle_hints();

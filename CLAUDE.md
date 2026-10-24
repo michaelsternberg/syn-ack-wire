@@ -34,6 +34,7 @@ players: a summary, not a specification.
 cd server && python3 -m unittest -q && python3 sim.py 2000   # rules and server; soak test
 cd client && make && make atr                                # build/atari/synack.xex, build/atari/synack.atr (public server)
 cd client && make atrtest                                    # build/atari/local/synack.atr, dialing localhost:6502
+cd client && make apple2_text-po PRODOS=<ProDOS disk>        # build/apple2_text/synack.po: Apple II, text mode
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
 ```
