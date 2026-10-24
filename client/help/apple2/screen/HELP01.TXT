@@ -1,24 +1,24 @@
-{ SYN-ACK WIRE: INSTRUCTIONS         1/2 }
+{ HOW TO PLAY                       1/10 }
 
- A FIRST PAGE, TO TRY THE PAGES OUT.
- THE REAL ONES ARE STILL TO BE WRITTEN.
+Crime syndicates want control of the 
+region's network and reward netrunners
+like you to gain access.
 
- KEYS
- {RETURN}          JACK IN, ANSWER
- {1}-{6}             RUN AN EXPLOIT
- {G} {R} {D} ...       PICK A SYNDICATE
- {DELETE} {<-}       UNDO A LETTER (BUY)
- {ESC}             LOG OFF (THEN Y)
- {OPEN-APPLE}      MOVE HINTS ON/OFF
- {CLOSED-APPLE}    SOUND ON/OFF
- {?}               THESE PAGES, ANY TIME
+Compromise a network node using your
+exploit kit. Compromise two adjacent
+nodes to create a botnet hive. Sell it
+to a syndicate for one of their crypto.
 
+Hives spread and merge. Larger hives
+hivejack smaller ones. The smaller
+hive's top two crypto backers make bank.
 
+But you know the real \\\ is dealing in
+the crypto market and playing syndicates
+against each other. That is, until a
+null-route ends the gig.
 
+Turn pages with < > or the arrow keys.
+ESC goes back to the title.
 
-
-
-
-
-
-                  {ESC}:EXIT    NEXT {->}
+{                ESC:EXIT         NEXT ->}
