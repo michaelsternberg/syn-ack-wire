@@ -70,7 +70,7 @@ tools/run-test.sh build/synack.xex       # run it in atari800 with FujiNet-PC
 - **The screen:** a GR.0 text playfield: the Grid, the syndicates' prices, the netrunners' holdings, a log and
   the prompt. Player/missile graphics and display list interrupts add color bands; the title has animated TV
   static in its block letters.
-- **Instructions:** nine help pages, read straight from the disk with SIO, any time: on the title or mid-game.
+- **Instructions:** eleven help pages, the last two a QR code for the manual and the credits, read straight from the disk with SIO, any time: on the title or mid-game.
 - **Sound:** short chords for game events, from the vertical blank.
 - **Lobby aware:** booted from the FujiNet lobby, it dials the chosen server and fills in the player's name.
 

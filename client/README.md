@@ -165,6 +165,13 @@ conversion on the Atari. So they need `make atr`; the bare `.xex` with no game d
   The first holds the page's last 64 bytes and the signature `SYNACK`, the other 7 its first 896. The sectors are
   marked used in the VTOC so DOS won't write over them; they have no directory entry, so DOS can't list or `TYPE`
   them. `help_disk.py --check help/atari/screen/*.TXT` only checks.
+- **A QR code:** `[QR]` on a page becomes a QR code for `QR_URL` (the Makefile's; the Atari manual on the fly.io server by default), its
+  top left corner where the marker is, in quarter- and half-block characters, 2x2 modules each (`tools/qr.py`, a
+  small encoder, standard library only). It takes the highest error correction level that fits in blanks from
+  the marker: the default URL, all upper case, is a version 3-H code, 17x17 characters. The font has no glyph for the
+  two diagonal 2x2 patterns, so those cells get one module wrong; of the eight masks and four ways of laying the
+  grid, the tool keeps the one with the fewest, and says how many (13 of 841 for the default URL, well within
+  level H's correction).
 - **Names are typed in:** unlike the rest of the client, these pages don't read `theme.toml`. Renaming a
   syndicate or a term means editing the pages too.
 

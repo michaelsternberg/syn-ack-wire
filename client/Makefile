@@ -22,6 +22,9 @@ DOS25   ?= $(HOME)/Nextcloud/Projects/computers/atari8/Source/plato2/disks/DOS_v
 HELP    = $(sort $(wildcard help/atari/screen/HELP*.TXT))
 # the help pages' first sector on the disk, 8 sectors a page (help.s and help_disk.py)
 HELP_SECTOR ?= 600
+# what a help page's [QR] marker links to: this platform's manual on the fly.io server (upper case keeps the
+# QR code small)
+QR_URL  ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/ATARI
 
 NET     = $(B)/net_sio.o $(B)/ring.o
 COMMON  = $(B)/proto.o
@@ -78,8 +81,8 @@ $(B)/%.xex: $(B)/%.o $(COMMON) $(NET)
 # HELP_SECTOR (help.s reads them).
 $(B)/dos.sys: | $(B)
 	atr "$(DOS25)" get dos.sys $@
-$(B)/%.atr: $(B)/%.xex $(HELP) tools/help_disk.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
-	python3 tools/help_disk.py --check $(HELP)
+$(B)/%.atr: $(B)/%.xex $(HELP) tools/help_disk.py tools/qr.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
+	python3 tools/help_disk.py --qr "$(QR_URL)" --check $(HELP)
 	rm -rf $(B)/disk-$* && mkdir $(B)/disk-$*
 ifeq ($(BOOT),Dos25)
 	cp $(B)/dos.sys $(B)/disk-$*/DOS.SYS
@@ -88,7 +91,7 @@ else
 	cp $< $(B)/disk-$*/SYNACK.XEX
 endif
 	dir2atr -b $(BOOT) $@ $(B)/disk-$* >/dev/null
-	python3 tools/help_disk.py $@ $(HELP_SECTOR) $(HELP)
+	python3 tools/help_disk.py --qr "$(QR_URL)" $@ $(HELP_SECTOR) $(HELP)
 atr: $(B)/synack.atr
 
 
