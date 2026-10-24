@@ -14,6 +14,13 @@ host = "0.0.0.0"                # listen on every address (127.0.0.1: this machi
 # region = "us"                                 # the real-world region, 1-2 letters
 # url = "https://qalobby.fujinet.online"        # the QA lobby, to try it out; default: the public one
 
+# Optional: answer the short links in the game disks' QR codes (client Makefile QR_URL): GET /ATARI redirects to
+# `manual` with {platform} = atari, any platform alike; GET / to `home`. Plain HTTP: put TLS in front of it.
+# [web]
+# port = 8080
+# manual = "https://raw.githubusercontent.com/OWNER/syn-ack-wire/main/docs/manual/{platform}/syn-ack-wire-manual-{platform}.pdf"
+# home = "https://github.com/OWNER/syn-ack-wire"
+
 [[server]]
 port = 6502
 region = "NEO-KANSAI-1"

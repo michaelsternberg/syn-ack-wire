@@ -11,7 +11,8 @@
 
 Clients connect with FujiNet N:TCP://host:port/ and speak docs/protocol.md. With --lobby, the server lists
 table 0 (the one clients join) in the FujiNet game lobby. With --config, one process runs several servers, each
-on its own port with its own settings and its own lobby entry (servers.example.toml shows how).
+on its own port with its own settings and its own lobby entry (servers.example.toml shows how), and its [web]
+section can answer the short links in the game disks' QR codes (acquire/web.py).
 """
 import argparse
 import asyncio
@@ -27,6 +28,7 @@ from dataclasses import dataclass, field
 from acquire import lobby, proto, theme
 from acquire.guard import Guard
 from acquire.table import Conn, Table
+from acquire.web import Web
 
 log = logging.getLogger("synack")
 # The server a log line comes from, when one process runs several: set for each connection, and inherited by
@@ -389,15 +391,36 @@ LOBBY_KEYS = {
 }
 
 
+def _web_url(v, need=None):
+    u = urllib.parse.urlsplit(v) if isinstance(v, str) else None
+    if not u or u.scheme not in ("http", "https") or not u.netloc or (need and need not in v):
+        raise ValueError(f"{v!r}: need an http(s) URL in quotes" + (f" with {need} in it" if need else ""))
+    return v
+
+
+def _port(v):
+    if isinstance(v, bool) or not isinstance(v, int) or not 0 <= v <= 65535:
+        raise ValueError("need a TCP port number")
+    return v
+
+
+WEB_KEYS = {
+    "port": _port,
+    "manual": lambda v: _web_url(v, "{platform}"),
+    "home": _web_url,
+}
+
+
 def load_config(text, default_region):
-    """servers.toml -> (Specs, lobby settings or None, listen address or None). ValueError says what's wrong."""
+    """servers.toml -> (Specs, lobby settings or None, listen address or None, [web] settings or None).
+    ValueError says what's wrong."""
     try:
         cfg = tomllib.loads(text)
     except tomllib.TOMLDecodeError as e:
         raise ValueError(f"not valid TOML: {e}")
     for k in cfg:
-        if k not in ("host", "proxy-protocol", "lobby", "server"):
-            raise ValueError(f"unknown setting {k!r} (expected host, proxy-protocol, [lobby] and [[server]])")
+        if k not in ("host", "proxy-protocol", "lobby", "web", "server"):
+            raise ValueError(f"unknown setting {k!r} (expected host, proxy-protocol, [lobby], [web] and [[server]])")
     host = cfg.get("host")
     if host is not None and not isinstance(host, str):
         raise ValueError("host: need a string in quotes")
@@ -469,7 +492,22 @@ def load_config(text, default_region):
         if lob:
             spec.lobby_url = f"TCP://{lob['address']}:{port}/"
         specs.append(spec)
-    return specs, lob, host
+    web = None
+    if "web" in cfg:
+        web = {}
+        for k, v in cfg["web"].items():
+            if k not in WEB_KEYS:
+                raise ValueError(f"[web]: unknown setting {k!r} (expected {', '.join(WEB_KEYS)})")
+            try:
+                web[k] = WEB_KEYS[k](v)
+            except ValueError as e:
+                raise ValueError(f"[web] {k}: {e}")
+        for k in ("port", "manual"):
+            if k not in web:
+                raise ValueError(f"[web]: needs {k}")
+        if web["port"] and web["port"] in ports:
+            raise ValueError(f"[web]: port {web['port']} is also a server's")
+    return specs, lob, host, web
 
 
 async def main():
@@ -555,7 +593,7 @@ async def main():
             ap.error(f"--config replaces the other options: drop --{given[0].replace('_', '-')}, or set it in the file")
         try:
             with open(a.config, encoding="utf-8") as f:
-                specs, lob, host = load_config(f.read(), default_region)
+                specs, lob, host, web = load_config(f.read(), default_region)
         except (OSError, ValueError) as e:
             ap.error(f"{a.config}: {e}")
         if host and a.host == ap.get_default("host"):
@@ -572,12 +610,15 @@ async def main():
                                    proxy_protocol=a.proxy_protocol),
                       a.description or "", a.lobby or "")]
         lob = a.lobby and {"client": a.lobby_client, "key": a.lobby_key, "region": a.lobby_region, "url": a.lobby_url}
+        web = None
     logging.basicConfig(level=logging.DEBUG if a.trace else logging.INFO,
                         format="%(asctime)s %(server)s%(message)s" if len(specs) > 1 else "%(asctime)s %(message)s")
     for h in logging.getLogger().handlers:
         h.addFilter(ServerName())
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     servers, srvs = await start(specs, a.host)
+    if web:
+        srvs.append(await Web(web["manual"], web.get("home")).serve(a.host, web["port"]))
     if lob:
         list_all(servers, specs, lob)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)

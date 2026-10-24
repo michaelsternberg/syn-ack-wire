@@ -119,7 +119,7 @@ with a message naming the server and the setting. Only `--host` and `--trace` go
 ## Deploying to fly.io
 The repository root has what [fly.io](https://fly.io) needs: `Dockerfile` (Python and the server, plus `tnfsd` to
 serve the client disk to the FujiNet lobby), `fly.toml` (one small machine, always on, a TCP service per server and a
-UDP one for `tnfsd`) and `server/servers.fly.toml` (the four servers: two relaxed, one quicker, one fast). Fly builds
+UDP one for `tnfsd`, and an HTTPS one for the QR codes' short links) and `server/servers.fly.toml` (the four servers: two relaxed, one quicker, one fast). Fly builds
 the image on its own machines, so Docker isn't needed locally. Cost at the time of writing: about $2/month for the
 machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UDP services need; the host name
 `<app>.fly.dev` comes with the app.
@@ -143,6 +143,12 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
 `fly deploy`; to change the disk, `make atr` and `fly deploy`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
+
+The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s
+HTTPS service (TLS by fly.io, port 80 sent to 443) passes it to `servers.fly.toml`'s `[web]` section, which
+redirects `/<PLATFORM>` to that platform's manual on GitHub (`docs/manual/<platform>/`, so a new platform needs
+nothing here) and `/` to the project. Only redirects: a manual changes with a push, not a deploy. The links lead
+to GitHub, so they work once the repository is public.
 
 fly.io delivers UDP only to a program listening on the machine's `fly-global-services` address, which stock `tnfsd`
 can't do (it listens on all addresses), so the image builds it from upstream with `deploy/tnfsd-bind-address.patch`,

@@ -24,7 +24,7 @@ def config(servers, lob=""):
 
 class ConfigTest(unittest.TestCase):
     def test_example_loads(self):
-        specs, lob, host = load_config((HERE / "servers.example.toml").read_text(), REGION)
+        specs, lob, host, _ = load_config((HERE / "servers.example.toml").read_text(), REGION)
         self.assertEqual([s.port for s in specs], [6502, 6503, 6504, 6505])
         self.assertEqual(lobby_name(specs[2].args["region"], specs[2].description), "OSAKA-SPRAWL - relaxed pace")
         self.assertEqual(specs[2].args["think"], {"P": (20.0, 10.0), "B": (12.0, 5.0)})
@@ -33,7 +33,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(host, "0.0.0.0")
 
     def test_lobby_section_gives_each_server_its_address(self):
-        specs, lob, _ = load_config(config(['port = 6502\nregion = "A"', 'port = 6503\nregion = "B"'],
+        specs, lob, _, _ = load_config(config(['port = 6502\nregion = "A"', 'port = 6503\nregion = "B"'],
                                            '[lobby]\naddress = "wire.example.com"\n'
                                            'client = "TNFS://tnfs.example.com/synack.atr"\n'), REGION)
         self.assertEqual([s.lobby_url for s in specs], ["TCP://wire.example.com:6502/", "TCP://wire.example.com:6503/"])
@@ -41,7 +41,7 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(lob["url"], "https://lobby.fujinet.online")
 
     def test_proxy_protocol_reaches_every_server(self):
-        specs, _, _ = load_config("proxy-protocol = true\n" + config(['port = 6502\nregion = "A"',
+        specs, _, _, _ = load_config("proxy-protocol = true\n" + config(['port = 6502\nregion = "A"',
                                                                         'port = 6503\nregion = "B"']), REGION)
         self.assertEqual([s.args.get("proxy_protocol") for s in specs], [True, True])
 
@@ -58,6 +58,11 @@ class ConfigTest(unittest.TestCase):
             config(['port = 6502\nregion = "A"'], '[lobby]\nclient = "TNFS://t.example.com/s.atr"\n'): "needs address",
             config(['port = 6502\nregion = "A"\njack-in = "no"']): "need true or false",
             "": "needs at least one [[server]]",
+            '[web]\nport = 8080\n' + config(['port = 6502\nregion = "A"']): "[web]: needs manual",
+            '[web]\nport = 8080\nmanual = "https://x.example/manual.pdf"\n' + config(['port = 6502\nregion = "A"']):
+                "with {platform} in it",
+            '[web]\nport = 6502\nmanual = "https://x/{platform}"\n' + config(['port = 6502\nregion = "A"']):
+                "port 6502 is also a server's",
             "port = 6502\n": "unknown setting 'port'",
         }
         for text, want in cases.items():
@@ -70,8 +75,11 @@ class ConfigTest(unittest.TestCase):
         """fly.toml forwards each server's port with the PROXY header, and the servers expect it."""
         import tomllib
         fly = tomllib.loads((HERE.parent / "fly.toml").read_text())
-        specs, _, host = load_config((HERE / "servers.fly.toml").read_text(), REGION)
-        services = {s["internal_port"]: s for s in fly["services"] if s["protocol"] == "tcp"}
+        specs, _, host, web = load_config((HERE / "servers.fly.toml").read_text(), REGION)
+        http = [s for s in fly["services"] if any("http" in p.get("handlers", ()) for p in s["ports"])]
+        self.assertEqual([s["internal_port"] for s in http], [web["port"]])       # the QR codes' short links
+        self.assertEqual(sorted(p["port"] for p in http[0]["ports"]), [80, 443])
+        services = {s["internal_port"]: s for s in fly["services"] if s["protocol"] == "tcp" and s not in http}
         self.assertEqual(sorted(services), sorted(s.port for s in specs))
         for port, s in services.items():
             self.assertEqual([(p["port"], p["handlers"]) for p in s["ports"]], [(port, ["proxy_proto"])])
@@ -89,7 +97,7 @@ class ConfigTest(unittest.TestCase):
 
 class ServersTest(unittest.IsolatedAsyncioTestCase):
     async def test_each_server_has_its_settings_and_all_share_a_guard(self):
-        specs, _, _ = load_config(config(['port = 0\nregion = "FAST-1"\nbot-delay = 0',
+        specs, _, _, _ = load_config(config(['port = 0\nregion = "FAST-1"\nbot-delay = 0',
                                           'port = 0\nregion = "SLOW-2"\ntimeout = 90\nthink-buy = "12,5"']), REGION)
         servers, srvs = await start(specs, HOST)
         try:
@@ -112,7 +120,7 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_stop_closes_games_at_once(self):
         """SIGTERM (a cloud host redeploying, say) must not wait for the games to end."""
-        specs, _, _ = load_config(config(['port = 0\nregion = "A"', 'port = 0\nregion = "B"']), REGION)
+        specs, _, _, _ = load_config(config(['port = 0\nregion = "A"', 'port = 0\nregion = "B"']), REGION)
         servers, srvs = await start(specs, HOST)
         r, w = await asyncio.open_connection(HOST, srvs[0].sockets[0].getsockname()[1])
         w.write(proto.hello(0, bytes(4), "STAYER"))
@@ -147,7 +155,7 @@ class ServersTest(unittest.IsolatedAsyncioTestCase):
 
         http = ThreadingHTTPServer((HOST, 0), FakeLobby)
         threading.Thread(target=http.serve_forever, daemon=True).start()
-        specs, lob, _ = load_config(config(['port = 0\nregion = "OSAKA-SPRAWL"\ndescription = "relaxed pace"',
+        specs, lob, _, _ = load_config(config(['port = 0\nregion = "OSAKA-SPRAWL"\ndescription = "relaxed pace"',
                                             'port = 0\nregion = "NEO-KANSAI-1"\ndescription = "fast pace"'],
                                            f'[lobby]\naddress = "wire.example.com"\n'
                                            f'client = "TNFS://tnfs.example.com/synack.atr"\n'

@@ -24,5 +24,5 @@ COPY server/ server/
 COPY deploy/start.sh .
 WORKDIR /app/server
 USER synack
-EXPOSE 6502 6503 6504 6505 16384/udp
+EXPOSE 6502 6503 6504 6505 8080 16384/udp
 CMD ["/app/start.sh"]

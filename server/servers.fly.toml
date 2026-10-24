@@ -13,6 +13,13 @@ proxy-protocol = true           # fly.io's proxy_proto handler names each player
 # region = "us"
 # url = "https://qalobby.fujinet.online"
 
+# The short links in the game disks' QR codes (fly.toml's https service): https://syn-ack-wire.fly.dev/ATARI
+# redirects to the Atari manual, any platform the same way by its docs/manual/ folder; / to the project.
+[web]
+port = 8080
+manual = "https://raw.githubusercontent.com/michaelsternberg/syn-ack-wire/main/docs/manual/{platform}/syn-ack-wire-manual-{platform}.pdf"
+home = "https://github.com/michaelsternberg/syn-ack-wire"
+
 # Listed in the lobby by region name when equally busy (busier servers float up), so the names sort in the
 # order wanted: relaxed, relaxed, quicker, fast. The default port, 6502, is relaxed: the kindest landing for a
 # disk booted without the lobby.
