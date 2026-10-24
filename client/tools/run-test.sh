@@ -16,13 +16,12 @@
 #   INSTANCE=1 tools/run-test.sh build/synack.xex     a second Atari at the same time
 #       each instance gets its own NetSIO port (9997 + n) and FujiNet web page (8000 + n)
 #
-# FUJINET_DIR is your FujiNet-PC build: the folder with run-fujinet and fnconfig.ini.
 # Start the server first:  cd ../server && python3 serve.py --trace
 # Closing the emulator (or Ctrl-C) stops FujiNet-PC as well.
 set -e
 XEX=$(realpath "$1")
 ATARI800=${ATARI800:-atari800}
-FUJINET_DIR=${FUJINET_DIR:?set FUJINET_DIR to your FujiNet-PC build (the folder with run-fujinet and fnconfig.ini)}
+FUJINET_DIR=${FUJINET_DIR:-$HOME/Nextcloud/Projects/computers/atari8/Source/FujiNetWIFI/fujinet-firmware/build/dist}
 INSTANCE=${INSTANCE:-0}
 NETSIO=$((9997 + INSTANCE))
 WEB=$((8000 + INSTANCE))
@@ -51,11 +50,15 @@ done) > "$WORK/fujinet.log" 2>&1 &
 FN=$!
 trap 'pkill -P $FN 2>/dev/null; kill $FN 2>/dev/null; echo "logs: $WORK"' EXIT INT TERM
 
+# No joysticks: some keyboards show up as a game controller, and keyboard-as-joystick
+# on port 1 swallows letter keys. The game uses neither.
 if [ -n "$BASIC" ]; then
-    OPTS="-xl -basic -netsio $NETSIO"
+    #OPTS="-xl -basic -netsio $NETSIO -nojoystick -no-kbdjoy1"
+    OPTS="-atari -netsio $NETSIO -nojoystick -no-kbdjoy1"
     SCREEN="9C40 9FFF"          # GR.0 screen memory under the BASIC ROM
 else
-    OPTS="-xl -nobasic -netsio $NETSIO"
+    #OPTS="-xl -nobasic -netsio $NETSIO -nojoystick -no-kbdjoy1"
+    OPTS="-atari -netsio $NETSIO -nojoystick -no-kbdjoy1"
     SCREEN="BC40 BFFF"          # GR.0 screen memory with no BASIC
 fi
 if [ -n "$DUMPDIR" ]; then
@@ -65,10 +68,10 @@ if [ -n "$DUMPDIR" ]; then
         printf 'WRITE %s %s/scr%03d.bin\nCONT\n' "$SCREEN" "$DUMPDIR" $i
         i=$((i + 1))
     done > "$WORK/monitor.txt"
-    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound -bbrk $RUN \
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -bbrk $RUN \
         < "$WORK/monitor.txt" > "$WORK/atari800.log" 2>&1
 elif [ -n "$HEADLESS" ]; then
-    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS -nosound $RUN > "$WORK/atari800.log" 2>&1
+    SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy "$ATARI800" $OPTS $RUN > "$WORK/atari800.log" 2>&1
 else
     "$ATARI800" $OPTS $RUN
 fi
