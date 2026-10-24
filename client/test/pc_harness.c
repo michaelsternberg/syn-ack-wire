@@ -3,6 +3,11 @@
  * test/autoplay.c's keys. Finds logic bugs without an emulator.
  *
  *   make pc && build/pc/pc-client [host] [port]
+ *
+ * With PC_SCREEN defined (make pc-apple2), the display is the Apple II's own,
+ * src/apple2/display_text.c, drawing into the array PC_SCREEN names; each of
+ * autoplay's dumps saves that array to DUMPDIR/scrNNN.bin, for the manual's
+ * captures (tools/capture.sh).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -89,10 +94,33 @@ unsigned char ticks_per_sec(void)
     return 60;
 }
 
+#ifdef PC_SCREEN
+unsigned char PC_SCREEN[1024], pc_switch;
+
+void pc_dump(void)
+{
+    static int n;
+    char path[512];
+    const char *dir = getenv("DUMPDIR");
+    FILE *f;
+    if (!dir)
+        return;
+    snprintf(path, sizeof path, "%s/scr%03d.bin", dir, n++);
+    if ((f = fopen(path, "wb")) != 0) {
+        fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
+        fclose(f);
+    }
+}
+#endif
+
 void snd_init(void) {}
 void play_chord(unsigned char n) { (void)n; }
 void snd_toggle(void) {}
 
+void help_open(void) { }
+unsigned char help_key(unsigned char k) { return k != K_ESC; }
+
+#ifndef PC_SCREEN
 /* ---- display: print what changed */
 void display_title_screen(void) {}
 void display_title_update(void) {}
@@ -110,15 +138,15 @@ void display_prompt(void)
 void display_clock(unsigned char secs) { (void)secs; }
 void display_message(const char *s) { fprintf(stderr, "[msg] %s\n", s); }
 void display_game_over(void) { fprintf(stderr, "[game over] winners %02x\n", winners); if (turn == NONE && pr_kind == 0) exit(0); }
-void help_open(void) { }
-unsigned char help_key(unsigned char k) { return k != K_ESC; }
 void display_link(void) { fprintf(stderr, "[link] %s\n", link_up ? "CONNECTED" : "NO SIGNAL"); }
+#endif
 
-int harness_args(int argc, char **argv)
+/* [host] [port]: the common main() takes no arguments, so this runs before it (glibc hands a constructor
+ * argc and argv). */
+__attribute__((constructor)) static void harness_args(int argc, char **argv)
 {
     if (argc > 1)
         host = argv[1];
     if (argc > 2)
         port = argv[2];
-    return 0;
 }

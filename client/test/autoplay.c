@@ -3,7 +3,8 @@
  * player might press for each prompt, wrong ones included, so the local checks
  * and the server's refusals both get exercised. When a new prompt opens, and
  * every DUMP_TICKS, it executes BRK; atari800 -bbrk stops in its monitor there, and tools/run-test.sh feeds
- * the monitor commands that save screen memory to a file. */
+ * the monitor commands that save screen memory to a file. On a PC (make pc-apple2) it calls pc_dump()
+ * instead, which saves the screen array. */
 #include "../src/platform.h"
 #include "../src/common/game.h"
 
@@ -13,9 +14,19 @@
 
 static unsigned char seed = 0x5A, last, prev, shown = 0xFF, typed, paged;  /* 0xFF: dump the title too */
 static unsigned elapsed;
-static const char name[] = "ATARI\r";
+#ifndef AUTO_HANDLE
+#define AUTO_HANDLE "ATARI"
+#endif
+static const char name[] = AUTO_HANDLE "\r";
 /* first, the help pages: open, page to the end (extra presses are ignored), back one, leave */
 static const unsigned char paging[] = { K_HELP, '>', '>', '>', '>', '>', '>', '>', '>', '<', K_ESC, 0 };
+
+#ifdef __CC65__
+#define DUMP() do { __asm__ ("brk"); __asm__ ("nop"); } while (0)
+#else
+void pc_dump(void);                         /* test/pc_harness.c */
+#define DUMP() pc_dump()
+#endif
 
 static unsigned char rnd(void)
 {
@@ -28,25 +39,20 @@ unsigned char auto_key(void)
     unsigned char t = ticks(), r;
     elapsed += (unsigned char)(t - prev);
     prev = t;
+    if (!status_len && !status_code && shown == 0xFF)
+        return 0;                                   /* the title, until the server answers: its status shows */
     if (DUMP_TICKS && (elapsed >= DUMP_TICKS || pr_kind != shown)) {
         elapsed = 0;
         shown = pr_kind;
-#ifdef __CC65__
-        __asm__ ("brk");
-        __asm__ ("nop");
-#endif
+        DUMP();
     }
     in_key();
     if ((unsigned char)(t - last) < 20)             /* a third of a second between keys */
         return 0;
     last = t;
     if (paging[paged]) {                            /* a dump before each key shows each page */
-#ifdef __CC65__
-        if (DUMP_TICKS) {
-            __asm__ ("brk");
-            __asm__ ("nop");
-        }
-#endif
+        if (DUMP_TICKS)
+            DUMP();
         return paging[paged++];
     }
     if (name[typed])                                /* title: the handle, then Return */

@@ -7,6 +7,7 @@
 #   coins    per netrunner: syndicate letter = crypto held (the Darkpool holds the rest)
 #   kit      seat 0's exploits, in key order (1-6); any left out are dealt at random
 #   play     the node seat 0 runs as the game starts (seat 0 has the turn); "" = none: the turn just opens
+#   last     with no play: the node of the move before seat 0's turn, shown as the last move
 #   end      true: after the move, seat 0 buys nothing and calls the null-route
 #   capture  the moment to capture: how the prompt line (or the info line above it) starts, as on screen
 #   like     start from that scenario, and change what is given here
@@ -36,6 +37,22 @@ about = "Playing a Turn, 1. Spike a node: the drawing's four targets are the hin
 like = "tied-root"
 play = ""
 capture = "RUN WHICH EXPLOIT? PRESS 1-6"
+
+[spike-early]
+about = "The Screen chapter: early in a game, three seats, the turn just opening (as a real game the Atari captured)."
+seats = ["ZER0COOL", "R00TKIT", "WIREWOLF"]
+cash = [6000, 6000, 4800]
+spikes = ["K2", "G4"]
+kit = ["H2", "J2", "E2", "D7", "I1", "F6"]
+play = ""
+last = "A5"                 # WIREWOLF's spike that founded the Lotus-12 hive
+capture = "RUN WHICH EXPLOIT? PRESS 1-6"
+
+[spike-early.hives]
+L = ["A5", "A6"]
+
+[spike-early.coins]
+WIREWOLF = { L = 4 }
 
 [infiltration]
 about = "Playing a Turn, infiltration: target 2, C6 touches the lone spike on B6."

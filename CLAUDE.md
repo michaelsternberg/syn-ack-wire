@@ -14,7 +14,7 @@ it points rather than repeats, so keep it short and fix it when it goes stale.
 | Tables: lobby, host clock, joining, dropping, rejoining, autopilot, jack-in, log off, abandon | `server/acquire/table.py`, summarised in `server/README.md` ("Seats and tables") | `server/tests/test_server.py` (test names read as use cases) |
 | Client behaviour, keys, screen layout, sizes | `client/src/`, summarised in `client/README.md` | |
 | Rules text for players | `docs/rules/*.tex` (shared) | the rulebook (`docs/rulebook/`) and each platform manual (`docs/manual/<platform>/`) |
-| Manual captures | `docs/scenarios.toml` (staged games, the same for every platform) | `server/stage.py`, `client/tools/capture.sh`, `docs/manual/atari/screens/` |
+| Manual captures | `docs/scenarios.toml` (staged games, the same for every platform) | `server/stage.py`, `client/tools/capture.sh` (`PLATFORM=apple2`: `make pc-apple2`), `docs/manual/<platform>/screens/` |
 
 When behaviour changes, change the code, its tests and its summary together. The manuals are written for
 players: a summary, not a specification.

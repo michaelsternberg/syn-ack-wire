@@ -167,9 +167,17 @@ $(A2)/synack.po: $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	$(AC) -ls $@
 apple2_text-po: $(A2)/synack.po
 
+# --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
+# new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
+pc-apple2: $(HDRS) src/apple2/title_art.h
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 \
+	    -DPC_SCREEN=pc_screen -DAUTO_HANDLE='"APPLE"' -o build/pc/pc-apple2 \
+	    src/common/main.c src/common/game.c src/common/proto.c src/apple2/display_text.c test/autoplay.c test/pc_harness.c
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc apple2_text apple2_text-po clean
+.PHONY: all atr atrtest test pc pc-apple2 apple2_text apple2_text-po clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o
 .DELETE_ON_ERROR:

@@ -51,6 +51,7 @@ class StagedGame(rules.Game):
                 self.coins[p][s] += k
                 self.supply[s] -= k
         self.play = node(sc["play"]) if sc.get("play") else None
+        self.last = node(sc["last"]) if sc.get("last") else None
         self.end = sc.get("end", False)
         kit = [node(n) for n in sc.get("kit", ())]
         if self.play is not None and self.play not in kit:
@@ -109,6 +110,14 @@ class StagedTable(table_mod.Table):
             # whatever that spike did. They end where the snapshot already is.
             self._send(self.seats[0], table_mod.proto.hand(g.kit))
             data = b"".join(table_mod.proto.event(e) for e in g.moves)
+            for s in self.seats:
+                self._send(s, data)
+        elif g is not None and g.last is not None:
+            # The move before seat 0's turn, as it arrived: its spike, which the client marks LAST, then the node as
+            # the snapshot has it (a hive, say, if that spike founded one).
+            n = g.last
+            data = (table_mod.proto.event(rules.Cells(rules.SPIKE, (n,)))
+                    + table_mod.proto.event(rules.Cells(g.board[n], (n,))))
             for s in self.seats:
                 self._send(s, data)
 

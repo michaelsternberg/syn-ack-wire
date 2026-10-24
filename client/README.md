@@ -39,7 +39,8 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800 |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2` |
+| `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 
 ## Build
 ```sh
@@ -52,6 +53,7 @@ make HINTS=0                             # move hints start off (the player can 
 make test                                # build/atari/synack-auto.xex: plays by itself, for the emulator
 make atr                                 # build/atari/synack.atr: the game disk (PicoBoot + game, help pages in raw sectors)
 make pc                                  # build/pc/pc-client: the common code on this PC
+make pc-apple2                           # build/pc/pc-apple2: the same with the Apple II's display, for captures
 ```
 Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build.
 
@@ -218,6 +220,11 @@ log with no screen: `HEADLESS=1 tools/run-test.sh build/atari/wiremon-auto.xex`.
 - **`make pc && build/pc/pc-client [host] [port]`** runs `main.c`, `game.c` and `proto.c` compiled with gcc against a
   real server, pressing autoplay keys and printing prompts, logs and what it sends. It is the quickest way to find a
   logic bug, and gdb works on it.
+- **`make pc-apple2`** builds the same with the Apple II's real display, `src/apple2/display_text.c`, drawing into
+  an array instead of text page 1 (`PC_SCREEN`; the Apple build is unchanged). Each autoplay dump saves the
+  array to `DUMPDIR/scrNNN.bin`, in the screen's own order. `PLATFORM=apple2 tools/capture.sh` uses it for the
+  Apple II manual's captures, with no emulator: the staged scenarios, and `title` and `lobby-join` from a plain
+  server with two test clients waiting in its lobby. `tools/render_apple2.py --text` shows a dump as text.
 - **`DUMPDIR=dir tools/run-test.sh build/atari/synack-auto.xex`** runs the real Atari build headless. It executes `BRK` when
   a new prompt opens and every 4 seconds; atari800 `-bbrk` stops in its monitor, which saves screen memory to
   `dir/scrNNN.bin` and continues. `tools/screen2txt.py dir/scr042.bin` shows one as text.

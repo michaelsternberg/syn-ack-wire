@@ -25,7 +25,14 @@
 #include "../common/proto_tab.h"
 #include "../common/game.h"
 
+#ifdef PC_SCREEN                        /* a PC build for the manual's captures (test/pc_harness.c) */
+extern unsigned char PC_SCREEN[1024], pc_switch;
+#define PAGE1   PC_SCREEN
+#define SW(a)   (*(volatile unsigned char *)&pc_switch)
+#else
+#define PAGE1   ((unsigned char *)0x400)
 #define SW(a)   (*(volatile unsigned char *)(a))
+#endif
 #define CLR80STORE  0xC000              /* write: PAGE2 then shows text page 2, not aux memory */
 #define CLR80VID    0xC00C              /* write: 40 columns */
 #define CLRALTCHAR  0xC00E              /* write: the primary set, which has flash */
@@ -59,7 +66,7 @@
 #error "the title logo runs into the title's lines: at most rows 0-13"
 #endif
 
-#define R(n) ((unsigned char *)(0x400 + ((n) & 7) * 0x80 + ((n) >> 3) * 40))
+#define R(n) (PAGE1 + ((n) & 7) * 0x80 + ((n) >> 3) * 40)
 static unsigned char *const row[24] = {
     R(0),  R(1),  R(2),  R(3),  R(4),  R(5),  R(6),  R(7),
     R(8),  R(9),  R(10), R(11), R(12), R(13), R(14), R(15),
