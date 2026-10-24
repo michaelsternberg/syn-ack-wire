@@ -9,8 +9,13 @@
 ; void snd_init(void)
 ; void __fastcall__ play_chord(unsigned char n)
 ; void snd_toggle(void)
+;
+; And the delay loop the network and the clock pace their polling with
+; (net_fn.c, input.c), since the Apple has no timer:
+; void __fastcall__ pause(unsigned char n)   n (1-255) units of about 256 cycles,
+;                                            a quarter millisecond at 1 MHz
 
-        .export _snd_init, _play_chord, _snd_toggle
+        .export _snd_init, _play_chord, _snd_toggle, _pause
 
 SPKR    = $C030
 CHORD_HIVE = 2          ; platform.h
@@ -74,3 +79,11 @@ _play_chord:
         rts
 @end:   pla
 done:   rts
+
+_pause: tay
+@unit:  ldx #50                 ; 50 x 5 cycles, and the 6 around them
+:       dex
+        bne :-
+        dey
+        bne @unit
+        rts

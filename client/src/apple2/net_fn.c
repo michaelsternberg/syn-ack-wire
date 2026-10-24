@@ -11,12 +11,15 @@ unsigned char rx_head, rx_tail, tx[16];
 static const char dev[] = "N:";         /* the unit; the URL is only needed to open */
 static unsigned bw;
 static unsigned char conn, err, n;      /* err: FujiNet's own code, 1 = fine */
+static unsigned char skip;              /* net_poll calls left before it asks again */
+void __fastcall__ pause(unsigned char n);   /* sound.s */
 
 /* Over SmartPort a failed open still answers fine: the failure shows in the
  * status after it (not connected, FujiNet's error code). */
 unsigned char __fastcall__ net_open(const char *url)
 {
     rx_head = rx_tail = 0;              /* anything left from an old connection is junk */
+    skip = 0;
     if ((n = network_open(url, OPEN_MODE_RW, OPEN_TRANS_NONE)) != 0
         || (n = network_status(dev, &bw, &conn, &err)) != 0)
         return n;
@@ -26,13 +29,25 @@ unsigned char __fastcall__ net_open(const char *url)
 }
 
 /* One status call and, if bytes are waiting, one read of as many as fit before
- * the ring's page end without overrunning unparsed bytes. */
+ * the ring's page end without overrunning unparsed bytes. SmartPort has no
+ * signal for "data waiting" (the Atari's PROCEED), so this asks: while nothing
+ * comes, only one call in POLL_EVERY does, at most about 10 times a second, the
+ * calls between waiting a moment (pause); while bytes arrive, every call does. */
+#define POLL_EVERY 40                   /* x 2 ms: a tenth of a second, at least */
+
 unsigned char net_poll(void)
 {
+    if (skip) {
+        --skip;
+        pause(8);
+        return 0;
+    }
+    skip = POLL_EVERY;
     if ((n = network_status(dev, &bw, &conn, &err)) != 0)
         return n;
     if (!bw)
         return conn ? 0 : NET_CLOSED;
+    skip = 0;                           /* data: ask again at once, till it stops */
     n = bw > 255 ? 255 : bw;
     if (n > (unsigned char)(rx_head - rx_tail - 1))     /* free space */
         n = rx_head - rx_tail - 1;
@@ -48,6 +63,7 @@ unsigned char net_poll(void)
 
 unsigned char __fastcall__ net_send(unsigned char len)
 {
+    skip = 0;                           /* the answer is on its way: look at once */
     return network_write(dev, tx, len);
 }
 

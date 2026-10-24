@@ -47,12 +47,26 @@ unsigned char in_key(void)
     return k;
 }
 
-/* Seconds since the first call, from FujiNet's clock (now[6] = seconds). If
- * the clock doesn't answer (no clock device), every 256th call counts one. */
+/* Seconds since the first call, from FujiNet's clock (now[6] = seconds). The
+ * clock is read on one call in CLOCK_EVERY, at most about 10 times a second: the
+ * calls between return the last count, and each waits a moment (pause), so the
+ * calls themselves keep time even in a loop that does nothing else. If the clock
+ * doesn't answer (no clock device), every 4th read counts a second. */
+#define CLOCK_EVERY 160                 /* x half a millisecond: a tenth of a second, at least; more
+                                           apart, a second shows late enough to see the count stall */
+void __fastcall__ pause(unsigned char n);   /* sound.s */
+static unsigned cached;
+
 unsigned char ticks(void)
 {
+    if (cached) {
+        --cached;
+        pause(2);
+        return count;
+    }
+    cached = CLOCK_EVERY;
     if (clock_get_time(now, SIMPLE_BINARY) != 0) {
-        if (!++spin)
+        if (!(++spin & 3))
             ++count;
         return count;
     }

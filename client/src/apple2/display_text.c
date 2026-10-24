@@ -505,6 +505,9 @@ void display_prompt(void)
     mode = NORMAL;
 }
 
+/* One second short: the clock (input.c) is read about 10 times a second, so its
+ * count can lag by a tenth of a second or so; shown short, it never promises
+ * more time than the server gives. */
 void display_clock(unsigned char secs)
 {
     if (!pr_kind)
@@ -512,7 +515,7 @@ void display_clock(unsigned char secs)
     mode = bottom;
     at(ROW_ASK, 37);
     if (secs)
-        number(secs, 3, 0);
+        number(secs - 1, 3, 0);
     else
         spaces(3);
     mode = NORMAL;

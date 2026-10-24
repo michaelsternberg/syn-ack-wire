@@ -277,12 +277,17 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 
 - **Network:** fujinet-lib (`lib/fujinet-lib/`), not hand-written SmartPort code: 3.4 KB, against 386 bytes
   for the Atari's raw SIO, for one library every later platform can share. `net_poll` is one status call, then
-  one read of what fits in the ring, as on the Atari. Two SmartPort quirks (FujiNet 1.6): a missing AppKey reads
+  one read of what fits in the ring, as on the Atari. SmartPort has no signal for "data waiting" (the
+  Atari's PROCEED), so the Apple asks, but paced: about 10 status calls a second while nothing comes (every
+  call while bytes arrive, and at once after sending), and the clock about 10 reads a second; the calls in
+  between wait a moment in `pause` (sound.s), the Apple having no timer. Unpaced, the loop asked FujiNet
+  continuously and its activity light never rested. Two SmartPort quirks (FujiNet 1.6): a missing AppKey reads
   as a success, 64 zero bytes, so its length is counted to the first NUL; and a failed open answers fine, so
   `net_open` asks for the status at once and reports "not connected" as the failure.
 - **The shot clock** runs on FujiNet's clock device, in whole seconds (`ticks_per_sec()` is 1). Counting video
   frames would run slow whenever a SmartPort call blocks past one, and then promise more time than the server
-  gives; whole seconds can only err the other way.
+  gives; whole seconds can only err the other way. The count can lag a reading by a tenth of a second, so the
+  countdown shows one second short (59 for 60): the clock reaches zero with the server's.
 - **Screen:** as the Atari's, in the three modes of the primary character set. Hives, the title bar, whose turn
   it is and Black ICE sizes are inverse. The last move **flashes** for 5 seconds, then shows as usual (the game
   loop calls `display_idle()` for that: `DISPLAY_IDLE=1`). Rows 22-23 are normal while others play and
@@ -323,14 +328,14 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 | `snow.s` | 74 | + 48 rodata (masks), 3 bss: the title's static, also from the deferred VBI |
 | `dli.s` | 133 | the color bands' DLI handler and its display list switch (117 before the title's purple) |
 | **apple2_text** (2026-10-24) | | |
-| `synack` | 15271 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
+| `synack` | 15370 | whole AppleSingle file; loads at $2000; `rx_ring` and the ProDOS buffer at $0C00 (bss) |
 | `display_text.c` | 3628 | + 845 rodata (screen words, the 48-byte row table, 101 of title art), 28 bss/data |
 | fujinet-lib | 3404 | open, status, read, write, close, AppKey read, clock; the bus layer alone is 1520 |
 | cc65 runtime | 1585 | startup, memcpy/memset, the C stack helpers, ctype (pulled in by fujinet-lib's clock) |
-| `net_fn.c` | 473 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine |
-| `input.c` | 239 | keys, the Apple keys, and `ticks()` from FujiNet's clock |
+| `net_fn.c` | 509 | the platform.h network calls on fujinet-lib; `net_open` checks status, as a failed open still answers fine; status paced to ~10 a second |
+| `input.c` | 280 | keys, the Apple keys, and `ticks()` from FujiNet's clock, read ~10 times a second |
 | `help.s` | 211 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2; lo-res for a QR page |
-| `sound.s` | 75 | + 42 rodata (7 chords of up to 3 notes) |
+| `sound.s` | 85 | + 42 rodata (7 chords of up to 3 notes); `pause`, the delay loop the polling is paced by |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
