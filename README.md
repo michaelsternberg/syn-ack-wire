@@ -1,15 +1,11 @@
 # SYN-ACK WIRE
 
-A cyberpunk network game of hostile takeovers for the Atari 8-bit computers and
+A cyberpunk network game of hacking and crypto for the Atari 8-bit computers and
 [FujiNet](https://fujinet.online/). Two to six netrunners spike nodes on the Grid, a region-sized cloud where
 crime syndicates grow botnet hives. Back the syndicates with crypto, sell out when a bigger hive hivejacks
 yours, and hold the most new yen when the region is null-routed.
 
-The rules are those of Sid Sackson's classic board game *Acquire*, rethemed from the ground up: syndicates and
-their hives for hotel chains, nodes for tiles, crypto for stock. Bots take any empty seats, so one player is enough for a game.
-
-> **Status:** in development. The server, the Atari client and the rulebook are playable end to end; the
-> printed manual and other platforms are still to come.
+Based on the rules of Sid Sackson's classic board game *Acquire*.
 
 ## How it fits together
 
