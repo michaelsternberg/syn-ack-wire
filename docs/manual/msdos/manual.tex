@@ -75,12 +75,20 @@ ACQUIRE IS A TRADEMARK OF HASBRO, INC. NOT AFFILIATED WITH OR ENDORSED BY HASBRO
 % ================================================================== 02
 \renewcommand{\secstatus}{REGION \quad // \quad STATUS \quad // \quad HANDLE}
 \chapter{\VC{jackin}}
-\game\ runs from DOS, with an RS-232 FujiNet on a serial port.
+\game\ runs from DOS, with an RS-232 FujiNet on a serial port. First load FujiNet's driver, one of
+the FujiNet RS-232 tools, with \code{DEVICE=FUJINET.SYS} in CONFIG.SYS. Then pick a \game\ server in the FujiNet lobby,
+which mounts the disk and starts the game, or start it yourself:
 \begin{enumerate}[nosep]
-  \item Load FujiNet's driver in CONFIG.SYS: \code{DEVICE=FUJINET.SYS}, one of the FujiNet RS-232 tools.
   \item Put the \game\ disk in a FujiNet slot: on FujiNet's web page, or with \code{FCONFIG}.
   \item Mount it with \code{FMOUNT -A}, change to its drive, and type \code{SYNACK}.
 \end{enumerate}
+From the lobby:
+\begin{itemize}[nosep]
+  \item The server you pick reaches the game through FujiNet's SD card. Without one, the game dials its own
+    server, CHIBA-GRID-7, whichever you picked: put any SD card in the FujiNet to join the others.
+  \item To start the game, the lobby looks for \code{COMMAND.COM} on the path: if the screen stays blank,
+    put \code{PATH C:\textbackslash} in AUTOEXEC.BAT.
+\end{itemize}
 The title screen dials the server as soon as it appears. Type a handle, up to 8 characters, and press
 \key{Enter}.
 
