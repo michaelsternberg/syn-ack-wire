@@ -7,7 +7,9 @@
  * With PC_SCREEN defined (make pc-apple2), the display is the Apple II's own,
  * src/apple2/display_text.c, drawing into the array PC_SCREEN names; each of
  * autoplay's dumps saves that array to DUMPDIR/scrNNN.bin, for the manual's
- * captures (tools/capture.sh).
+ * captures (tools/capture.sh). With PC_MSDOS too (make pc-msdos), it is the
+ * MS-DOS display, src/msdos/display_text.c, and each dump is the 40x24 game area
+ * of its 80x25 screen, as the DOS autoplay build writes it (test/dos_dump.c).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -95,7 +97,11 @@ unsigned char ticks_per_sec(void)
 }
 
 #ifdef PC_SCREEN
+#ifdef PC_MSDOS
+unsigned short PC_SCREEN[25 * 80];      /* character and attribute, as in DOS video memory */
+#else
 unsigned char PC_SCREEN[1024], pc_switch;
+#endif
 
 void pc_dump(void)
 {
@@ -107,7 +113,12 @@ void pc_dump(void)
         return;
     snprintf(path, sizeof path, "%s/scr%03d.bin", dir, n++);
     if ((f = fopen(path, "wb")) != 0) {
+#ifdef PC_MSDOS
+        for (int r = 0; r < 24; ++r)    /* little-endian, as on the PC: character, then attribute */
+            fwrite(PC_SCREEN + r * 80 + 20, 2, 40, f);
+#else
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
+#endif
         fclose(f);
     }
 }
@@ -117,8 +128,10 @@ void snd_init(void) {}
 void play_chord(unsigned char n) { (void)n; }
 void snd_toggle(void) {}
 
+#ifndef PC_MSDOS                        /* the DOS display has its own */
 void help_open(void) { }
 unsigned char help_key(unsigned char k) { return k != K_ESC; }
+#endif
 
 #ifndef PC_SCREEN
 /* ---- display: print what changed */

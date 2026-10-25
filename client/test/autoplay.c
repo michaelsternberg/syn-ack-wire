@@ -11,6 +11,9 @@
 #ifndef DUMP_TICKS
 #define DUMP_TICKS 240             /* 0: no screen dumps */
 #endif
+#ifndef KEY_TICKS
+#define KEY_TICKS 20               /* between keys: a third of a second at 60 ticks a second */
+#endif
 
 static unsigned char seed = 0x5A, last, prev, shown = 0xFF, typed, paged;  /* 0xFF: dump the title too */
 static unsigned elapsed;
@@ -47,7 +50,7 @@ unsigned char auto_key(void)
         DUMP();
     }
     in_key();
-    if ((unsigned char)(t - last) < 20)             /* a third of a second between keys */
+    if ((unsigned char)(t - last) < KEY_TICKS)
         return 0;
     last = t;
     if (paging[paged]) {                            /* a dump before each key shows each page */

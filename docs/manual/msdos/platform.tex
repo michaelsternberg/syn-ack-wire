@@ -1,0 +1,12 @@
+% The PC's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // MS-DOS}
+\renewcommand{\PlatformShort}{PC}                          % as in "on the PC"
+\newcommand{\PlatformLong}{IBM PC and compatibles}         % the title page
+\newcommand{\PlatformMachines}{IBM PC / XT / AT AND COMPATIBLES}  % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{Enter}                           % the PC's name for the key that confirms
+
+% Where the 40 x 24 screen sits in a capture, in image pixels (see \capgeom):
+\makeatletter
+\newcommand{\rendered}{\capgeom{36}{21}{36}{42}{1512}{1050}}  % client/tools/render_msdos.py
+\makeatother

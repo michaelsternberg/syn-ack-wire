@@ -1,0 +1,338 @@
+% SYN-ACK WIRE -- user manual for MS-DOS (the IBM PC and compatibles)
+% Build: make   (or make in docs/: the rulebook and every manual)
+%
+% The style, the theme macros and the furniture the shared rules text needs are in ../../style/synack.sty;
+% the rules text is ../../rules/*.tex; the PC's names for things are in platform.tex.
+% Screens are in screens/: dumps of the PC's own display code, drawn by client/tools/render_msdos.py
+% (client/tools/capture.sh with PLATFORM=msdos makes them).
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage{synack}
+\input{platform.tex}
+\graphicspath{{screens/}}
+
+\makeatletter
+% The rules' captures are staged games (server/stage.py, scenarios.toml) on the board of the drawing
+% under "1. Spike a node", so the drawing, the text and the screen tell one story.
+\expandafter\def\csname shot@spike\endcsname{\screen{spike.png}{CAPTURE \quad \MakeUppercase{\V{spike}} A \MakeUppercase{\V{node}}}%
+  {The drawing above, as ZER0COOL sees it. The move hints \code{1}--\code{4} sit on its four targets: they are the
+  \Vp{exploit} in your \V{kit} that run there, as the info line lists them. Press the one to run.}}
+\expandafter\def\csname shot@broker\endcsname{\screen{infiltration.png}{CAPTURE \quad \MakeUppercase{\V{infiltration}}}%
+  {Target 2: ZER0COOL ran \node{C6}, next to the lone \V{spike} on \node{B6}. The info line lists, in reverse, the
+  syndicates with no \V{hive} on the \V{grid}: press one of those letters to \V{broker} the new \V{hive}.}}
+\expandafter\def\csname shot@hivejack\endcsname{\screen{tied-root.png}{CAPTURE \quad \MakeUppercase{\V{hivejack}}: A TIED \MakeUppercase{\V{root}}}%
+  {The example below, as ZER0COOL sees it. The spike on \node{G3} joined \Syn{5}{name} (4 \Vp{node}) and \Syn{3}{name}
+  (3); the log shows the tied \V{root} paid. The info line says how many of the \V{absorbed} \Vp{coin} you hold: type
+  how many to \V{cashout} and press \key{Enter}, then how many to \V{swap}, and \key{Enter} again.}}
+\expandafter\def\csname shot@buy\endcsname{\screen{spread-buy.png}{CAPTURE \quad BUY \MakeUppercase{\V{coin}}}%
+  {Target 3: \node{E1} spread \Syn{5}{name} to 5 \Vp{node}, and its price is already up. While you buy, the
+  \Vp{hive} panel shows each price and how many the \V{bank} has left. Type up to \Rule{maxbuy} letters, in any
+  mix (\code{\Syn{5}{letter}\Syn{5}{letter}\Syn{3}{letter}} buys two \Syn{5}{name} and one \Syn{3}{name}),
+  \key{Backspace} to take one back, \key{Enter} to buy.}}
+\expandafter\def\csname shot@nullroute\endcsname{\screen{nullroute.png}{CAPTURE \quad \MakeUppercase{\V{lockdown}}: THE QUESTION}%
+  {ZER0COOL's \V{spike} on \node{H2} spread \Syn{2}{name} to \Rule{safesize} \Vp{node}: \V{safe}, and with
+  \Syn{5}{name} and \Syn{0}{name} already \V{safe}, every \V{hive} is. With too little \Game{currency} for any
+  \V{coin}, the prompt is the question alone: \key{Y} calls the \V{nullroute}, \key{N} or \key{Enter} plays on.}}
+\expandafter\def\csname shot@lobby\endcsname{\screen{lobby-join.png}{CAPTURE \quad JOINING A LOBBY}%
+  {ZER0COOL hosts and MAMBA is waiting; the PC has just joined. The host clock started when MAMBA arrived, and every
+  newcomer is told how long the host has left.}}
+\expandafter\def\csname shot@final\endcsname{\screen{game-over.png}{CAPTURE \quad THE END OF A GAME}%
+  {ZER0COOL called it. \VC{root} and \V{sudo} were paid for every \V{hive}, all \V{coin} was sold, and the log ends
+  with each \V{player}'s final \Game{currency} and the top \V{player}. The table is a lobby again: the host's prompt
+  asks for the seats of a rematch.}}
+\makeatother
+
+
+\begin{document}
+
+% ================================================================== title
+\begin{titlepage}
+\machine
+\vspace*{1.6in}
+{\color{amber}\rule{\linewidth}{2pt}}\par\vspace{14pt}
+{\fontsize{44}{48}\selectfont \game\par}\vspace{10pt}
+{\fontsize{12}{16}\selectfont\color{steel} SEVEN SYNDICATES. ONE REGION. EVERY \MakeUppercase{\V{node}} FOR SALE.\par}
+\vspace{14pt}{\color{amber}\rule{\linewidth}{2pt}}\par
+\vspace{0.35in}
+{\fontsize{24}{30}\selectfont USER MANUAL\par}\vspace{4pt}
+{\fontsize{14}{18}\selectfont\color{amber} FOR THE \MakeUppercase{\PlatformLong}\par}
+\vspace{0.4in}
+{\fontsize{12}{16}\selectfont \PlatformMachines \quad // \quad FUJINET\par
+\Rule{minplayers}-\Rule{maxplayers} \MakeUppercase{\Vp{player}} \quad // \quad BOTS FILL EMPTY SEATS\par}
+\vfill
+{\fontsize{8.5}{11}\selectfont\color{steel}
+AN UNOFFICIAL CYBERPUNK RE-SKIN OF ACQUIRE BY SID SACKSON.\par
+ACQUIRE IS A TRADEMARK OF HASBRO, INC. NOT AFFILIATED WITH OR ENDORSED BY HASBRO.\par}
+\end{titlepage}
+
+% ================================================================== 01
+\renewcommand{\secstatus}{THE SETTING \quad // \quad THE OBJECT \quad // \quad THE END}
+\chapter{The Network Grid}
+\begin{multicols}{2}
+\rules{opening}
+\end{multicols}
+
+% ================================================================== 02
+\renewcommand{\secstatus}{REGION \quad // \quad STATUS \quad // \quad HANDLE}
+\chapter{\VC{jackin}}
+\game\ runs from DOS, with an RS-232 FujiNet on a serial port.
+\begin{enumerate}[nosep]
+  \item Load FujiNet's driver in CONFIG.SYS: \code{DEVICE=FUJINET.SYS}, one of the FujiNet RS-232 tools.
+  \item Put the \game\ disk in a FujiNet slot: on FujiNet's web page, or with \code{FCONFIG}.
+  \item Mount it with \code{FMOUNT -A}, change to its drive, and type \code{SYNACK}.
+\end{enumerate}
+The title screen dials the server as soon as it appears. Type a handle, up to 8 characters, and press
+\key{Enter}.
+
+\begin{capture}{title.png}{CAPTURE 01 \quad TITLE SCREEN \quad LOBBY OPEN}
+  \callout{1}{L}{4}{15}
+  \callout{2}{R}{33}{16}
+  \callout{3}{L}{4}{17}
+  \callout{4}{L}{4}{19}
+  \callout{5}{L}{4}{20}
+  \callout{6}{R}{39}{21}
+  \callout{7}{R}{30}{23}
+\end{capture}
+
+\begin{legend}
+\li{1}{\textbf{Region.} The server's \V{grid}: one game at a time, up to six seats.}
+\li{2}{\textbf{Status.} Whether you can join, and how: \code{LOBBY OPEN}, \code{IN PROGRESS}, \code{TABLE FULL}.
+It stays up to date while you type.}
+\li{3}{\textbf{Handle.} Your name at the table. From the FujiNet lobby, it starts with your lobby name.}
+\li{4}{\key{F2} turns the move hints on or off.}
+\li{5}{\key{F3} turns the sound on or off.}
+\li{6}{\key{F1} or \key{?} opens the instructions, here or in the middle of a game.}
+\li{7}{\textbf{The prompt line.} What the screen expects from you next; a refusal, such as a handle already
+taken, shows here in reverse.}
+\end{legend}
+
+% ================================================================== 03
+\renewcommand{\secstatus}{80 x 25 TEXT \quad // \quad ANY DISPLAY \quad // \quad 40 x 24}
+\chapter{The Screen}
+Everything you need is on one screen, in its middle 40 columns; a circuit board is drawn at the sides. It
+looks alike on any display, from a monochrome card to VGA or a laptop's grey LCD. This is early in a game, and
+it's your turn: pick an \V{exploit} to run.
+
+\begin{capture}{spike-early.png}{CAPTURE 02 \quad \MakeUppercase{\V{spike}} PROMPT \quad 3 SEATS \quad EARLY GAME}
+  \callout{1}{L}{2}{0}
+  \callout{2}{L}{2}{6}
+  \callout{3}{R}{35}{1}
+  \callout{4}{R}{23}{10}
+  \callout{5}{L}{0}{13}
+  \callout{6}{L}{1}{20}
+  \callout{7}{L}{1}{22}
+  \callout{8}{R}{38}{23}
+\end{capture}
+
+\begin{legend}
+\li{1}{\textbf{Title bar.} The region and the link. It reads \code{NO SIGNAL} when the server goes quiet.}
+\li{2}{\textbf{The \V{grid}.} Reverse letters are \Vp{hive}; \node{\Glyph{spike}} is a lone \V{spike}. A digit marks
+a \V{node} an \V{exploit} in your \V{kit} can run on. The last move blinks for a few seconds.}
+\li{3}{\textbf{\VCp{hive}.} Each syndicate's letter, \V{hive} size and name. While you buy, its price and how many
+the \V{bank} has left.}
+\li{4}{\textbf{Last move.} The \V{node} \V{spike}d most recently.}
+\li{5}{\textbf{\VCp{player}.} \code{>} marks you, \code{*} a bot, \code{?} someone away. Account, then
+\V{coin} held. A reverse name has the turn.}
+\li{6}{\textbf{The log.} The last three things that happened at the table.}
+\li{7}{\textbf{Your \V{kit}.} Your \Rule{kitsize} \Vp{exploit} and the \Vp{node} they run on.}
+\li{8}{\textbf{The prompt.} What you're asked, with seconds left on the shot clock. The two bottom lines turn
+reverse when the decision is yours. Here: press \key{1}--\key{6}.}
+\end{legend}
+
+% ================================================================== 04
+\renewcommand{\secstatus}{THE KEYBOARD \quad // \quad FUNCTION KEYS \quad // \quad NO MOUSE}
+\chapter{Keys}
+\game\ is played from the keyboard. Each question on the prompt line names the keys it takes; this chapter
+has them all in one place. The game checks an answer before sending it and says on the prompt line what's
+wrong, such as \code{NOT ENOUGH NEW YEN}.
+
+\subsection{Any time}
+\begin{keytable}
+\kr{\key{F1}\ \ \key{?}}{Open the instructions, on the title screen or in the middle of a game.}
+\kr{\key{F2}}{Move hints on or off: the digits on the \V{grid} that show where each \V{exploit} in your \V{kit} can run.}
+\kr{\key{F3}}{Sound on or off. A chord tells you it's on.}
+\end{keytable}
+
+\subsection{The title screen}
+\begin{keytable}
+\kr{\key{A}--\key{Z}\ \ \key{0}--\key{9}}{Type your handle, up to 8 characters.}
+\kr{\key{Backspace}}{Rub out the last character.}
+\kr{\key{Enter}}{\VC{jackin}.}
+\end{keytable}
+
+\subsection{The instructions}
+\begin{keytable}
+\kr{\key{>}\ \ \key{\fontsize{12}{9}\selectfont$\rightarrow$}}{Next page.}
+\kr{\key{<}\ \ \key{\fontsize{12}{9}\selectfont$\leftarrow$}}{Previous page.}
+\kr{\key{Esc}}{Back to where you were. \key{Enter}, \key{F1} and \key{?} do the same.}
+\end{keytable}
+
+\subsection{Hosting}
+\begin{keytable}
+\kr{\key{2}--\key{6}}{Start the game with that many seats. Bots take the seats nobody has joined.}
+\end{keytable}
+
+\subsection{Your turn}
+\begin{keytable}
+\kr{\key{1}--\key{6}}{\VC{spike}: run that \V{exploit} from your \V{kit}. A reverse one can't run now; press it and the prompt line says why.}
+\kr{\key{A}--\key{Z}}{\VC{infiltration}: the letter of the syndicate to \V{broker} the new \V{hive} to.}
+\kr{\key{A}--\key{Z}}{A tied \V{hivejack}: the letter of the \V{hive} that survives, or is \V{absorbed} next.}
+\kr{\key{A}--\key{Z}}{Buy \V{coin}: type the syndicate letters, up to \Rule{maxbuy}, in any mix of the \Vp{hive} on the \V{grid}.
+One letter per \V{coin}: \key{\Syn{5}{letter}} buys one, \key{\Syn{5}{letter}}\key{\Syn{5}{letter}} two, \key{\Syn{5}{letter}}\key{\Syn{5}{letter}}\key{\Syn{5}{letter}} three of the same, \key{\Syn{5}{letter}}\key{\Syn{0}{letter}} one each of two, \key{\Syn{5}{letter}}\key{\Syn{0}{letter}}\key{\Syn{6}{letter}} one each of three.}
+\kr{\key{Backspace}}{Take back the last \V{coin} in a buy. \key{Delete} does the same.}
+\kr{\key{Enter}}{Confirm the buy. \key{Enter} alone buys nothing.}
+\kr{\key{Y}\ \ \key{N}}{When the game may end: \V{nullroute} the region now, or play on. \key{Enter} plays on too.}
+\end{keytable}
+
+\subsection{When your \V{hive} is \V{absorbed}}
+\begin{keytable}
+\kr{\key{0}--\key{9}\ \ \key{Enter}}{First, how many \Vp{coin} to \V{cashout}; then how many to \V{swap}, an even number.
+The rest you \V{hodl}. \key{Backspace} rubs out a digit.}
+\end{keytable}
+
+\subsection{Leaving}
+\begin{keytable}
+\kr{\key{Esc}\ \ \key{Y}}{\VC{logoff} for good. A bot takes over your seat at once, and you're back on the title screen.
+Any key but \key{Y} stays.}
+\end{keytable}
+
+% ================================================================== 05
+\renewcommand{\secstatus}{THE \MakeUppercase{\V{grid}} \quad // \quad THE SYNDICATES \quad // \quad SETUP}
+\chapter{What's in the Game}
+\begin{multicols}{2}
+\rules{contents}
+\end{multicols}
+
+\subsection{The Seven Syndicates}
+\syntable
+
+\subsection{Setup}
+\begin{multicols}{2}
+\rules{setup}
+\end{multicols}
+
+% ================================================================== 06
+\renewcommand{\secstatus}{\MakeUppercase{\V{spike}} \quad // \quad BUY \quad // \quad DRAW}
+\chapter{Playing a Turn}
+\begin{multicols}{2}
+\rules{turn}
+\end{multicols}
+
+% ================================================================== 07
+\renewcommand{\secstatus}{\MakeUppercase{\V{totalcompromise}} \quad // \quad \MakeUppercase{\V{lockdown}} \quad // \quad \MakeUppercase{\V{cashout}}}
+\chapter{Ending the Game}
+\begin{multicols}{2}
+\rules{ending}
+\end{multicols}
+
+% ================================================================== 08
+\renewcommand{\secstatus}{THE LOBBY \quad // \quad THE HOST \quad // \quad SEATS AND BOTS}
+\chapter{Hosting, Joining and Leaving}
+\begin{multicols}{2}
+\rules{hosting}
+\end{multicols}
+
+% ================================================================== 09
+\renewcommand{\secstatus}{\MakeUppercase{\V{finderscut}} \quad // \quad \MakeUppercase{\V{root}} AND \MakeUppercase{\V{sudo}} \quad // \quad CASH}
+\chapter{Where the Money Comes From}
+\begin{multicols}{2}
+\rules{money}
+\end{multicols}
+
+% ================================================================== 10
+\renewcommand{\secstatus}{EARLY \quad // \quad MIDDLE \quad // \quad LATE}
+\vspace{24pt}\section{Tips}                  % follows on: the money chapter ends early on its page
+\begin{multicols}{2}
+\rules{tips}
+\end{multicols}
+
+% ================================================================== 11
+\renewcommand{\secstatus}{THE RULES \quad // \quad THE PC}
+\chapter{Frequently Asked Questions}
+\begin{multicols}{2}
+\rules{faq}
+
+\subsection{On the PC}
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[Which PCs?] Any IBM PC or compatible from the first 4.77 MHz PC on, DOS 2 or later, with an RS-232 FujiNet
+    and its \code{FUJINET.SYS} loaded. The game is all text, so it looks alike on any display: MDA, Hercules, CGA,
+    EGA, VGA or a laptop's LCD.
+  \item[What do I need in CONFIG.SYS?] \code{DEVICE=FUJINET.SYS}, from the same FujiNet firmware version as your
+    FujiNet. It uses \code{COM1} at 115200 bps unless you set \code{FUJI\_PORT} and \code{FUJI\_BPS}.
+  \item[Can I play alone?] Yes. Host a game and press \key{\Rule{minplayers}}: one bot plays you. Any seat nobody
+    takes goes to a bot.
+  \item[What are the digits on the \V{grid}?] Move hints: each marks a \V{node} that an \V{exploit} in your \V{kit}
+    can run on, and the digit is its key. \key{F2} turns them on or off.
+  \item[What do \code{*} and \code{?} after a name mean?] \code{*} is a bot. \code{?} is a \V{player} who is away,
+    or on autopilot; a bot plays for them meanwhile.
+  \item[Can I turn the sound off?] Yes: \key{F3}, any time. A chord says it's back on.
+  \item[What do I hear?] With an AdLib or a Sound Blaster, the chords play on its music chip; otherwise on the
+    PC's speaker, a note at a time.
+  \item[What is the art at the sides?] Decoration: a circuit board, the same all game. It shows nothing the
+    middle 40 columns don't.
+  \item[Can I play against an Atari or an Apple II?] Yes. The servers are the same for every machine: PC, Apple II
+    and Atari players meet at the same tables.
+  \item[Why was my handle refused?] Someone at the table has it, a bot included. If it's your own seat after a
+    reboot, the server may not have noticed the drop yet: try again in a minute.
+  \item[What if everybody leaves?] The game waits for 10 minutes with nobody connected, then it is dropped.
+\end{description}
+\end{multicols}
+
+% ================================================================== 12
+\renewcommand{\secstatus}{EVERY TERM, FROM THE THEME}
+\chapter{Glossary}
+\rules{glossary}
+
+% ================================================================== REF
+\renewcommand{\secstatus}{FIND THE \MakeUppercase{\V{hive}}'S SIZE IN ITS TIER, THEN READ ACROSS}
+\clearpage\renewcommand{\secnum}{REF}% after the page break: the running head uses it
+\section{\V{coin} Prices and Payouts}
+\vspace{6pt}
+\begin{center}
+\def\textcolor#1#2{\inv{#2}}% the tier's syndicate letters inverse, as on the screen
+\newcommand{\hot}[1]{\leavevmode{\color{alarm}#1}}
+\machine\fontsize{12}{14}\selectfont
+\renewcommand{\arraystretch}{1.3}
+\newcolumntype{C}{>{\centering\arraybackslash}p{0.85in}}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}p{0.95in}}
+\begin{tabular}{CCC@{\hspace{14pt}}R@{\hspace{14pt}}RR}
+LOW & MID & HIGH & \leavevmode\color{steel}PRICE & \leavevmode\color{signal}\MakeUppercase{\V{root}} & \leavevmode\color{signal}\MakeUppercase{\V{sudo}} \\
+\TierCoins{low} & \TierCoins{mid} & \TierCoins{high} & & & \\[2pt]
+\hline
+2      & -      & -      & \Y{200}   & \Y{2,000}  & \Y{1,000} \\
+3      & 2      & -      & \Y{300}   & \Y{3,000}  & \Y{1,500} \\
+4      & 3      & 2      & \Y{400}   & \Y{4,000}  & \Y{2,000} \\
+5      & 4      & 3      & \Y{500}   & \Y{5,000}  & \Y{2,500} \\
+6-10   & 5      & 4      & \Y{600}   & \Y{6,000}  & \Y{3,000} \\
+\hot{11-20}  & 6-10   & 5      & \Y{700}   & \Y{7,000}  & \Y{3,500} \\
+21-30  & \hot{11-20}  & 6-10   & \Y{800}   & \Y{8,000}  & \Y{4,000} \\
+31-40  & 21-30  & \hot{11-20}  & \Y{900}   & \Y{9,000}  & \Y{4,500} \\
+41+    & 31-40  & 21-30  & \Y{1,000} & \Y{10,000} & \Y{5,000} \\
+-      & 41+    & 31-40  & \Y{1,100} & \Y{11,000} & \Y{5,500} \\
+-      & -      & 41+    & \Y{1,200} & \Y{12,000} & \Y{6,000} \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{10pt}
+\begin{center}\machine\fontsize{10}{16}\selectfont
+\begin{tabular}{@{}ll@{}}
+\textcolor{alarm}{RED} & FIRST \MakeUppercase{\V{safe}} SIZE: THE \MakeUppercase{\V{hive}} CAN'T BE \MakeUppercase{\V{absorbed}}\\
+\textcolor{signal}{\MakeUppercase{\V{root}}} & 10 x \MakeUppercase{\V{coin}} PRICE\\
+\textcolor{signal}{\MakeUppercase{\V{sudo}}} & 5 x \MakeUppercase{\V{coin}} PRICE\\
+\Rule{endsize}+ & \MakeUppercase{\V{totalcompromise}}: THE \MakeUppercase{\V{nullroute}} MAY BE CALLED
+\end{tabular}\end{center}
+
+\vspace{6pt}
+\begin{center}
+{\machine\fontsize{9}{11}\selectfont\color{steel} THE LETTERS: EACH SYNDICATE ON THE \MakeUppercase{\V{grid}}, AND ITS TIER}\par\vspace{6pt}
+\renewcommand{\arraystretch}{1.3}
+\newcommand{\synrow}[1]{\inv{\Syn{#1}{letter}} & \Syn{#1}{name} & {\machine\color{steel}\MakeUppercase{\Syn{#1}{tier}}}}
+\begin{tabular}{@{}cl@{\hspace{8pt}}l@{\hspace{36pt}}cl@{\hspace{8pt}}l@{}}
+\synrow{0} & \synrow{4} \\
+\synrow{1} & \synrow{5} \\
+\synrow{2} & \synrow{6} \\
+\synrow{3} & & & \\
+\end{tabular}
+\end{center}
+
+\end{document}

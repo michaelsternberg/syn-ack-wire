@@ -11,10 +11,10 @@ The title screen dials the server as soon as it appears, and its status line sta
 type your handle.
 
 \begin{description}[leftmargin=0pt,labelsep=0.5em]
-  \item[\code{\Status{lobby}{2}}] No game yet; 2 \Vp{player} wait to play. \key{Return} takes a seat in the lobby.
-  \item[\code{\Status{jackin}}] A game is on, and a bot holds at least one seat. \key{Return} takes over a bot.
+  \item[\code{\Status{lobby}{2}}] No game yet; 2 \Vp{player} wait to play. \key{\KeyReturn} takes a seat in the lobby.
+  \item[\code{\Status{jackin}}] A game is on, and a bot holds at least one seat. \key{\KeyReturn} takes over a bot.
   \item[\code{\Status{away}}] A game is on, every seat is a \V{player}'s, and some have dropped. Only they get back in.
-  \item[\code{\Status{full}}] \Rule{maxplayers} \Vp{player} are playing. \key{Return} does nothing.
+  \item[\code{\Status{full}}] \Rule{maxplayers} \Vp{player} are playing. \key{\KeyReturn} does nothing.
   \item[\code{NO CARRIER}] The server didn't answer. The game dials again.
 \end{description}
 People at the title screen don't hold a seat yet, and nobody waits for them.
@@ -45,7 +45,7 @@ Upper and lower case count as the same. The one exception is coming back to your
 \end{itemize}
 
 \subsection{Joining a lobby}
-Type your handle and press \key{Return}. You take the next empty seat and appear in everyone's seat rows. If
+Type your handle and press \key{\KeyReturn}. You take the next empty seat and appear in everyone's seat rows. If
 the host clock is running, the log tells you how long the host has left. You play when the host starts.
 
 \atscreen{lobby}
@@ -56,7 +56,7 @@ A newcomer to a game in progress takes over the bot seat worth least (cash plus 
 \code{\Say{takeover}}, and everyone reads \code{\Say{jackin}{ZER0COOL}{\Bot{4}}}. A decision the bot is already
 making stays the bot's; you play from the next one.
 \begin{itemize}
-  \item Two people going for the last bot seat: the first \key{Return} wins. The other reads
+  \item Two people going for the last bot seat: the first \key{\KeyReturn} wins. The other reads
     \code{TOO LATE: THE LAST SEAT WAS TAKEN} and stays on the title screen.
   \item The server may disable the jack in function for a game among friends. A game in progress then shows
     \code{\Status{full}}.
@@ -96,7 +96,7 @@ about a minute; meanwhile the shot clock covers any decision.
 \begin{itemize}
   \item \textbf{The connection drops:} after 20 seconds with nothing from the server, \SignalLost. At 30 seconds the game hangs up and dials again by itself. Once back, the
     server sends the whole game again, any decision waiting included. No key needed.
-  \item \textbf{After a reboot:} type the same handle on the title screen and press \key{Return}. You get your
+  \item \textbf{After a reboot:} type the same handle on the title screen and press \key{\KeyReturn}. You get your
     own seat back, not a bot's, as long as it is shown away. If the server hasn't noticed the drop yet, your
     handle is still in use (\code{THAT HANDLE IS TAKEN}): wait a minute and try again.
 \end{itemize}

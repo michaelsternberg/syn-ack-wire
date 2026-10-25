@@ -29,11 +29,19 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/apple2/sound.s` | Chords as short notes on the speaker |
 | `src/apple2/ring.s`, `game.cfg` | `rx_ring` at $0C00; cc65's `apple2-system.cfg`: a ProDOS system file at $2000 |
 | `src/apple2/title.txt` | The Apple title logo, plain text; `title_art.h` is **generated** by `tools/title_text.py` |
+| `src/msdos/display_text.c` | MS-DOS text screens: the 40×24 layout centred in 80×25 text, monochrome attributes only (normal, reverse, blink); the instruction pages from `SYNACK.HLP` |
+| `src/msdos/net_fn.c` | Network calls for MS-DOS: FujiNet RS-232 through fujinet-lib, which calls `FUJINET.SYS`'s INT F5h |
+| `src/msdos/input.c` | Keys from the BIOS (F1 help, F2 hints, F3 sound) and `ticks()` from the BIOS tick, 18 a second |
+| `src/msdos/sound.c` | Chords on an AdLib (OPL2 at 388h, also a Sound Blaster's) when one answers, else on the PC speaker |
+| `src/msdos/title_art.h` | The Atari's title logo in code page 437's box characters, **generated** by `tools/title_art.py d` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
+| `test/dos_dump.c` | The MS-DOS autoplay build's screen dumps: the 40×24 game area to `SCRnnn.BIN` |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
+| `tools/run-dos.sh` | Plays the MS-DOS client in a DOSBox-X window, booting your PC-DOS disk with `FUJINET.SYS`, FujiNet-PC (RS-232) on COM1 |
+| `tools/help_msdos.py` | Checks the MS-DOS instruction pages and writes them as screen images (`SYNACK.HLP`) |
 | `tools/screen2txt.py` | Shows a screen dump as text |
 | `tools/render_screen.py` | Draws a screen dump as the screen looks, for the manual's captures |
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
@@ -54,8 +62,16 @@ make test                                # build/atari/synack-auto.xex: plays by
 make atr                                 # build/atari/syn-ack-wire-atari.atr: the game disk (PicoBoot, game, help pages)
 make pc                                  # build/pc/pc-client: the common code on this PC
 make pc-apple2                           # build/pc/pc-apple2: the same with the Apple II's display, for captures
+make msdos WATCOM=dir                    # build/msdos/SYNACK.EXE and SYNACK.HLP: the MS-DOS client (8088 and up)
+make msdos-img WATCOM=dir                # build/msdos/syn-ack-wire-msdos.img: the release floppy (360 KB)
+make msdos-test WATCOM=dir               # build/msdos/SYNAUTO.EXE: plays by itself, saving its screen
+make msdos-wiremon WATCOM=dir            # build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for DOS
+make pc-msdos                            # build/pc/pc-msdos: the common code with the MS-DOS display, for captures
 ```
-Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build.
+Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. MS-DOS: Open
+Watcom v2 (`2.0 beta Sep 22 2025`), as the FujiNet team builds its DOS programs; `WATCOM` is its folder (default
+`~/openwatcom`). The game needs `FUJINET.SYS` (fujinet-rs232) loaded in CONFIG.SYS, from the same firmware version as
+the FujiNet.
 
 ## Play it in the emulator
 ```sh
@@ -313,6 +329,41 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
   lower case and `|`), in rows 0-13; `tools/title_text.py` makes the header. Under it, low on the screen as on
   the Atari: REGION, STATUS and HANDLE (rows 15-17), then the keys, OPEN-APPLE, CLOSED-APPLE and ? (19-21).
 
+## MS-DOS (msdos)
+The same common code with an MS-DOS platform layer (`src/msdos/`), for an IBM PC and up: plain 8086 code, so an
+8088 at 4.77 MHz, DOS 2 or later, any display adapter. Built with Open Watcom v2, as the FujiNet team's DOS
+programs are (`make msdos WATCOM=dir`). FujiNet is an RS-232 one, reached through `FUJINET.SYS` (fujinet-rs232),
+which CONFIG.SYS loads and which gives programs INT F5h; fujinet-lib's MS-DOS build calls it.
+```sh
+make msdos WATCOM=dir                       # build/msdos/SYNACK.EXE and SYNACK.HLP
+make msdos-img WATCOM=dir                   # build/msdos/syn-ack-wire-msdos.img: both on a 360 KB floppy
+tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for an IBM PC 5150 (CARD=mda, ADLIB=1)
+```
+- **Network:** as the Apple's (`net_fn.c` follows it), through fujinet-lib: 1 KB. There is no "data waiting"
+  signal, so while nothing comes `net_poll` asks once a BIOS tick (18 a second); while bytes arrive, every call.
+- **The shot clock** is the BIOS tick (`ticks_per_sec()` 18), which the timer interrupt keeps counting while a
+  serial call waits; the countdown shows one second short, as on the Apple.
+- **Screen:** 80x25 text, the 40x24 layout in columns 20-59, written straight to video memory: B000 on a
+  monochrome adapter (BIOS mode 7), else B800 in mode 3. Monochrome attributes only, so it reads alike on MDA,
+  Hercules, CGA, EGA, VGA and the grey LCD panels of old laptops: normal, reverse where the Apple has inverse,
+  and reverse blinking for the last move (5 seconds, `DISPLAY_IDLE=1`). Code page 437 has a yen sign. The 20
+  columns either side hold circuit-board art (`src/msdos/margins.txt`, UTF-8, `tools/margins_msdos.py` makes the
+  header): decoration only, dark grey on a colour adapter, normal on a monochrome one. The title logo is the
+  Atari's art in box characters (`tools/title_art.py d`).
+- **Keys:** **F1** or **?** the instructions, **F2** move hints, **F3** sound (switched where the keys are read),
+  **Backspace** or **Delete** undoes a letter, **Enter** confirms; the prompts say BACKSPACE and ENTER.
+- **Sound:** an AdLib, or a Sound Blaster's FM part, when one answers at 388h: the Atari's chords on three FM
+  voices, started and stopped by the BIOS tick (`snd_poll()`, with every key check), so nothing waits. Else the
+  PC speaker: the Apple's chords, a note at a time, timed by a delay loop measured against the tick at start.
+- **Instructions:** `SYNACK.HLP` beside the program, from `help/msdos/screen/HELP*.TXT` (the Apple's format, with
+  `\` for the yen sign) by `tools/help_msdos.py`: 1920-byte pages of character and attribute, the QR code drawn
+  in half blocks. A monochrome adapter has one text page, so while the pages are up the game draws into a copy of
+  the screen in memory, copied back when they close.
+- **Tested** (2026-10-24, FujiNet-PC built with `FUJINET_TARGET=RS232`, its BoIP port on COM1, PC-DOS 3.30):
+  in DOSBox-X the autoplay build played two whole games and the protocol monitor ran 8 minutes, 632 frames, 0
+  bad. On MAME's IBM PC 5150 (8088 at 4.77 MHz, 115200 bps) with CGA and an AdLib it played two whole games in
+  13 minutes on one connection; with MDA and the speaker, one whole game. No errors in either log.
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -337,6 +388,17 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
 | `help.s` | 211 | + 68 rodata/data, 1K ProDOS buffer; the pages are read onto text page 2; lo-res for a QR page |
 | `sound.s` | 85 | + 42 rodata (7 chords of up to 3 notes); `pause`, the delay loop the polling is paced by |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
+| **msdos** (2026-10-25, Open Watcom `-0 -ms -os`) | | |
+| `SYNACK.EXE` | 19598 | whole MZ file; code 16520 (below); plus 6.6 KB bss and a 2 KB stack once loaded |
+| `display_text.c` | 4059 | + 2071 rodata (screen words, title art, the circuit-board panels), 5946 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page |
+| `game.c` | 2322 | + 382 rodata, 310 bss (the game state) |
+| `main.c` | 1171 | + 152 rodata |
+| `sound.c` | 1046 | + 175 rodata (7 speaker chords, 11 AdLib chords); the OPL2 test and set-up, the speaker's delay loop |
+| `net_fn.c` | 452 | + 281 bss (the 256-byte `rx_ring`); status paced to one call a BIOS tick while nothing comes |
+| `proto.c` | 196 | + 26-byte length table, 128-byte `msg[]` |
+| `input.c` | 150 | keys from INT 16h, `ticks()` from the BIOS tick |
+| fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
+| Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |

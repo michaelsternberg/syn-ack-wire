@@ -161,6 +161,9 @@
 % The legend under a capture: numbered items in two columns, none split.
 \newcommand{\ci}[1]{\colorbox{amber}{\textcolor{white}{\machine\fontsize{10}{10}\selectfont #1}}\ }
 \newcommand{\li}[2]{\par\noindent\parbox[t]{\linewidth}{\ci{#1}#2}\par}
+% The key that confirms, as the platform's keyboard names it: shared text says \key{\KeyReturn}.
+% A platform.tex may rename it (MS-DOS: Enter).
+\newcommand{\KeyReturn}{Return}
 % Key tables: the keys on the left as keycaps, what they do on the right.
 \newenvironment{keytable}{\par\noindent\renewcommand{\arraystretch}{1.5}%
   \tabularx{\linewidth}{@{}>{\raggedright\arraybackslash}p{1.55in}>{\RaggedRight\arraybackslash}X@{}}}

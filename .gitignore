@@ -7,6 +7,8 @@ client/src/common/proto_tab.h
 client/src/atari/title_art.h
 client/src/atari/title_art.inc
 client/src/apple2/title_art.h
+client/src/msdos/title_art.h
+client/src/msdos/margins.h
 docs/style/theme.tex
 
 # LaTeX leftovers if a build fails

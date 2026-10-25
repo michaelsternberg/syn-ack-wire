@@ -7,6 +7,9 @@
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
 #   make apple2_text          build/apple2_text/synack: the Apple II client, text mode (IIe, IIc, IIgs)
 #   make apple2_text-po PRODOS=disk   build/apple2_text/syn-ack-wire-apple2.po: a ProDOS disk that boots it
+#   make msdos WATCOM=dir     build/msdos/SYNACK.EXE: the MS-DOS client (8088 and up, FUJINET.SYS)
+#   make msdos-img WATCOM=dir build/msdos/syn-ack-wire-msdos.img: a 360 KB floppy with SYNACK.EXE and its help pages
+#   make msdos-wiremon WATCOM=dir     build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for MS-DOS
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -172,6 +175,58 @@ $(PO): $(A2)/synack $(A2)/synack.hlp tools/prodos_boot.py
 	$(AC) -ls $@
 apple2_text-po: $(PO)
 
+# --- MS-DOS (8088 and up): FujiNet RS-232 through fujinet-lib (a pinned copy in lib/), which calls FUJINET.SYS's
+# INT F5h. Open Watcom v2 (WATCOM=its folder), 8086 code, small model. DOS names are 8.3: WMAUTO.EXE is
+# wiremon's self-test (AUTOTEST), which also writes WIREMON.TXT.
+WATCOM  ?= $(HOME)/openwatcom
+DOSB    = build/msdos
+DOSLIB  = lib/fujinet-lib/msdos-5.0.0
+WCL     = env WATCOM=$(WATCOM) PATH=$(WATCOM)/binl64:$(WATCOM)/binl:$$PATH INCLUDE=$(WATCOM)/h wcl
+WFLAGS  = -q -0 -ms -bt=dos -os -w4 -D__fastcall__= -I$(DOSLIB)/include
+DOSNET  = src/common/proto.c src/msdos/net_fn.c $(DOSLIB)/fujinet-msdos-5.0.0.lib
+
+DOSGAME = src/common/main.c src/common/game.c src/msdos/display_text.c src/msdos/input.c src/msdos/sound.c $(DOSNET)
+
+src/msdos/title_art.h: $(TITLE) tools/title_art.py      # the Atari's logo, in code page 437's box characters
+	python3 tools/title_art.py d 0 $< > $@
+src/msdos/margins.h: src/msdos/margins.txt tools/margins_msdos.py     # the circuit-board panels either side
+	python3 tools/margins_msdos.py $< > $@
+DOSHDRS = src/msdos/title_art.h src/msdos/margins.h
+
+$(DOSB):
+	mkdir -p $@
+$(DOSB)/SYNACK.EXE: $(DOSGAME) $(HDRS) $(DOSHDRS) | $(DOSB)
+	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -fo=$(DOSB)/ -fe=$@ $(DOSGAME)
+	@echo "$@: $$(stat -c %s $@) bytes"
+msdos: $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP
+# the instruction pages; a help page's [QR] marker links to the MS-DOS manual, by the fly.io server's short link
+DOSHELP = $(sort $(wildcard help/msdos/screen/HELP*.TXT))
+DOS_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/MSDOS
+$(DOSB)/SYNACK.HLP: $(DOSHELP) tools/help_msdos.py tools/qr.py | $(DOSB)
+	python3 tools/help_msdos.py --qr "$(DOS_QR_URL)" $@ $(DOSHELP)
+# the release floppy: 360 KB, so the first PCs' drives read it; not bootable, and no FUJINET.SYS, which comes with
+# the player's FujiNet (mtools: mformat, mcopy)
+DOSIMG  = $(DOSB)/syn-ack-wire-msdos.img
+$(DOSIMG): $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP
+	rm -f $@
+	mformat -i $@ -C -f 360 -v SYNACK ::
+	mcopy -i $@ $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP ::
+	mdir -i $@ ::
+msdos-img: $(DOSIMG)
+# the autoplay build: plays by itself and saves the screen (SCRnnn.BIN) at each new prompt and every 4 seconds
+DOSAUTO = test/autoplay.c test/dos_dump.c $(DOSGAME)
+$(DOSB)/SYNAUTO.EXE: $(DOSAUTO) $(HDRS) $(DOSHDRS) | $(DOSB)
+	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -DAUTOPLAY -DDUMP_TICKS=72 -DKEY_TICKS=6 -DAUTO_HANDLE='"PC"' -fo=$(DOSB)/ -fe=$@ $(DOSAUTO)
+	@echo "$@: $$(stat -c %s $@) bytes"
+msdos-test: $(DOSB)/SYNAUTO.EXE
+$(DOSB)/WIREMON.EXE: test/wiremon.c $(DOSNET) $(HDRS) | $(DOSB)
+	$(WCL) $(WFLAGS) $(DEFS) -fo=$(DOSB)/ -fe=$@ test/wiremon.c $(DOSNET)
+	@echo "$@: $$(stat -c %s $@) bytes"
+$(DOSB)/WMAUTO.EXE: test/wiremon.c $(DOSNET) $(HDRS) | $(DOSB)
+	$(WCL) $(WFLAGS) $(DEFS) -DAUTOTEST -fo=$(DOSB)/ -fe=$@ test/wiremon.c $(DOSNET)
+	@echo "$@: $$(stat -c %s $@) bytes"
+msdos-wiremon: $(DOSB)/WIREMON.EXE $(DOSB)/WMAUTO.EXE
+
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
 pc-apple2: $(HDRS) src/apple2/title_art.h
@@ -180,9 +235,16 @@ pc-apple2: $(HDRS) src/apple2/title_art.h
 	    -DPC_SCREEN=pc_screen -DAUTO_HANDLE='"APPLE"' -o build/pc/pc-apple2 \
 	    src/common/main.c src/common/game.c src/common/proto.c src/apple2/display_text.c test/autoplay.c test/pc_harness.c
 
+# --- the same for the MS-DOS display (src/msdos/display_text.c): build/pc/pc-msdos [host] [port]
+pc-msdos: $(HDRS) $(DOSHDRS)
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 \
+	    -DPC_SCREEN=pc_screen -DPC_MSDOS -DAUTO_HANDLE='"PC"' -o build/pc/pc-msdos \
+	    src/common/main.c src/common/game.c src/common/proto.c src/msdos/display_text.c test/autoplay.c test/pc_harness.c
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 apple2_text apple2_text-po clean
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o
 .DELETE_ON_ERROR:

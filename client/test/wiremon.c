@@ -10,9 +10,19 @@
  * Built with -DAUTOTEST it then starts a 3-seat game itself and sends Q once the
  * game is over (then stops), or as soon as a bad frame arrives, so a test
  * script can read the result from the server log.
+ *
+ * On MS-DOS (built with Open Watcom, __DOS__) the 40x24 screen is a buffer in
+ * memory, shown in the middle of the 80-column text screen. The AUTOTEST build
+ * also writes it to WIREMON.TXT every few seconds and when it stops, for a test
+ * script to read from the disk.
  */
-#include <atari.h>
 #include <string.h>
+#ifdef __DOS__
+#include <stdio.h>
+#include <bios.h>
+#else
+#include <atari.h>
+#endif
 #include "../src/platform.h"
 #include "../src/common/proto.h"
 #include "../src/common/proto_tab.h"
@@ -23,9 +33,18 @@
 #define TABLE   0
 #define RESYNCS 10
 
+#ifdef __DOS__
+static unsigned char screen[24 * 40];
+#define RTCLOK (*(volatile unsigned char __far *)0x0040006CL)  /* BIOS tick, 18.2 a second */
+#define SECOND 18
+#define CHAR(c) (c)                     /* the buffer holds ASCII; 0 shows as blank */
+#else
 #define SAVMSC (*(unsigned char **)0x58)
 #define RTCLOK (*(volatile unsigned char *)0x14)
 #define CH     (*(volatile unsigned char *)0x2FC)
+#define SECOND 60
+#define CHAR(c) ((c) - 0x20)            /* ATASCII $20-$5F is internal $00-$3F */
+#endif
 
 static unsigned char *scr, *cur;
 static unsigned char token[4];
@@ -33,14 +52,17 @@ static unsigned frames, bytes;
 static unsigned char bad, resyncs, greeted, t, j, k, e;
 #ifdef AUTOTEST
 static unsigned char started;           /* 1: S sent, 2: game running, 3: done */
+#ifdef __DOS__
+static unsigned char passes;            /* main loop passes, for the periodic save */
+#endif
 #endif
 
 /* ---------------------------------------------------------------- screen
- * Screen memory takes internal codes: ATASCII $20-$5F is internal $00-$3F. */
+ * The Atari's screen memory takes internal codes: see CHAR. */
 
 static void put(unsigned char c)
 {
-    *cur++ = c - 0x20;
+    *cur++ = CHAR(c);
 }
 
 static void puts_(const char *s)
@@ -80,6 +102,36 @@ static void say(const char *s)
     puts_(s);
 }
 
+#ifdef __DOS__
+/* Copy the buffer to the middle of the 80x25 text screen: B000 on a monochrome
+ * adapter (BIOS video mode 7), else B800. Normal attribute. */
+static void show_screen(void)
+{
+    unsigned short __far *v = *(volatile unsigned char __far *)0x00400049L == 7
+        ? (unsigned short __far *)0xB0000000L : (unsigned short __far *)0xB8000000L;
+    unsigned i;
+    for (i = 0; i < 24 * 40; ++i)
+        v[i / 40 * 80 + 20 + i % 40] = 0x0700 | screen[i];
+}
+
+#ifdef AUTOTEST
+/* The buffer as text, for a test script: WIREMON.TXT on the current drive. */
+static void save_screen(void)
+{
+    FILE *f = fopen("WIREMON.TXT", "w");
+    unsigned i;
+    if (!f)
+        return;
+    for (i = 0; i < 24 * 40; ++i) {
+        fputc(screen[i] ? screen[i] : ' ', f);
+        if (i % 40 == 39)
+            fputc('\n', f);
+    }
+    fclose(f);
+}
+#endif
+#endif
+
 static void status(void)
 {
     cur = scr + 40;
@@ -89,6 +141,9 @@ static void status(void)
     dec(bytes);
     puts_("  BAD ");
     hex(bad);
+#ifdef __DOS__
+    show_screen();
+#endif
 }
 
 /* ---------------------------------------------------------------- network */
@@ -136,7 +191,7 @@ static void connect(void)
         say("OPEN FAILED ");
         hex(e);
         net_close();
-        wait(120);
+        wait(2 * SECOND);
     }
     hello();
 }
@@ -204,12 +259,31 @@ static void frame(void)
             started = 3;
             say("AUTOTEST DONE");
             send1('Q', 0, 1);
+#ifdef __DOS__
+            save_screen();
+#endif
         }
         break;
 #endif
     }
 }
 
+#ifdef __DOS__
+static void keys(void)
+{
+    if (!_bios_keybrd(_KEYBRD_READY))
+        return;
+    switch ((unsigned char)_bios_keybrd(_KEYBRD_READ) & 0xDF) {     /* ASCII, upper case */
+    case '2' & 0xDF: send1('S', 2, 2); break;
+    case '3' & 0xDF: send1('S', 3, 2); break;
+    case '4' & 0xDF: send1('S', 4, 2); break;
+    case '5' & 0xDF: send1('S', 5, 2); break;
+    case '6' & 0xDF: send1('S', 6, 2); break;
+    case 'R': send1('R', 0, 1); break;
+    case 'Q': send1('Q', 0, 1); break;
+    }
+}
+#else
 static void keys(void)
 {
     k = CH;
@@ -226,10 +300,15 @@ static void keys(void)
     case 0x2F: send1('Q', 0, 1); break; /* Q */
     }
 }
+#endif
 
 void main(void)
 {
+#ifdef __DOS__
+    scr = screen;
+#else
     scr = SAVMSC;
+#endif
     for (cur = scr; cur < scr + 24 * 40; ++cur)
         *cur = 0;
     cur = scr;
@@ -247,7 +326,7 @@ void main(void)
             say("CARRIER LOST ");
             hex(e);
             net_close();
-            wait(120);
+            wait(2 * SECOND);
             connect();
             continue;
         }
@@ -265,5 +344,9 @@ void main(void)
         }
         status();
         keys();
+#if defined(__DOS__) && defined(AUTOTEST)
+        if (++passes == 0)              /* every 256 passes: about 14 s */
+            save_screen();
+#endif
     }
 }
