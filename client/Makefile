@@ -205,12 +205,14 @@ DOS_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/MSDOS
 $(DOSB)/SYNACK.HLP: $(DOSHELP) tools/help_msdos.py tools/qr.py | $(DOSB)
 	python3 tools/help_msdos.py --qr "$(DOS_QR_URL)" $@ $(DOSHELP)
 # the release floppy: 360 KB, so the first PCs' drives read it; not bootable, and no FUJINET.SYS, which comes with
-# the player's FujiNet (mtools: mformat, mcopy)
+# the player's FujiNet (mtools: mformat, mcopy). The FujiNet lobby mounts it, changes to its root and runs its
+# AUTOEXEC.BAT (fujinet-lobby, clients/src/msdos/platform.c): one line, no @ECHO OFF, which DOS 2 doesn't know.
 DOSIMG  = $(DOSB)/syn-ack-wire-msdos.img
 $(DOSIMG): $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP
 	rm -f $@
 	mformat -i $@ -C -f 360 -v SYNACK ::
 	mcopy -i $@ $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP ::
+	printf 'SYNACK\r\n' | mcopy -i $@ - ::AUTOEXEC.BAT
 	mdir -i $@ ::
 msdos-img: $(DOSIMG)
 # the autoplay build: plays by itself and saves the screen (SCRnnn.BIN) at each new prompt and every 4 seconds

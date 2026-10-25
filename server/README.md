@@ -199,9 +199,9 @@ for the Apple, the option once for each platform; `clients` in a `--config` file
 (`TCP://host:port/`, the server's public address) in an AppKey; the client reads it and dials `N:` + it
 (client/README.md).
 - The entry: game `SYN-ACK WIRE` (theme title), server name = the `--region`, real-world region `--lobby-region`
-  (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`), appkey `--lobby-key` (default
+  (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`, `msdos`), appkey `--lobby-key` (default
   11; it must match the clients' `LOBBY_KEY`). Each server process is its own entry, so four regions are four
-  `serve.py` on four ports. One entry serves both platforms: each platform's lobby program lists the entries with a
+  `serve.py` on four ports. One entry serves every platform: each platform's lobby program lists the entries with a
   disk for it, so Apple and Atari players meet at the same tables.
 - PLAYERS shows table 0, the one clients join. In the lobby: humans here of 6. In a game: the seats humans hold
   (away ones too) of the seats playing, the rest being bots a newcomer can jack in for; with `--no-jack-in` a game
