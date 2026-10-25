@@ -35,6 +35,7 @@ cd server && python3 -m unittest -q && python3 sim.py 2000   # rules and server;
 cd client && make && make atr                                # build/atari/syn-ack-wire-atari.atr (public server)
 cd client && make atrtest                                    # build/atari/local/..., dialing localhost:6502
 cd client && make apple2_text-po PRODOS=<ProDOS disk>        # build/apple2_text/syn-ack-wire-apple2.po
+cd client && make msdos-img WATCOM=<Open Watcom dir>         # build/msdos/syn-ack-wire-msdos.img (360 KB floppy)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
 ```
@@ -52,8 +53,8 @@ client/tools/capture.sh                                      # redo the staged c
 - Never post to the FujiNet lobby, public or QA, unless asked. Never echo a token or other secret.
 - `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked, and with
   `deploy/deploy.sh`, which first checks no one is playing. The disks it serves are
-  `client/build/atari/syn-ack-wire-atari.atr` and `client/build/apple2_text/syn-ack-wire-apple2.po` as they are at
-  deploy time (`server/README.md`, "Deploying to fly.io").
+  `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po` and
+  `client/build/msdos/syn-ack-wire-msdos.img` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else

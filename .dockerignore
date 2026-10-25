@@ -4,6 +4,7 @@
 !theme/theme.toml
 !client/build/atari/syn-ack-wire-atari.atr
 !client/build/apple2_text/syn-ack-wire-apple2.po
+!client/build/msdos/syn-ack-wire-msdos.img
 !deploy/
 server/tests/
 **/__pycache__

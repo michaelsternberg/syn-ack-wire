@@ -132,11 +132,13 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
 3. Give it a dedicated IPv4 address: `fly ips allocate-v4`. (The free shared address only carries HTTP and TLS;
    FujiNet's `N:TCP://` is neither.)
 4. Build the game disks for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` and
-   `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` (the default URL is this project's own app,
-   syn-ack-wire.fly.dev). The image takes `client/build/atari/syn-ack-wire-atari.atr` and
-   `client/build/apple2_text/syn-ack-wire-apple2.po` as they are when you deploy, and serves them at
-   `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr` and `.../syn-ack-wire-apple2.po`, and under their old names,
-   `synack.atr` and `synack.po` (v0.2.0 and before), for links saved then. A disk booted directly dials that one
+   `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` and
+   `make msdos-img URL=N:TCP://<app>.fly.dev:6502/ WATCOM=...` (the default URL is this project's own app,
+   syn-ack-wire.fly.dev). The image takes `client/build/atari/syn-ack-wire-atari.atr`,
+   `client/build/apple2_text/syn-ack-wire-apple2.po` and `client/build/msdos/syn-ack-wire-msdos.img` as they are
+   when you deploy, and serves them at `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`
+   and `.../syn-ack-wire-msdos.img`, and the first two under their old names, `synack.atr` and `synack.po`
+   (v0.2.0 and before), for links saved then. A disk booted directly dials that one
    server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
 5. Deploy, as **one** machine: `fly deploy --ha=false`, or `deploy/deploy.sh`, which does it only while no one
    is playing: no players on this app's servers in the lobby, and no game activity in `fly logs` for 10 minutes
@@ -147,7 +149,7 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    disks above, one for each platform), keep `url` on the QA lobby until a listing looks right, and deploy again.
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
-`deploy/deploy.sh`; to change a disk, `make atr` or `make apple2_text-po` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
+`deploy/deploy.sh`; to change a disk, `make atr`, `make apple2_text-po` or `make msdos-img` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s
