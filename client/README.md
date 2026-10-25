@@ -363,6 +363,11 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
   in DOSBox-X the autoplay build played two whole games and the protocol monitor ran 8 minutes, 632 frames, 0
   bad. On MAME's IBM PC 5150 (8088 at 4.77 MHz, 115200 bps) with CGA and an AdLib it played two whole games in
   13 minutes on one connection; with MDA and the speaker, one whole game. No errors in either log.
+  On real hardware (2026-10-25), a 386 with a FujiNet RS-232 on its serial port: run by hand from the mounted disk
+  (the title, the art, the sound, a connection that held), and from the FujiNet lobby, which mounts the floppy
+  and runs its `AUTOEXEC.BAT`. With an SD card in the FujiNet, the table picked and the lobby name reached the
+  game; without one, FujiNet keeps no app keys and the game dials its built-in server. The lobby finds
+  `COMMAND.COM` by `PATH`, so an empty `PATH` leaves it at a blank screen.
 
 ## Sizes (bytes)
 | Piece | Code | Notes |
