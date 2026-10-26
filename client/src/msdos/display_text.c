@@ -1,5 +1,9 @@
 /* The text-only display for MS-DOS: the 40x24 layout in the middle of the
- * 80x25 text screen (columns 20-59), written straight to video memory. The
+ * 80x25 text screen (columns 20-59), or filling a 40x25 one, written straight
+ * to video memory. 40 columns are for a TV or a composite monitor, where 80
+ * blur: the player picks (setup), and F4 on the title screen swaps. On a colour
+ * adapter F5 turns green phosphor on or off, anywhere (below); it starts off, as
+ * colour can be hard to read on a grey LCD panel. The
  * layout and the code are the Apple II's (src/apple2/display_text.c). Only
  * monochrome attributes, so it reads the same on MDA, Hercules, CGA, EGA, VGA
  * and the grey LCD panels of old laptops:
@@ -16,7 +20,7 @@
  * A cell is two bytes, character then attribute. Text arrives as ASCII; "\"
  * from the server (the Atari's yen sign) shows as code page 437's yen.
  *
- * The 20 columns either side of the game hold circuit-board art (margins.txt):
+ * In 80 columns, the 20 either side of the game hold circuit-board art (margins.txt):
  * decoration only, drawn with every full redraw, dark grey on a colour adapter
  * so it stays behind the game; normal on a monochrome one, where dark grey
  * would not show at all. */
@@ -34,6 +38,8 @@
 extern unsigned short PC_SCREEN[25 * 80];
 #else
 #include <i86.h>
+#include <conio.h>                      /* inp, outp */
+#include <stdlib.h>                     /* _psp */
 #define FAR __far
 #define FMEMCPY _fmemcpy                /* video memory is in another segment */
 #endif
@@ -42,10 +48,10 @@ typedef unsigned short FAR cell;
 #define NORMAL  0x07                    /* attribute: light grey on black */
 #define INV     0x70                    /* black on light grey */
 #define FLASH   0xF0                    /* the same, blinking */
+#define HIVE    0x7F                    /* a hive's letter: reverse, or its syndicate's colours */
 #define FLIP    (NORMAL ^ INV)          /* mode ^ FLIP: normal <-> reverse */
 #define YEN     0x9D                    /* code page 437 */
 
-#define LEFT    20                      /* the 40 columns start here, in 80 */
 
 #define FLASH_SECS  5
 
@@ -61,9 +67,9 @@ typedef unsigned short FAR cell;
 
 /* The title's lines sit low, as on the Atari, whatever the logo's height */
 #define ROW_REGION  15                  /* then STATUS and HANDLE */
-#define ROW_KEYS    19                  /* F2, F3, F1 */
+#define ROW_KEYS    18                  /* F2, F3, F1, then F4 and F5 on a colour adapter */
 #define COL_KEYS    18                  /* what each key does */
-#define COL_HINTS   (COL_KEYS + 11)     /* ON/OFF after "MOVE HINTS" */
+#define COL_HINTS   (COL_KEYS + 11)     /* ON/OFF after "MOVE HINTS", 40/80 after "COLUMNS" */
 
 #include "title_art.h"                  /* title_art[], TITLE_END */
 #include "margins.h"                    /* margins[], MARGIN_W */
@@ -72,20 +78,104 @@ typedef unsigned short FAR cell;
 #error "the title logo runs into the title's lines: at most rows 0-13"
 #endif
 
-static cell *screen;                    /* row 0, column 0 of the 80x25 screen */
+static cell *screen;                    /* row 0, column 0 of the screen */
 static cell *cur;
+static unsigned char cols = 80, left = 20;  /* the screen's width; where the game's 40 columns start */
+static unsigned char mono;              /* a monochrome adapter: 80 columns only, no colour */
+static unsigned char colour;            /* green phosphor (F5), on a colour adapter */
+static unsigned char cr, cc;            /* the row and column put() writes next */
+static unsigned char helping;           /* the instructions are up */
 static unsigned char mode = NORMAL, ready, i, j, n, v;
 static unsigned char art = ART_COLOUR;  /* the panels' attribute */
 static unsigned char field;             /* the playfield is up: the title bar may draw */
 static unsigned char bottom = NORMAL;   /* rows 22-23: INV while this seat decides */
 
-#define ROW(r)  (screen + (r) * 80 + LEFT)
+#define ROW(r)  (screen + (r) * cols + left)
 
 /* ---------------------------------------------------------------- drawing */
 
-/* Text mode, once: a monochrome adapter (BIOS mode 7) stays as it is, at B000;
- * anything else is set to 80x25 colour text (mode 3), at B800. The cursor is
- * hidden: the game draws its own. */
+static void at(unsigned char r, unsigned char c);
+static void put(unsigned char ch);
+static void text(const char *s);
+static void clear_screen(void);
+
+#ifndef PC_SCREEN
+#define BIOS_CGA_MODE (*(unsigned char __far *)0x00400065L)  /* the BIOS's copy of port 3D8 */
+#define MODEL_BYTE    (*(unsigned char __far *)0xF000FFFEL)  /* FDh: a PCjr */
+
+/* The BIOS text mode for `cols` and `colour`: 1 (40x25) or 3 (80x25) in colour,
+ * else 0 or 2, the same with a composite monitor's colour burst off, which
+ * makes text sharper there; the cursor hidden, as the game draws its own. In
+ * colour the hardware blink goes off, so backgrounds can be bright: by the BIOS
+ * on an EGA or VGA (INT 10h AX=1003h), the video gate array's mode control
+ * register 2 on a PCjr, port 3D8 on a CGA or a Tandy 1000. */
+static void set_width(void)
+{
+    union REGS r;
+    left = cols == 80 ? 20 : 0;
+    r.x.ax = (cols == 80 ? 2 : 0) + colour;
+    int86(0x10, &r, &r);
+    r.h.ah = 0x01;                      /* cursor shape: off */
+    r.x.cx = 0x2000;
+    int86(0x10, &r, &r);
+    if (!colour)
+        return;
+    r.x.ax = 0x1003;
+    r.h.bl = 0;
+    int86(0x10, &r, &r);
+    if (MODEL_BYTE == 0xFD) {
+        inp(0x3DA);                     /* the gate array's next write is a register number */
+        outp(0x3DA, 3);
+        outp(0x3DA, 0);
+    } else {
+        BIOS_CGA_MODE &= ~0x20;
+        outp(0x3D8, BIOS_CGA_MODE);
+    }
+}
+
+/* The player picks the width, asked in 40 columns, which every screen shows clearly. */
+static void ask_width(void)
+{
+    cols = 40;
+    set_width();
+    clear_screen();
+    at(8, 20 - (sizeof TH_TITLE - 1) / 2);
+    text(TH_TITLE);
+    at(11, 5);
+    text("SCREEN WIDTH:");
+    at(13, 5);
+    text("1) 40 COLUMNS (TV, COMPOSITE)");
+    at(14, 5);
+    text("2) 80 COLUMNS");
+    at(19, 4);
+    text("SET SYNACK=40 OR 80 TO SKIP THIS");
+    while ((v = in_key()) != '1' && v != '2')
+        ;
+    cols = v == '1' ? 40 : 80;
+}
+
+/* The first letter of SYNACK= in DOS's environment (the segment at offset 2Ch
+ * of the program's PSP: NAME=value strings, an empty one last), or 0. Read
+ * there rather than with getenv, which copies the whole environment first. */
+static unsigned char env_width(void)
+{
+    static const char name[] = "SYNACK=";
+    const char __far *e = MK_FP(*(unsigned short __far *)MK_FP(_psp, 0x2C), 0);
+    while (*e) {
+        for (n = 0; name[n] && e[n] == name[n]; ++n)
+            ;
+        if (!name[n])
+            return e[n];
+        while (*e++)
+            ;
+    }
+    return 0;
+}
+#endif
+
+/* Text mode, once. A monochrome adapter (BIOS mode 7) stays as it is, at B000,
+ * in 80 columns. Anything else is at B800, in 40 or 80 columns: SYNACK=40 or
+ * SYNACK=80 in the environment says which, else the player picks. */
 static void setup(void)
 {
 #ifndef PC_SCREEN
@@ -102,29 +192,109 @@ static void setup(void)
     if (r.h.al == 7) {
         screen = (cell *)0xB0000000L;
         art = NORMAL;
-    } else {
-        if (r.h.al != 2 && r.h.al != 3) {
-            r.x.ax = 0x0003;
-            int86(0x10, &r, &r);
-        }
-        screen = (cell *)0xB8000000L;
+        mono = 1;
+        r.h.ah = 0x01;                  /* cursor shape: off */
+        r.x.cx = 0x2000;
+        int86(0x10, &r, &r);
+        return;
     }
-    r.h.ah = 0x01;                      /* cursor shape: off */
-    r.x.cx = 0x2000;
-    int86(0x10, &r, &r);
+    screen = (cell *)0xB8000000L;
+    v = env_width();
+    if (v == '4' || v == '8')
+        cols = v == '4' ? 40 : 80;
+    else
+        ask_width();
+    set_width();
 #endif
+}
+
+/* F5, anywhere but the instructions: colour on or off, and the screen drawn
+ * again. The playfield's log isn't in the game state, so its lines are kept. */
+void display_colour(void)
+{
+#ifndef PC_SCREEN
+    static unsigned char log[LOG_ROWS][40];
+    if (mono || helping || !ready)
+        return;
+    for (i = 0; i < LOG_ROWS; ++i)     /* before the mode change clears the screen */
+        for (j = 0; j < 40; ++j)
+            log[i][j] = (unsigned char)ROW(ROW_LOG + i)[j];
+    colour ^= 1;
+    set_width();
+    if (!field) {
+        display_title_screen();
+        return;
+    }
+    display_playfield();
+    for (i = 0; i < LOG_ROWS; ++i) {
+        at(ROW_LOG + i, 0);
+        for (j = 0; j < 40; ++j)
+            put(log[i][j]);
+    }
+#endif
+}
+
+/* F4 on the title screen: the other width, and the title drawn again in it. */
+void display_width(void)
+{
+#ifndef PC_SCREEN
+    if (field || mono || helping || !ready)
+        return;
+    cols ^= 40 ^ 80;
+    set_width();
+    display_title_screen();
+#endif
+}
+
+/* ---------------------------------------------------------------- colour
+ * The drawing code writes NORMAL, INV, FLASH and HIVE, the monochrome
+ * attributes (HIVE shows as INV); in colour they become green phosphor by
+ * where the cell is: light green on black, black on green under the Grid's
+ * nodes and the seats' rows (not the labels or headers), as on the Atari; reverse black on light green, the
+ * title bar white on green, the rows of a question for this seat white on
+ * magenta. Each syndicate's letter has its own background with a bright letter.
+ * Bright backgrounds need the hardware blink off (set_blink), so in colour the
+ * last move blinks in software (display_idle). */
+#define C_TEXT      0x0A                /* light green on black */
+#define C_PANEL     0x20                /* black on green */
+#define C_INV       0xA0                /* black on light green */
+#define C_BAR       0x2F                /* white on green */
+#define C_ASK       0x5F                /* white on magenta */
+#define C_LAST      0xF0                /* black on white: the last move, lit */
+#define C_ART       0x02                /* the side panels: green on black */
+/* the syndicates in theme order, never green or magenta: cyan, red, brown, light grey, blue, yellow, dark grey */
+static const unsigned char hive_colour[NSYN] = { 0x3F, 0x4F, 0x6E, 0x70, 0x1F, 0xE0, 0x8F };
+
+static unsigned char attr(unsigned char m, unsigned char ch, unsigned char r, unsigned char c)
+{
+    if (!colour)
+        return m == HIVE ? INV : m;
+    if (m == HIVE) {
+        unsigned char k;
+        for (k = 0; k < NSYN - 1 && syn_letter[k] != ch; ++k)
+            ;
+        return hive_colour[k];
+    }
+    if (m == FLASH)
+        return C_LAST;
+    if (m == INV)
+        return r == 0 ? C_BAR : r >= ROW_INFO ? C_ASK : C_INV;
+    return field && ((r >= ROW_BOARD && r < ROW_BOARD + RULE_ROWS && c >= COL_BOARD && c < COL_BOARD + RULE_COLS)
+                     || (r >= ROW_SEATS && r < ROW_SEATS + SEATS)) ? C_PANEL : C_TEXT;
 }
 
 static void at(unsigned char r, unsigned char c)
 {
     cur = ROW(r) + c;
+    cr = r;
+    cc = c;
 }
 
 static void put(unsigned char ch)
 {
     if (ch == '\\')
         ch = YEN;
-    *cur++ = mode << 8 | ch;
+    *cur++ = attr(mode, ch, cr, cc++) << 8 | ch;
 }
 
 static void text(const char *s)
@@ -154,13 +324,21 @@ static void clear_row(unsigned char r)
 static void clear_screen(void)
 {
     unsigned k;
-    for (k = 0; k < 25 * 80; ++k)
-        screen[k] = NORMAL << 8 | ' ';
-    for (k = 0; k < 25; ++k)            /* the side panels */
-        for (j = 0; j < MARGIN_W; ++j) {
-            screen[k * 80 + j] = art << 8 | margins[k][j];
-            screen[k * 80 + 80 - MARGIN_W + j] = art << 8 | margins[k][MARGIN_W + j];
-        }
+    unsigned char a = colour ? C_ART : art;
+    mode = NORMAL;
+    if (cols == 80) {
+        for (k = 0; k < 25 * 80; ++k)
+            screen[k] = (colour ? C_TEXT : NORMAL) << 8 | ' ';
+        for (k = 0; k < 25; ++k)        /* the side panels */
+            for (j = 0; j < MARGIN_W; ++j) {
+                screen[k * 80 + j] = a << 8 | margins[k][j];
+                screen[k * 80 + 80 - MARGIN_W + j] = a << 8 | margins[k][MARGIN_W + j];
+            }
+    }
+    for (k = 0; k < 25; ++k) {          /* the game's 40 columns, cell by cell for the panels' colour */
+        at(k, 0);
+        spaces(40);
+    }
 }
 
 /* Right-aligned decimal in `width` columns. `money` (units of 100) appends "00"
@@ -206,9 +384,10 @@ static void syn_letters(unsigned char mask)
 {
     for (i = 0; i < NSYN; ++i)
         if (mask >> i & 1) {
-            mode ^= FLIP;
+            v = mode;
+            mode = colour ? HIVE : mode ^ FLIP;
             put(syn_letter[i]);
-            mode ^= FLIP;
+            mode = v;
             put(' ');
         }
 }
@@ -239,6 +418,17 @@ void display_title_screen(void)
     text("F3");
     at(ROW_KEYS + 2, 4);
     text("F1 ?");
+    if (!mono) {
+        at(ROW_KEYS + 3, 4);
+        text("F4");
+        at(ROW_KEYS + 4, 4);
+        text("F5");
+        at(ROW_KEYS + 3, COL_HINTS);
+        put('0' + cols / 10);
+        put('0');
+        at(ROW_KEYS + 4, COL_HINTS);
+        text(colour ? "ON" : "OFF");
+    }
     mode = NORMAL;
     at(ROW_KEYS, COL_KEYS);
     text("MOVE HINTS");
@@ -246,6 +436,12 @@ void display_title_screen(void)
     text("TOGGLE SOUND");
     at(ROW_KEYS + 2, COL_KEYS);
     text("INSTRUCTIONS, ANY TIME");
+    if (!mono) {
+        at(ROW_KEYS + 3, COL_KEYS);
+        text("COLUMNS");
+        at(ROW_KEYS + 4, COL_KEYS);
+        text("COLOR");
+    }
     if (refused)
         mode = INV;                     /* a refusal stands out at the foot */
     clear_row(ROW_ASK);
@@ -291,7 +487,7 @@ void display_title_update(void)
 
 /* The last move blinks from when it is first drawn until FLASH_SECS have
  * passed (display_idle); then `done` holds it, and it shows as usual. */
-static unsigned char blink = NONE, blink_t, done = NONE;
+static unsigned char blink = NONE, blink_t, done = NONE, lit;   /* lit: in colour, its software blink's phase */
 
 /* The key ('1'-'6') of the exploit in my kit that can run on `node` now, or 0. */
 static unsigned char target(unsigned char node)
@@ -319,22 +515,24 @@ void display_node(unsigned char node)
         v = GLYPH_SPIKE;
     else {
         v = syn_letter[v - 2];
-        m = INV;
+        m = HIVE;
     }
     if (node == last_node) {
         at(ROW_BOARD + 7 + 1, COL_PANEL);
         text("LAST: ");
         node_name(node);
         if (node != done) {
-            m = FLASH;
             if (blink != node) {
                 blink = node;
                 blink_t = ticks();
+                lit = 0;
             }
+            if (!colour || !lit)
+                m = FLASH;
         }
     } else if (node == done)
         done = NONE;                    /* no longer the last move: it may be again, next game */
-    ROW(ROW_BOARD + r)[COL_BOARD + c] = m << 8 | v;
+    ROW(ROW_BOARD + r)[COL_BOARD + c] = attr(m, v, ROW_BOARD + r, COL_BOARD + c) << 8 | v;
 }
 
 void display_idle(void)
@@ -343,10 +541,13 @@ void display_idle(void)
         return;
     if (blink != last_node)
         blink = NONE;                   /* a newer move took over, or a new game */
-    else if ((unsigned char)(ticks() - blink_t) >= FLASH_SECS * 18) {
+    else if ((unsigned char)(v = ticks() - blink_t) >= FLASH_SECS * 18) {
         done = blink;
         blink = NONE;
         display_node(done);
+    } else if (colour && (v >> 3 & 1) != lit) {    /* lit and unlit by turns, about twice a second */
+        lit ^= 1;
+        display_node(blink);
     }
 }
 
@@ -361,7 +562,7 @@ void display_hives(void)
     for (j = 0; j < NSYN; ++j) {
         at(ROW_BOARD + j, COL_PANEL);
         spaces(2);                      /* the letter sits under the start of the header */
-        mode = INV;
+        mode = HIVE;
         put(syn_letter[j]);
         mode = NORMAL;
         n = hive_size[j];               /* then its size, next to it */
@@ -463,7 +664,7 @@ static void recolor_info(void)
 {
     cur = ROW(ROW_INFO);
     for (i = 0; i < 40; ++i, ++cur)
-        *cur = bottom << 8 | (*cur & 0xFF);
+        *cur = attr(bottom, (unsigned char)*cur, ROW_INFO, i) << 8 | (*cur & 0xFF);
 }
 
 void display_prompt(void)
@@ -620,7 +821,7 @@ void display_playfield(void)
     text(T_ACCOUNT);
     for (j = 0; j < NSYN; ++j) {
         at(ROW_SEATS - 1, 20 + 3 * j);
-        mode = INV;
+        mode = HIVE;
         put(syn_letter[j]);
         mode = NORMAL;
     }
@@ -677,8 +878,12 @@ static unsigned char help_page(unsigned char p)
         for (k = 0; back[k]; ++k)
             buf[13 * 40 + 6 + k] = NORMAL << 8 | back[k];
     }
-    for (k = 0; k < PAGE_CELLS; ++k)
-        video[k / 40 * 80 + LEFT + k % 40] = buf[k];
+    for (k = 0; k < PAGE_CELLS; ++k) {
+        v = buf[k] >> 8;
+        if (colour)
+            v = v == NORMAL ? C_TEXT : v == INV ? C_INV : v;
+        video[k / 40 * cols + left + k % 40] = v << 8 | (buf[k] & 0xFF);
+    }
     return 1;
 }
 
@@ -686,8 +891,9 @@ void help_open(void)
 {
     setup();
     video = screen;
-    FMEMCPY(shadow, video, sizeof shadow);      /* the game goes on drawing here */
+    FMEMCPY(shadow, video, 25 * 2 * cols);      /* the game goes on drawing here */
     screen = shadow;
+    helping = 1;
     help_page(page);
 }
 
@@ -705,8 +911,9 @@ unsigned char help_key(unsigned char k)
     case K_ESC:
     case K_RETURN:
     case K_HELP:
-        FMEMCPY(video, shadow, sizeof shadow);
+        FMEMCPY(video, shadow, 25 * 2 * cols);
         screen = video;
+        helping = 0;
         return 0;
     }
     return 1;

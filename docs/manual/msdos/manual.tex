@@ -89,6 +89,12 @@ From the lobby:
   \item To start the game, the lobby looks for \code{COMMAND.COM} on the path: if the screen stays blank,
     put \code{PATH C:\textbackslash} in AUTOEXEC.BAT.
 \end{itemize}
+\begin{sloppypar}
+On a colour display the game first asks for the screen width: \key{1} for 40 columns, clearer on a TV or a
+composite monitor, or \key{2} for 80. To skip the question, add \code{SET~SYNACK=40} or \code{SET~SYNACK=80} to
+AUTOEXEC.BAT. On the title screen, \key{F4} swaps them.
+\end{sloppypar}
+
 The title screen dials the server as soon as it appears. Type a handle, up to 8 characters, and press
 \key{Enter}.
 
@@ -96,10 +102,12 @@ The title screen dials the server as soon as it appears. Type a handle, up to 8 
   \callout{1}{L}{4}{15}
   \callout{2}{R}{33}{16}
   \callout{3}{L}{4}{17}
-  \callout{4}{L}{4}{19}
-  \callout{5}{L}{4}{20}
-  \callout{6}{R}{39}{21}
-  \callout{7}{R}{30}{23}
+  \callout{4}{L}{4}{18}
+  \callout{5}{L}{4}{19}
+  \callout{6}{R}{39}{20}
+  \callout{7}{R}{31}{21}
+  \callout{8}{R}{32}{22}
+  \callout{9}{R}{30}{23}
 \end{capture}
 
 \begin{legend}
@@ -110,16 +118,22 @@ It stays up to date while you type.}
 \li{4}{\key{F2} turns the move hints on or off.}
 \li{5}{\key{F3} turns the sound on or off.}
 \li{6}{\key{F1} or \key{?} opens the instructions, here or in the middle of a game.}
-\li{7}{\textbf{The prompt line.} What the screen expects from you next; a refusal, such as a handle already
+\li{7}{\key{F4} swaps 40 and 80 columns. A monochrome display stays at 80.}
+\li{8}{\key{F5} turns colour on or off: green phosphor, on a colour display.}
+\li{9}{\textbf{The prompt line.} What the screen expects from you next; a refusal, such as a handle already
 taken, shows here in reverse.}
 \end{legend}
 
 % ================================================================== 03
-\renewcommand{\secstatus}{80 x 25 TEXT \quad // \quad ANY DISPLAY \quad // \quad 40 x 24}
+\renewcommand{\secstatus}{80 OR 40 COLUMNS \quad // \quad ANY DISPLAY \quad // \quad 40 x 24}
 \chapter{The Screen}
-Everything you need is on one screen, in its middle 40 columns; a circuit board is drawn at the sides. It
-looks alike on any display, from a monochrome card to VGA or a laptop's grey LCD. This is early in a game, and
+\begin{sloppypar}
+Everything you need is on one screen: its middle 40 columns in 80, with a circuit board at the sides, or all
+of it in 40. It starts out alike on any display, from a monochrome card to VGA or a laptop's grey LCD. On a
+colour display, the \key{F5} key turns on green phosphor, with each syndicate in its own colour and your
+questions on magenta. This is early in a game, and
 it's your turn: pick an \V{exploit} to run.
+\end{sloppypar}
 
 \begin{capture}{spike-early.png}{CAPTURE 02 \quad \MakeUppercase{\V{spike}} PROMPT \quad 3 SEATS \quad EARLY GAME}
   \callout{1}{L}{2}{0}
@@ -159,6 +173,7 @@ wrong, such as \code{NOT ENOUGH NEW YEN}.
 \kr{\key{F1}\ \ \key{?}}{Open the instructions, on the title screen or in the middle of a game.}
 \kr{\key{F2}}{Move hints on or off: the digits on the \V{grid} that show where each \V{exploit} in your \V{kit} can run.}
 \kr{\key{F3}}{Sound on or off. A chord tells you it's on.}
+\kr{\key{F5}}{Colour on or off, on a colour display.}
 \end{keytable}
 
 \subsection{The title screen}
@@ -166,6 +181,7 @@ wrong, such as \code{NOT ENOUGH NEW YEN}.
 \kr{\key{A}--\key{Z}\ \ \key{0}--\key{9}}{Type your handle, up to 8 characters.}
 \kr{\key{Backspace}}{Rub out the last character.}
 \kr{\key{Enter}}{\VC{jackin}.}
+\kr{\key{F4}}{40 or 80 columns (a PCjr: \key{Fn} and \key{4}).}
 \end{keytable}
 
 \subsection{The instructions}

@@ -31,7 +31,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/apple2/title.txt` | The Apple title logo, plain text; `title_art.h` is **generated** by `tools/title_text.py` |
 | `src/msdos/display_text.c` | MS-DOS text screens: the 40×24 layout centred in 80×25 text, monochrome attributes only (normal, reverse, blink); the instruction pages from `SYNACK.HLP` |
 | `src/msdos/net_fn.c` | Network calls for MS-DOS: FujiNet RS-232 through fujinet-lib, which calls `FUJINET.SYS`'s INT F5h |
-| `src/msdos/input.c` | Keys from the BIOS (F1 help, F2 hints, F3 sound) and `ticks()` from the BIOS tick, 18 a second |
+| `src/msdos/input.c` | Keys from the BIOS (F1 help, F2 hints, F3 sound, F4 40/80 columns, F5 colour) and `ticks()` from the BIOS tick, 18 a second |
 | `src/msdos/sound.c` | Chords on an AdLib (OPL2 at 388h, also a Sound Blaster's) when one answers, else on the PC speaker |
 | `src/msdos/title_art.h` | The Atari's title logo in code page 437's box characters, **generated** by `tools/title_art.py d` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
@@ -343,14 +343,28 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
   signal, so while nothing comes `net_poll` asks once a BIOS tick (18 a second); while bytes arrive, every call.
 - **The shot clock** is the BIOS tick (`ticks_per_sec()` 18), which the timer interrupt keeps counting while a
   serial call waits; the countdown shows one second short, as on the Apple.
-- **Screen:** 80x25 text, the 40x24 layout in columns 20-59, written straight to video memory: B000 on a
-  monochrome adapter (BIOS mode 7), else B800 in mode 3. Monochrome attributes only, so it reads alike on MDA,
+- **Screen:** 80x25 text, the 40x24 layout in columns 20-59, or 40x25 text for a TV or a composite monitor,
+  where 80 columns blur; written straight to video memory. A monochrome adapter (BIOS mode 7, B000) is 80 only.
+  On anything else (B800) `SYNACK=40` or `SYNACK=80` in the environment picks the width, else a menu at start
+  does, asked in 40 columns (1 or 2), and **F4** on the title screen swaps them. `SYNACK=` is read from the
+  PSP's environment, as Watcom's `getenv` would add 800 bytes.
+- **Colour:** on a colour adapter **F5** turns green phosphor on or off, anywhere but the instructions (the
+  playfield is redrawn, its log lines kept). It starts off, menu included: on a grey LCD panel the colours
+  were hard to read (a monochrome LCD laptop, 2026-10-25). The drawing code still writes the
+  monochrome attributes, plus `HIVE` for a syndicate's letter; `attr()` turns them into colours by where the
+  cell is: light green on black, black on green under the Grid's nodes and the seats' rows, not their
+  labels and headers (as the Atari's panels), reverse black on light green, the title bar white on green, a question for this seat white on
+  magenta, and each syndicate its own background with a bright letter. Bright backgrounds need the hardware
+  blink off (INT 10h AX=1003h on EGA/VGA, port 3D8 on CGA and Tandy, the gate array on a PCjr), so in colour
+  the last move blinks in software. BIOS modes 1 and 3 in colour; 0 and 2 without, text with a composite
+  monitor's colour burst off. Without colour, monochrome attributes only, so it reads alike on MDA,
   Hercules, CGA, EGA, VGA and the grey LCD panels of old laptops: normal, reverse where the Apple has inverse,
   and reverse blinking for the last move (5 seconds, `DISPLAY_IDLE=1`). Code page 437 has a yen sign. The 20
-  columns either side hold circuit-board art (`src/msdos/margins.txt`, UTF-8, `tools/margins_msdos.py` makes the
+  columns either side, in 80, hold circuit-board art (`src/msdos/margins.txt`, UTF-8, `tools/margins_msdos.py` makes the
   header): decoration only, dark grey on a colour adapter, normal on a monochrome one. The title logo is the
   Atari's art in box characters (`tools/title_art.py d`).
 - **Keys:** **F1** or **?** the instructions, **F2** move hints, **F3** sound (switched where the keys are read),
+  **F4** 40 or 80 columns (the title screen only; on a PCjr's keyboard, Fn and 4), **F5** colour,
   **Backspace** or **Delete** undoes a letter, **Enter** confirms; the prompts say BACKSPACE and ENTER.
 - **Sound:** an AdLib, or a Sound Blaster's FM part, when one answers at 388h: the Atari's chords on three FM
   voices, started and stopped by the BIOS tick (`snd_poll()`, with every key check), so nothing waits. Else the
@@ -394,14 +408,14 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
 | `sound.s` | 85 | + 42 rodata (7 chords of up to 3 notes); `pause`, the delay loop the polling is paced by |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | **msdos** (2026-10-25, Open Watcom `-0 -ms -os`) | | |
-| `SYNACK.EXE` | 19598 | whole MZ file; code 16520 (below); plus 6.6 KB bss and a 2 KB stack once loaded |
-| `display_text.c` | 4059 | + 2071 rodata (screen words, title art, the circuit-board panels), 5946 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page |
+| `SYNACK.EXE` | 21214 | whole MZ file; code 18008 (below); plus 6.8 KB bss and a 2 KB stack once loaded |
+| `display_text.c` | 5508 | + 2205 rodata/data (screen words, title art, the circuit-board panels, the width menu, 7 hive colours), 6072 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page, 120 for the log while F5 redraws |
 | `game.c` | 2322 | + 382 rodata, 310 bss (the game state) |
 | `main.c` | 1171 | + 152 rodata |
 | `sound.c` | 1046 | + 175 rodata (7 speaker chords, 11 AdLib chords); the OPL2 test and set-up, the speaker's delay loop |
 | `net_fn.c` | 452 | + 281 bss (the 256-byte `rx_ring`); status paced to one call a BIOS tick while nothing comes |
 | `proto.c` | 196 | + 26-byte length table, 128-byte `msg[]` |
-| `input.c` | 150 | keys from INT 16h, `ticks()` from the BIOS tick |
+| `input.c` | 186 | keys from INT 16h (F4 and F5 call the display's width and colour swaps), `ticks()` from the BIOS tick |
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
 | Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
 | Bake-off (2026-10-18), network added on top of the same test program | | |

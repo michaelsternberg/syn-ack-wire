@@ -17,8 +17,8 @@
  Y / N        call the null-route?
  F2           toggle on-screen hints
  F3           toggle sound
+ F4           40/80 columns (title)
+ F5           toggle color
  F1 or ?      view help at any time
  ESC          quit game
-
-
 {<- PREV         ESC:EXIT         NEXT ->}
