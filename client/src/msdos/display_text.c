@@ -21,9 +21,8 @@
  * from the server (the Atari's yen sign) shows as code page 437's yen.
  *
  * In 80 columns, the 20 either side of the game hold circuit-board art (margins.txt):
- * decoration only, drawn with every full redraw, dark grey on a colour adapter
- * so it stays behind the game; normal on a monochrome one, where dark grey
- * would not show at all. */
+ * decoration only, drawn with every full redraw: normal, as dark grey doesn't
+ * show on a monochrome adapter or a grey LCD panel; green in colour. */
 #include <string.h>
 #include "../config.h"
 #include "../platform.h"
@@ -73,7 +72,6 @@ typedef unsigned short FAR cell;
 
 #include "title_art.h"                  /* title_art[], TITLE_END */
 #include "margins.h"                    /* margins[], MARGIN_W */
-#define ART_COLOUR  0x08                /* the panels: dark grey */
 #if TITLE_END >= ROW_REGION - 1
 #error "the title logo runs into the title's lines: at most rows 0-13"
 #endif
@@ -86,7 +84,9 @@ static unsigned char colour;            /* green phosphor (F5), on a colour adap
 static unsigned char cr, cc;            /* the row and column put() writes next */
 static unsigned char helping;           /* the instructions are up */
 static unsigned char mode = NORMAL, ready, i, j, n, v;
-static unsigned char art = ART_COLOUR;  /* the panels' attribute */
+#ifndef PC_SCREEN
+static unsigned char old_mode;          /* the BIOS video mode the program found, put back on the way out */
+#endif
 static unsigned char field;             /* the playfield is up: the title bar may draw */
 static unsigned char bottom = NORMAL;   /* rows 22-23: INV while this seat decides */
 
@@ -189,9 +189,9 @@ static void setup(void)
 #else
     r.h.ah = 0x0F;                      /* the current video mode */
     int86(0x10, &r, &r);
+    old_mode = r.h.al;
     if (r.h.al == 7) {
         screen = (cell *)0xB0000000L;
-        art = NORMAL;
         mono = 1;
         r.h.ah = 0x01;                  /* cursor shape: off */
         r.x.cx = 0x2000;
@@ -231,6 +231,20 @@ void display_colour(void)
         for (j = 0; j < 40; ++j)
             put(log[i][j]);
     }
+#endif
+}
+
+/* On the way out to DOS: the video mode the program found, which also brings
+ * back the cursor, the screen cleared, and the hardware blink. */
+void display_restore(void)
+{
+#ifndef PC_SCREEN
+    union REGS r;
+    if (!ready)
+        return;
+    r.h.ah = 0x00;
+    r.h.al = old_mode;
+    int86(0x10, &r, &r);
 #endif
 }
 
@@ -324,7 +338,7 @@ static void clear_row(unsigned char r)
 static void clear_screen(void)
 {
     unsigned k;
-    unsigned char a = colour ? C_ART : art;
+    unsigned char a = colour ? C_ART : NORMAL;
     mode = NORMAL;
     if (cols == 80) {
         for (k = 0; k < 25 * 80; ++k)
@@ -447,7 +461,7 @@ void display_title_screen(void)
     clear_row(ROW_ASK);
     at(ROW_ASK, 1);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
-         : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN ENTER");
+         : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN ENTER. ESC QUITS");
     mode = NORMAL;
     display_title_update();
 }

@@ -53,4 +53,8 @@ void snd_init(void);
 void __fastcall__ play_chord(unsigned char n);
 void snd_toggle(void);                  /* sound on/off; on plays CHORD_HIVE */
 
+#if QUIT_TO_OS
+void platform_quit(void);               /* the machine as it was found, and the program ends */
+#endif
+
 #endif

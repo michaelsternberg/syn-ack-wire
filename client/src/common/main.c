@@ -106,6 +106,20 @@ static void title(void)
             refused = status_code != ST_FULL;   /* REFUSED_LATE, should it turn out full */
             return;
         }
+#if QUIT_TO_OS
+        if (c == K_ESC) {               /* Esc, then Y: back to the operating system */
+            display_message(QUIT_ASK);
+            while ((c = key()) == 0)
+                ;
+            if (c == 'Y') {
+                if (link_up)
+                    net_close();
+                platform_quit();
+            }
+            display_title_screen();     /* any other key: the title as it was */
+            continue;
+        }
+#endif
         if (c == K_OPTION)
             hints ^= 1;
         else if (c == K_DELETE && edit_len)

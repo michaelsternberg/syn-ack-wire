@@ -20,5 +20,5 @@
  F4           40/80 columns (title)
  F5           toggle color
  F1 or ?      view help at any time
- ESC          quit game
+ ESC          leave game / quit to DOS
 {<- PREV         ESC:EXIT         NEXT ->}

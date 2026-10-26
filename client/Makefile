@@ -196,7 +196,7 @@ DOSHDRS = src/msdos/title_art.h src/msdos/margins.h
 $(DOSB):
 	mkdir -p $@
 $(DOSB)/SYNACK.EXE: $(DOSGAME) $(HDRS) $(DOSHDRS) | $(DOSB)
-	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -fo=$(DOSB)/ -fe=$@ $(DOSGAME)
+	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -DQUIT_TO_OS=1 -fo=$(DOSB)/ -fe=$@ $(DOSGAME)
 	@echo "$@: $$(stat -c %s $@) bytes"
 msdos: $(DOSB)/SYNACK.EXE $(DOSB)/SYNACK.HLP
 # the instruction pages; a help page's [QR] marker links to the MS-DOS manual, by the fly.io server's short link
@@ -218,7 +218,7 @@ msdos-img: $(DOSIMG)
 # the autoplay build: plays by itself and saves the screen (SCRnnn.BIN) at each new prompt and every 4 seconds
 DOSAUTO = test/autoplay.c test/dos_dump.c $(DOSGAME)
 $(DOSB)/SYNAUTO.EXE: $(DOSAUTO) $(HDRS) $(DOSHDRS) | $(DOSB)
-	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -DAUTOPLAY -DDUMP_TICKS=72 -DKEY_TICKS=6 -DAUTO_HANDLE='"PC"' -fo=$(DOSB)/ -fe=$@ $(DOSAUTO)
+	$(WCL) $(WFLAGS) $(DEFS) -DDISPLAY_IDLE=1 -DQUIT_TO_OS=1 -DAUTOPLAY -DDUMP_TICKS=72 -DKEY_TICKS=6 -DAUTO_HANDLE='"PC"' -fo=$(DOSB)/ -fe=$@ $(DOSAUTO)
 	@echo "$@: $$(stat -c %s $@) bytes"
 msdos-test: $(DOSB)/SYNAUTO.EXE
 $(DOSB)/WIREMON.EXE: test/wiremon.c $(DOSNET) $(HDRS) | $(DOSB)

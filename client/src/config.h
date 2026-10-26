@@ -37,4 +37,11 @@
 #define DISPLAY_IDLE 0
 #endif
 
+/* 1 = Esc on the title screen asks QUIT_ASK, and Y calls platform_quit(): for
+ * a platform with somewhere to go back to (msdos: DOS). */
+#ifndef QUIT_TO_OS
+#define QUIT_TO_OS 0
+#endif
+#define QUIT_ASK "QUIT TO DOS? Y/N"
+
 #endif

@@ -9,6 +9,7 @@
  * interrupt keeps counting while a serial call to FujiNet waits: so
  * ticks_per_sec() is 18, and a countdown's second is a few percent short. */
 #include <bios.h>
+#include <stdlib.h>
 #include "../platform.h"
 
 #define BIOS_TICK (*(volatile unsigned char __far *)0x0040006CL)
@@ -26,6 +27,8 @@
 void snd_poll(void);                    /* sound.c: an AdLib chord's time, checked with every key */
 void display_width(void);               /* display_text.c: 40 <-> 80 columns, on the title screen */
 void display_colour(void);              /* display_text.c: green phosphor on or off */
+void display_restore(void);             /* display_text.c: the video mode DOS had */
+void snd_off(void);                     /* sound.c: silence */
 
 unsigned char in_key(void)
 {
@@ -54,6 +57,14 @@ unsigned char in_key(void)
     if (c >= 'a' && c <= 'z')
         c -= 'a' - 'A';
     return c;                           /* Enter is '\r', Backspace '\b', Esc 0x1B: the platform.h codes */
+}
+
+/* Esc and Y on the title screen: silence, the screen as DOS had it, and back to DOS. */
+void platform_quit(void)
+{
+    snd_off();
+    display_restore();
+    exit(0);
 }
 
 unsigned char ticks(void)

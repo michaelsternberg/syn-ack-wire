@@ -217,6 +217,14 @@ void play_chord(unsigned char n)
     }
 }
 
+/* Silence, before the program ends: an AdLib chord released, the speaker off. */
+void snd_off(void)
+{
+    if (adlib)
+        fm_off();
+    quiet();
+}
+
 void snd_toggle(void)
 {
     on ^= 1;
