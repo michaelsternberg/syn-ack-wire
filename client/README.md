@@ -39,6 +39,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
 | `test/dos_dump.c` | The MS-DOS autoplay build's screen dumps: the 40×24 game area to `SCRnnn.BIN` |
+| `test/dos_glitch.c` | A flaky serial line for testing MS-DOS builds: with `-Dnetwork_status=glitch_status`, the status call fails 1 second in 20 |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/run-dos.sh` | Plays the MS-DOS client in a DOSBox-X window, booting your PC-DOS disk with `FUJINET.SYS`, FujiNet-PC (RS-232) on COM1 |
 | `tools/help_msdos.py` | Checks the MS-DOS instruction pages and writes them as screen images (`SYNACK.HLP`) |
@@ -341,6 +342,11 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
 ```
 - **Network:** as the Apple's (`net_fn.c` follows it), through fujinet-lib: 1 KB. There is no "data waiting"
   signal, so while nothing comes `net_poll` asks once a BIOS tick (18 a second); while bytes arrive, every call.
+  An exchange with FujiNet that fails on the serial line is let go, and asked again next tick; only about 3
+  seconds of them in a row (or FujiNet saying the connection closed) count as a dropped line. Giving up on the
+  first failure redialled on a blip of under a second, and the server's bot took the seat's move meanwhile.
+  Tested with `test/dos_glitch.c` (1 s of failures every 20 s): an autoplay game in DOSBox-X redialled 7 times
+  in 2.5 minutes before, and kept one connection for the whole game after.
 - **The shot clock** is the BIOS tick (`ticks_per_sec()` 18), which the timer interrupt keeps counting while a
   serial call waits; the countdown shows one second short, as on the Apple.
 - **Screen:** 80x25 text, the 40x24 layout in columns 20-59, or 40x25 text for a TV or a composite monitor,
@@ -361,10 +367,12 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
   Hercules, CGA, EGA, VGA and the grey LCD panels of old laptops: normal, reverse where the Apple has inverse,
   and reverse blinking for the last move (5 seconds, `DISPLAY_IDLE=1`). Code page 437 has a yen sign. The 20
   columns either side, in 80, hold circuit-board art (`src/msdos/margins.txt`, UTF-8, `tools/margins_msdos.py` makes the
-  header): decoration only, dark grey on a colour adapter, normal on a monochrome one. The title logo is the
+  header): decoration only, normal grey (dark grey vanished on a grey LCD), green in colour. The title logo is the
   Atari's art in box characters (`tools/title_art.py d`).
 - **Keys:** **F1** or **?** the instructions, **F2** move hints, **F3** sound (switched where the keys are read),
-  **F4** 40 or 80 columns (the title screen only; on a PCjr's keyboard, Fn and 4), **F5** colour,
+  **F4** 40 or 80 columns (the title screen only; on a PCjr's keyboard, Fn and 4), **F5** colour, **Esc** on
+  the title screen quits to DOS after a Y (`QUIT_TO_OS=1`: the sound silenced, the connection closed, the
+  video mode DOS had put back),
   **Backspace** or **Delete** undoes a letter, **Enter** confirms; the prompts say BACKSPACE and ENTER.
 - **Sound:** an AdLib, or a Sound Blaster's FM part, when one answers at 388h: the Atari's chords on three FM
   voices, started and stopped by the BIOS tick (`snd_poll()`, with every key check), so nothing waits. Else the
@@ -408,14 +416,14 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
 | `sound.s` | 85 | + 42 rodata (7 chords of up to 3 notes); `pause`, the delay loop the polling is paced by |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | **msdos** (2026-10-25, Open Watcom `-0 -ms -os`) | | |
-| `SYNACK.EXE` | 21214 | whole MZ file; code 18008 (below); plus 6.8 KB bss and a 2 KB stack once loaded |
-| `display_text.c` | 5508 | + 2205 rodata/data (screen words, title art, the circuit-board panels, the width menu, 7 hive colours), 6072 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page, 120 for the log while F5 redraws |
+| `SYNACK.EXE` | 21466 | whole MZ file; code 18232 (below); plus 6.8 KB bss and a 2 KB stack once loaded |
+| `display_text.c` | 5546 | + 2205 rodata/data (screen words, title art, the circuit-board panels, the width menu, 7 hive colours), 6072 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page, 120 for the log while F5 redraws |
 | `game.c` | 2322 | + 382 rodata, 310 bss (the game state) |
-| `main.c` | 1171 | + 152 rodata |
-| `sound.c` | 1046 | + 175 rodata (7 speaker chords, 11 AdLib chords); the OPL2 test and set-up, the speaker's delay loop |
-| `net_fn.c` | 452 | + 281 bss (the 256-byte `rx_ring`); status paced to one call a BIOS tick while nothing comes |
+| `main.c` | 1220 | + 152 rodata; Esc and Y on the title quit to DOS (`QUIT_TO_OS`) |
+| `sound.c` | 1068 | + 175 rodata (7 speaker chords, 11 AdLib chords); the OPL2 test and set-up, the speaker's delay loop |
+| `net_fn.c` | 544 | + 283 bss (the 256-byte `rx_ring`); status paced to one call a BIOS tick while nothing comes; failed exchanges let go for 3 s |
 | `proto.c` | 196 | + 26-byte length table, 128-byte `msg[]` |
-| `input.c` | 186 | keys from INT 16h (F4 and F5 call the display's width and colour swaps), `ticks()` from the BIOS tick |
+| `input.c` | 203 | keys from INT 16h (F4 and F5 call the display's width and colour swaps), `ticks()` from the BIOS tick |
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
 | Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
 | Bake-off (2026-10-18), network added on top of the same test program | | |

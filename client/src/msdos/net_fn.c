@@ -13,15 +13,33 @@ static const char dev[] = "N:";         /* the unit; the URL is only needed to o
 static uint16_t bw;
 static unsigned char conn, err, n;      /* err: FujiNet's own code, 1 = fine */
 static unsigned char quiet, asked;      /* nothing came last time; the tick we last asked on */
+static unsigned char failing, fail_t;   /* exchanges with FujiNet failing; the tick that began */
 
 #define BIOS_TICK (*(volatile unsigned char __far *)0x0040006CL)   /* 18.2 a second */
+#define FAIL_TICKS  55                  /* about 3 seconds of failed exchanges: the line is dead */
+
+/* An exchange with FujiNet that failed on the serial line (a reply garbled or
+ * lost, after FUJINET.SYS's own resend) is let go: the game asks again next
+ * tick. Only when they have failed for FAIL_TICKS does it count as a dropped
+ * line. A blip of a second used to end the connection, and the server gave the
+ * seat's move to its bot before the redial was back. FujiNet answering that the
+ * connection closed still counts at once. */
+static unsigned char failed(unsigned char code)
+{
+    if (!failing) {
+        failing = 1;
+        fail_t = BIOS_TICK;
+    }
+    quiet = 1;                          /* next tick */
+    return (unsigned char)(BIOS_TICK - fail_t) >= FAIL_TICKS ? code : 0;
+}
 
 /* As over SmartPort, a failed open may still answer fine: the failure shows in
  * the status after it (not connected, FujiNet's error code). */
 unsigned char net_open(const char *url)
 {
     rx_head = rx_tail = 0;              /* anything left from an old connection is junk */
-    quiet = 0;
+    quiet = failing = 0;
     if ((n = network_open(url, OPEN_MODE_RW, OPEN_TRANS_NONE)) != 0
         || (n = network_status(dev, &bw, &conn, &err)) != 0)
         return n;
@@ -40,7 +58,8 @@ unsigned char net_poll(void)
         return 0;
     asked = BIOS_TICK;
     if ((n = network_status(dev, &bw, &conn, &err)) != 0)
-        return n;
+        return failed(n);
+    failing = 0;
     if (!bw) {
         quiet = 1;
         return conn ? 0 : NET_CLOSED;
@@ -54,7 +73,7 @@ unsigned char net_poll(void)
     if (!n)
         return 0;                       /* ring full: the assembler drains it first */
     if (network_read(dev, rx_ring + rx_tail, n) != n)
-        return NET_CLOSED;
+        return failed(NET_CLOSED);      /* bytes lost, if any: the stream's resync finds its place */
     rx_tail += n;
     return 0;
 }
