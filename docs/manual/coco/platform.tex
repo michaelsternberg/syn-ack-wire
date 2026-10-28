@@ -1,0 +1,13 @@
+% The CoCo's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // COCO}
+\renewcommand{\PlatformShort}{CoCo}                        % as in "on the CoCo"
+\newcommand{\PlatformLong}{TRS-80 Color Computer}          % the title page
+\newcommand{\PlatformMachines}{COLOR COMPUTER 1 / 2}       % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{ENTER}                           % the CoCo's names for the keys that confirm
+\renewcommand{\KeyEsc}{BREAK}                              % and back out
+
+% Where the 40 x 24 screen sits in a capture, in image pixels (see \capgeom):
+\makeatletter
+\newcommand{\rendered}{\capgeom{72}{36}{18}{24}{864}{648}}  % client/tools/render_coco.py, --scale 3
+\makeatother

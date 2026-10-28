@@ -274,4 +274,5 @@ def main():
         print({"c": c_header, "s": s_include, "d": d_header}[sys.argv[1]](art, row))
 
 
-main()
+if __name__ == "__main__":
+    main()

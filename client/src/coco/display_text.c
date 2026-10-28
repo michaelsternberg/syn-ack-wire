@@ -237,7 +237,7 @@ void display_title_screen(void)
     clear_row(ROW_ASK);
     at(ROW_ASK, 1);
     text(refused == REFUSED_LATE ? "TOO LATE: THE LAST SEAT WAS TAKEN"
-         : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN RETURN");
+         : refused == REFUSED_HANDLE ? "THAT HANDLE IS TAKEN" : "TYPE A HANDLE, THEN ENTER");
     mode = NORMAL;
     display_title_update();
     end();
@@ -563,7 +563,7 @@ void display_prompt(void)
     }
     if (pr_kind == 'B')
         ask(step ? T_NULLROUTE " AND END THE GAME? Y/N"
-                 : "LETTERS, DELETE, RETURN TO BUY");
+                 : "LETTERS, <-, ENTER TO BUY");
     mode = NORMAL;
     end();
 }

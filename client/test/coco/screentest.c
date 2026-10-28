@@ -47,7 +47,7 @@ static const char *title_rows[ROWS] = {
     "    {CLEAR+S}   TOGGLE SOUND",
     "    {?}         INSTRUCTIONS, ANY TIME",
     0,
-    " TYPE A HANDLE, THEN RETURN",
+    " TYPE A HANDLE, THEN ENTER",
 };
 
 static const char *game_rows[ROWS] = {
@@ -74,7 +74,7 @@ static const char *game_rows[ROWS] = {
     " [+] ZER0COOL SPIKES E1",
     " [*] LOTUS-12 HIVE SPREADS: 5 NODES",
     "{ BUY UP TO 3 CRYPTO:                    }",
-    "{ LETTERS, DELETE, RETURN TO BUY       60}",
+    "{ LETTERS, <-, ENTER TO BUY            60}",
 };
 
 static const char *help_rows[ROWS] = {

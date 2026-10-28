@@ -7,6 +7,7 @@
 #   tools/capture.sh tied-root spike     just these
 #   PLATFORM=apple2 tools/capture.sh     the Apple II: its display code on this PC (make pc-apple2), no emulator
 #   PLATFORM=msdos tools/capture.sh      MS-DOS: its display code on this PC (make pc-msdos), no emulator
+#   PLATFORM=coco tools/capture.sh       the CoCo 1/2: its display code on this PC (make pc-coco), no emulator
 #   PORT=6599 INSTANCE=7 tools/capture.sh    the defaults: the server's port, run-test.sh's instance
 #   KEEP=1 tools/capture.sh tied-root    keep the dumps and logs (the script says where)
 #
@@ -23,8 +24,8 @@ PLATFORM=${PLATFORM:-atari}
 DUMPS=$ROOT/docs/manual/$PLATFORM/screens/dumps
 case $PLATFORM in
     atari) ports="$PORT $((9997 + INSTANCE)) $((8000 + INSTANCE))" ;;
-    apple2 | msdos) ports=$PORT ;;
-    *) echo "PLATFORM: atari, apple2 or msdos" >&2; exit 1 ;;
+    apple2 | msdos | coco) ports=$PORT ;;
+    *) echo "PLATFORM: atari, apple2, msdos or coco" >&2; exit 1 ;;
 esac
 mkdir -p "$DUMPS"
 
@@ -62,7 +63,7 @@ cat > "$WORK/pick.py" <<'EOF'
 import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
 from screen2txt import char
-import render_apple2, render_msdos
+import render_apple2, render_coco, render_msdos
 scenarios, name, dumps, out, platform = sys.argv[1:]
 all_ = tomllib.load(open(scenarios, "rb"))
 sc = all_[name]
@@ -76,6 +77,8 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         rows = [line.upper().strip() for line in render_apple2.text(d)[22:24]]
     elif platform == "msdos":
         rows = [line.upper().strip() for line in render_msdos.text(d)[22:24]]
+    elif platform == "coco":
+        rows = [line.upper().strip() for line in render_coco.text(d)[22:24]]
     else:
         rows = ["".join(char(b) for b in d[r * 40:r * 40 + 40]).upper().strip() for r in (22, 23)]
     if any(r.startswith(want) for r in rows):
@@ -88,7 +91,7 @@ EOF
 
 # Where the Atari's screen memory is depends on the emulated machine: $9C40 with the BASIC ROM in (BASIC=1), else
 # $BC40. That follows the owner's atari800 settings, so try one, fall back to the other, and keep the one that
-# worked. The Apple II and MS-DOS builds on this PC have one screen: one try.
+# worked. The Apple II, MS-DOS and CoCo builds on this PC have one screen: one try.
 order="1 0"
 [ "$PLATFORM" != atari ] && order=0
 run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a dump matched
@@ -110,7 +113,7 @@ run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a
 
 # The title screen and joining a lobby aren't staged games: a plain server with two test clients waiting in its
 # lobby, ZER0COOL hosting (it waits for more players than will come) and MAMBA, then the client joins.
-# The Apple II and MS-DOS only: the Atari manual's are captures from real play.
+# The Apple II, MS-DOS and CoCo only: the Atari manual's are captures from real play.
 live() {
     rm -rf "$WORK/d"; mkdir "$WORK/d"
     (cd "$ROOT/server" && exec python3 serve.py --host 127.0.0.1 --port "$PORT") > "$WORK/live.log" 2>&1 &
@@ -128,9 +131,9 @@ live() {
     python3 - "$WORK/d" "$DUMPS" "$PLATFORM" "$@" <<'PICK'
 import glob, os, shutil, sys
 sys.path.insert(0, "tools")
-import render_apple2, render_msdos
+import render_apple2, render_coco, render_msdos
 dumps, out, platform, *names = sys.argv[1:]
-text = render_msdos.text if platform == "msdos" else render_apple2.text
+text = {"msdos": render_msdos.text, "coco": render_coco.text}.get(platform, render_apple2.text)
 wants = {   # name: what its screen shows
     "title": lambda t: t[23].strip().startswith("TYPE A HANDLE") and any("LOBBY OPEN" in l for l in t),
     "lobby-join": lambda t: any(l.startswith(">") for l in t[13:19]) and any("S TO START" in l for l in t[19:22]),

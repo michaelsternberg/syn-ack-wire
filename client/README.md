@@ -60,11 +60,11 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2` |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco` |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
-| `tools/render_coco.py` | Draws a CoCo screen dump (6144 bytes of PMODE 4, or `pc-coco`'s 960 cells) as the screen looks |
+| `tools/render_coco.py` | Draws a CoCo screen dump (6144 bytes of PMODE 4, or `pc-coco`'s 960 cells, a title's logo with its static) as the screen looks |
 
 ## Build
 ```sh
@@ -420,7 +420,8 @@ make -C test/coco DECB=...                   # build/coco/screentest.dsk: the sc
 The disk is `syn-ack-wire-coco.dsk`, as the other platforms' are named, and the program on it `SYNACK.BIN`. The
 FujiNet lobby boots a CoCo game by `RUNM` of the mounted disk's own name (fujinet-lobby,
 `clients/src/coco/platform.c`), and Disk BASIC takes at most 8 letters: `RUNM"SYN-ACK-WIRE-COCO"` is `?FN ERROR`
-(tried in MAME), so for the lobby the disk must be served under a name of 8 at most. Booted from the FujiNet
+(tried in MAME), so for the lobby the disk must be served under a name of 8 at most: the server's image serves it
+as `synack.dsk` too, and the lobby runs `RUNM"SYNACK"` (server/README.md, "Deploying to fly.io"). Booted from the FujiNet
 without the lobby, HDB-DOS runs `AUTOEXEC.BAS` itself (seen in xroar); from plain Disk BASIC, `RUN"AUTOEXEC"`. It runs
 `PCLEAR1` first; with BASIC's 4 graphics pages its program starts at $2601, where LOADM would write over the
 running line. fujinet-lib reaches FujiNet through HDB-DOS's DriveWire routines, so the game needs the HDB-DOS a
@@ -433,7 +434,7 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   Cell code in C took 1.5 s a screen. Every pixel is written once, as it ends up, so a row drawn again over
   itself (the clock, the flashing last move) doesn't flicker, and nothing is cleared first. Drawing the margins
   in a second pass was 20% faster, but they blinked each time a row was drawn again. The screen is at $0E00-$25FF, where HDB-DOS leaves room (the lobby's is
-  there too), and the program loads at $2600; with its variables it ends at $772E, under the $7B00 a 32K
+  there too), and the program loads at $2600; with its variables it ends at $7728, under the $7B00 a 32K
   CoCo leaves below its stack and Disk BASIC's strings.
 - **Font** (`font.txt`, 95 glyphs): 5×7 in a 6×8 cell, the gap right and below; g j p q y use the gap row for
   their tails. The client's copy stops at $5F (the server sends nothing above it, and lower case is only in the
@@ -474,7 +475,11 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   to FujiNet, so it runs a little slow, and the countdown shows one second short, as on the Apple.
 - **Keys:** Color BASIC's keyboard scan. **?** the instructions, **CLEAR** move hints, **SHIFT+CLEAR** sound
   (switched where the keys are read), **up arrow** colours, **BREAK** for Esc, **left arrow** deletes, **ENTER**
-  confirms, **right arrow** and **left arrow** turn the instruction pages.
+  confirms, **right arrow** and **left arrow** turn the instruction pages. The prompts name them as the CoCo does:
+  `TYPE A HANDLE, THEN ENTER`, `LETTERS, <-, ENTER TO BUY`.
+- **Manual:** `docs/manual/coco/`, its captures from `PLATFORM=coco tools/capture.sh` (`pc-coco`'s cells, drawn by
+  `render_coco.py` in the client's font, the title with a still of its static). Help page 10's QR code links to
+  it by the fly.io short link (`COCO_QR_URL`).
 - **Sound:** the 6-bit DAC ($FF20) through the analog switch to the TV: the Apple's chords, a note at a time,
   timed by a delay loop, pitches scaled to the 0.89 MHz clock. $FF20's bit 1 is the serial line to FujiNet, so
   every write keeps bits 1-0 as they were.
@@ -531,8 +536,8 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
 | Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
 | **coco** (2026-10-27, CMOC 0.1.100 `-O2`) | | |
-| `synack.bin` | 18630 | whole Disk BASIC file; loads at $2600, ends at $772E with its variables, under the $7B00 limit |
-| `display_text.c` | 4517 | + 1084 rodata (screen words, title art), 48 bss/data |
+| `synack.bin` | 18624 | whole Disk BASIC file; loads at $2600, ends at $7728 with its variables, under the $7B00 limit |
+| `display_text.c` | 4517 | + 1078 rodata (screen words, title art), 48 bss/data |
 | `game.c` | 3183 | + 376 rodata, 389 bss/data (the game state) |
 | `main.c` | 1457 | + 152 rodata |
 | `text.c` | 1193 | + 600 rodata (the font: $20-$5F and the box glyphs), 1098 bss: the 960 cells, each cell's two flips for a row, the temporaries |
