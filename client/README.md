@@ -496,8 +496,10 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   `make coco-auto` played whole games against a scratch server (hivejacks, infiltrations, game over, the next
   game), rejoined after xroar restarted, and read its help pages from the disk through FujiNet.
   `tools/xroar_dump.py` saved the screens through xroar's GDB port (`-gdb -gdb-port N`), stopping at each
-  `pc_dump`, or every so often with `--poll`. Not yet tried: the lobby's AppKey, sound, carrier detect, a real
-  CoCo. MAME 0.289's Becker port stops it at start ("Attempt to register save state entry after state
+  `pc_dump`, or every so often with `--poll`. From the public lobby (2026-10-28, FujiNet Go CoCo 0.4.1, a CoCo 2):
+  the lobby's `RUNM"SYNACK"` of `synack.dsk` started the game, and the title showed the server picked (its AppKey,
+  through FujiNet's SD). Not yet tried: sound, carrier detect, a real CoCo. MAME 0.289's Becker port stops it at
+  start ("Attempt to register save state entry after state
   registration is closed"), so MAME is for the screen test only.
 
 ## Sizes (bytes)
