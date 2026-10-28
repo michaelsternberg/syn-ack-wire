@@ -235,7 +235,7 @@ msdos-wiremon: $(DOSB)/WIREMON.EXE $(DOSB)/WMAUTO.EXE
 # above it, a 32K CoCo's stack and Disk BASIC's strings. The disk is syn-ack-wire-coco.dsk, as the others are named;
 # the program on it is SYNACK.BIN. (The FujiNet lobby boots a CoCo game by RUNM of the mounted disk's own name,
 # fujinet-lobby clients/src/coco/platform.c, and Disk BASIC takes 8 letters: RUNM"SYN-ACK-WIRE-COCO" is ?FN ERROR,
-# so the lobby needs the disk served under a name of at most 8.) AUTOEXEC.BAS runs it for a disk booted by hand, after PCLEAR1:
+# so the lobby needs the disk served under a name of at most 8: the server image has it as synack.dsk too.) AUTOEXEC.BAS runs it for a disk booted by hand, after PCLEAR1:
 # with BASIC's 4 graphics pages its program starts at $2601, where LOADM would write over the running line.
 CMOC    ?= cmoc
 DECB    ?= decb
