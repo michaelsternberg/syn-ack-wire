@@ -433,7 +433,7 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   Cell code in C took 1.5 s a screen. Every pixel is written once, as it ends up, so a row drawn again over
   itself (the clock, the flashing last move) doesn't flicker, and nothing is cleared first. Drawing the margins
   in a second pass was 20% faster, but they blinked each time a row was drawn again. The screen is at $0E00-$25FF, where HDB-DOS leaves room (the lobby's is
-  there too), and the program loads at $2600; with its variables it ends at $775F, under the $7B00 a 32K
+  there too), and the program loads at $2600; with its variables it ends at $772E, under the $7B00 a 32K
   CoCo leaves below its stack and Disk BASIC's strings.
 - **Font** (`font.txt`, 95 glyphs): 5×7 in a 6×8 cell, the gap right and below; g j p q y use the gap row for
   their tails. The client's copy stops at $5F (the server sends nothing above it, and lower case is only in the
@@ -449,11 +449,13 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   inverse one, and on line 7 (the gap row) the cells over a short run, are turned to the inverse background.
 - **Colours:** green on black, or black on green (**up arrow**, anywhere: everything is in `txt_cells`, so it
   is drawn again). The VDG's colour set 0 both ways; the border stays green. About 60 bytes.
-- **Title:** the Atari's logo in box glyphs (`tools/title_art.py k`), lines through each cell's column 2 and
-  line 3, out to its edges. Its letters fill with static as the Atari's do (`snow.c`, from `display_title_idle()`,
+- **Title:** the Atari's logo in box glyphs (`tools/title_art.py k`), lines 2 pixels wide through each cell's
+  columns 2-3 and lines 3-4, out to its edges: an even pair of pixels is a whole NTSC colour cycle, so the lines
+  show plain green, where 1 pixel would take an artifact tint (dark brown at some start-up phases). Its
+  letters fill with static as the Atari's do (`snow.c`, from `display_title_idle()`,
   `TITLE_IDLE=1`): 30% of the pixels lit, kept 2 pixels clear of the lines, which would otherwise drown in a
   static of their own colour. `title_art.py m` works out the pixels (the Atari's flood fill, then down to the
-  pixel) and writes each line as a record of runs: bytes masked, skipped or all static, 36 different lines in
+  pixel) and writes each line as a record of runs: bytes masked, skipped or all static, 35 different lines in
   all. The random bytes come from a 256-byte table, read from a new start (an 8-bit LFSR) on each line. A call
   does every other line, about 36,000 cycles (MAME's CoCo 2), so the static changes 12 times a second and keys
   and the network wait at most 40 ms. Not while the instructions are up. On an NTSC TV the static's single
@@ -529,7 +531,7 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
 | Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
 | **coco** (2026-10-27, CMOC 0.1.100 `-O2`) | | |
-| `synack.bin` | 18679 | whole Disk BASIC file; loads at $2600, ends at $775F with its variables, under the $7B00 limit |
+| `synack.bin` | 18630 | whole Disk BASIC file; loads at $2600, ends at $772E with its variables, under the $7B00 limit |
 | `display_text.c` | 4517 | + 1084 rodata (screen words, title art), 48 bss/data |
 | `game.c` | 3183 | + 376 rodata, 389 bss/data (the game state) |
 | `main.c` | 1457 | + 152 rodata |
@@ -538,7 +540,7 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
 | `net_fn.c` | 547 | + 281 bss (the 256-byte `rx_ring`); status paced to ~10 a second, carrier detect as a hint |
 | `proto.c` | 222 | + 26-byte length table, 128-byte `msg[]` |
 | `sound.c` | 174 | + 42 rodata (7 chords) |
-| `snow.c` | 178 | + 1233 rodata (806 of line records and their 36 offsets, 99 line numbers, the 256 random bytes), 4 bss/data |
+| `snow.c` | 178 | + 1184 rodata (760 of line records and their 35 offsets, 98 line numbers, the 256 random bytes), 4 bss/data |
 | `input.c` | 99 | keys from Color BASIC's POLCAT, `ticks()` from TIMER |
 | fujinet-lib | 1730 | open, status, read, write, close, AppKey read; DriveWire through HDB-DOS |
 | CMOC runtime | 852 | start-up, memcpy/memset/memmove, multiply, divide and shift helpers |
