@@ -10,6 +10,8 @@
  * captures (tools/capture.sh). With PC_MSDOS too (make pc-msdos), it is the
  * MS-DOS display, src/msdos/display_text.c, and each dump is the 40x24 game area
  * of its 80x25 screen, as the DOS autoplay build writes it (test/dos_dump.c).
+ * With PC_COCO (make pc-coco), it is the CoCo's, src/coco/display_text.c, over
+ * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -99,6 +101,8 @@ unsigned char ticks_per_sec(void)
 #ifdef PC_SCREEN
 #ifdef PC_MSDOS
 unsigned short PC_SCREEN[25 * 80];      /* character and attribute, as in DOS video memory */
+#elif defined(PC_COCO)
+extern unsigned char PC_SCREEN[24 * 40];    /* test/coco_text_pc.c */
 #else
 unsigned char PC_SCREEN[1024], pc_switch;
 #endif

@@ -24,5 +24,6 @@ void display_message(const char *s);    /* one-line notice: connecting, faults..
 void display_game_over(void);           /* winners are in `winners` */
 void display_link(void);                /* region and link_up, in the title bar */
 void display_idle(void);                /* every pass of the game loop, if DISPLAY_IDLE */
+void display_title_idle(void);          /* every pass of the title's loop, if TITLE_IDLE */
 
 #endif

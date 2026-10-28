@@ -7,7 +7,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 |---|---|
 | `src/platform.h` | The contract each platform implements: network calls, the receive ring, keys, a tick counter |
 | `src/display.h` | Everything the game shows. One text version per platform; hand-made screens can replace it |
-| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `LOBBY_KEY`, `TABLE`, `DISPLAY_IDLE` |
+| `src/config.h` | Build choices: `FANCY_TITLE`, `FANCY_PLAYFIELD`, `HINTS`, server `URL`, `LOBBY_KEY`, `TABLE`, `DISPLAY_IDLE`, `TITLE_IDLE` |
 | `src/common/main.c` | Title (with the table's status), connect, the main loop, reconnect with the seat token |
 | `src/common/game.c` | Game state from server frames; keys → prompt answers, checked locally first |
 | `src/common/proto.c` | Frame assembler: bytes in `rx_ring` → one whole frame in `msg[]` |
@@ -34,11 +34,23 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/msdos/input.c` | Keys from the BIOS (F1 help, F2 hints, F3 sound, F4 40/80 columns, F5 colour) and `ticks()` from the BIOS tick, 18 a second |
 | `src/msdos/sound.c` | Chords on an AdLib (OPL2 at 388h, also a Sound Blaster's) when one answers, else on the PC speaker |
 | `src/msdos/title_art.h` | The Atari's title logo in code page 437's box characters, **generated** by `tools/title_art.py d` |
+| `src/coco/text.c` | CoCo 1/2: the 40×24 cells drawn on the PMODE 4 screen, 4 cells at a time in 6809 code, and the inverse margins |
+| `src/coco/font.txt` | The CoCo's 6×8 font as `#`/`.` pictures; `font.h` is **generated** by `tools/font_coco.py` |
+| `src/coco/display_text.c` | CoCo text screens: the Apple's layout in `txt_cells`, normal/inverse, the last move flashed by `display_idle()` |
+| `src/coco/net_fn.c` | Network calls for the CoCo: FujiNet over DriveWire (serial port or Becker port), through fujinet-lib |
+| `src/coco/input.c` | Keys from Color BASIC's keyboard scan (CLEAR hints, SHIFT+CLEAR sound, up arrow colours) and `ticks()` from its 60 Hz TIMER |
+| `src/coco/help.c` | The instruction pages: PMODE 4 screen images from `SYNACK.HLP`, read straight onto the screen through DSKCON |
+| `src/coco/sound.c` | Chords as short notes from the 6-bit DAC |
+| `src/coco/snow.c` | The CoCo title's static: random pixels in the logo's letters, written to the screen in 6809 code |
+| `src/coco/title_art.h`, `title_snow.h` | The Atari's title art in the font's box glyphs, and which pixels get the static, **generated** by `tools/title_art.py k` and `m` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
 | `test/dos_dump.c` | The MS-DOS autoplay build's screen dumps: the 40×24 game area to `SCRnnn.BIN` |
+| `test/coco_text_pc.c` | `text.c`'s calls on a PC (`make pc-coco`): only the cells, which the dumps save |
+| `test/coco_dump.c` | The CoCo autoplay build's dump hook: an empty `pc_dump` a debugger stops on |
+| `test/coco/` | The CoCo screen test (`screentest.c`): the font, both colour sets, the title's static and the drawing speed, on a PMODE 4 screen |
 | `test/dos_glitch.c` | A flaky serial line for testing MS-DOS builds: with `-Dnetwork_status=glitch_status`, the status call fails 1 second in 20 |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/run-dos.sh` | Plays the MS-DOS client in a DOSBox-X window, booting your PC-DOS disk with `FUJINET.SYS`, FujiNet-PC (RS-232) on COM1 |
@@ -50,6 +62,9 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
 | `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2` |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
+| `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
+| `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
+| `tools/render_coco.py` | Draws a CoCo screen dump (6144 bytes of PMODE 4, or `pc-coco`'s 960 cells) as the screen looks |
 
 ## Build
 ```sh
@@ -391,6 +406,93 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
   game; without one, FujiNet keeps no app keys and the game dials its built-in server. The lobby finds
   `COMMAND.COM` by `PATH`, so an empty `PATH` leaves it at a blank screen.
 
+## CoCo 1/2 (coco)
+The same common code with a CoCo 1/2 platform layer (`src/coco/`), built with CMOC and lwtools. The CoCo's
+6847 has no 40-column text (its text mode is 32×16, upper case), so the client draws its own: PMODE 4, 256×192 in
+two colours, 40 columns of 6×8 cells from pixel 8, with 8 pixels either side.
+```sh
+make coco                                    # build/coco/synack.bin, and synack.hlp, the instruction pages
+make coco-dsk DECB=path/to/toolshed/decb     # build/coco/syn-ack-wire-coco.dsk: both, and AUTOEXEC.BAS
+make pc-coco && build/pc/pc-coco host port   # the display on this PC against a server, saving its cells
+make coco-auto URL=N:TCP://host:port/ LOBBY_KEY=0 DECB=...   # build/coco/auto/syn-ack-wire-coco.dsk: plays by itself
+make -C test/coco DECB=...                   # build/coco/screentest.dsk: the screen test (LOADM"SCRTEST":EXEC)
+```
+The disk is `syn-ack-wire-coco.dsk`, as the other platforms' are named, and the program on it `SYNACK.BIN`. The
+FujiNet lobby boots a CoCo game by `RUNM` of the mounted disk's own name (fujinet-lobby,
+`clients/src/coco/platform.c`), and Disk BASIC takes at most 8 letters: `RUNM"SYN-ACK-WIRE-COCO"` is `?FN ERROR`
+(tried in MAME), so for the lobby the disk must be served under a name of 8 at most. Booted from the FujiNet
+without the lobby, HDB-DOS runs `AUTOEXEC.BAS` itself (seen in xroar); from plain Disk BASIC, `RUN"AUTOEXEC"`. It runs
+`PCLEAR1` first; with BASIC's 4 graphics pages its program starts at $2601, where LOADM would write over the
+running line. fujinet-lib reaches FujiNet through HDB-DOS's DriveWire routines, so the game needs the HDB-DOS a
+FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
+
+- **Screen** (`text.c`): `txt_cells[]` holds the 40×24 cells (ASCII, bit 7 inverse); the display writes it,
+  marks the rows it touched, and the outermost display call draws those rows as it returns, so the playfield,
+  built from the others, is drawn once. A row is drawn 4 cells at a time, 3 whole bytes a pixel line, in 6809
+  code: about 25,500 cycles (28 ms) a row with its margins, a full screen in 0.7 s (42/60 s, MAME's CoCo 2).
+  Cell code in C took 1.5 s a screen. Every pixel is written once, as it ends up, so a row drawn again over
+  itself (the clock, the flashing last move) doesn't flicker, and nothing is cleared first. Drawing the margins
+  in a second pass was 20% faster, but they blinked each time a row was drawn again. The screen is at $0E00-$25FF, where HDB-DOS leaves room (the lobby's is
+  there too), and the program loads at $2600; with its variables it ends at $775F, under the $7B00 a 32K
+  CoCo leaves below its stack and Disk BASIC's strings.
+- **Font** (`font.txt`, 95 glyphs): 5×7 in a 6×8 cell, the gap right and below; g j p q y use the gap row for
+  their tails. The client's copy stops at $5F (the server sends nothing above it, and lower case is only in the
+  help pages, drawn when the disk is built) and has the title's 11 box glyphs at $60-$6A instead. Vertical strokes are on even pixels, and cells start on even pixels, so on an NTSC TV every
+  one-pixel stroke takes the same artifact tint, not some blue and some orange (`font_coco.py` lists the
+  exceptions: only `#`). In colour set 0, green and black, MAME shows the tint as a darker green;
+  alternating pixels (the middles of m, w, M, N, W) smear.
+- **Inverse:** the cell's 6×8 the other way round. A glyph leaves its gap right and below, so an inverse
+  letter's left and top strokes would run into the dark around it: a run of inverse cells also takes the pixel
+  column left of it and, if shorter than 4 cells (a hive's letter), the line above, from its neighbours' gaps.
+  Longer runs (the bars, the turn's name) go without the line above, which would sit on the row above's text.
+  The margins are worked into each cell's flip before its row is drawn: the gap column of the cell left of an
+  inverse one, and on line 7 (the gap row) the cells over a short run, are turned to the inverse background.
+- **Colours:** green on black, or black on green (**up arrow**, anywhere: everything is in `txt_cells`, so it
+  is drawn again). The VDG's colour set 0 both ways; the border stays green. About 60 bytes.
+- **Title:** the Atari's logo in box glyphs (`tools/title_art.py k`), lines through each cell's column 2 and
+  line 3, out to its edges. Its letters fill with static as the Atari's do (`snow.c`, from `display_title_idle()`,
+  `TITLE_IDLE=1`): 30% of the pixels lit, kept 2 pixels clear of the lines, which would otherwise drown in a
+  static of their own colour. `title_art.py m` works out the pixels (the Atari's flood fill, then down to the
+  pixel) and writes each line as a record of runs: bytes masked, skipped or all static, 36 different lines in
+  all. The random bytes come from a 256-byte table, read from a new start (an 8-bit LFSR) on each line. A call
+  does every other line, about 36,000 cycles (MAME's CoCo 2), so the static changes 12 times a second and keys
+  and the network wait at most 40 ms. Not while the instructions are up. On an NTSC TV the static's single
+  pixels shimmer in artifact colour, as snow does. At start-up the screen goes black (BASIC's text screen
+  filled with dark blocks) while the title and two passes of static are drawn out of sight, then shows them
+  whole: the VDG only switches to PMODE 4 then (`txt_show`). Later screens are drawn in view.
+- **The last move flashes** for 5 seconds: inverse and back every 16 ticks, its row drawn each time, from
+  `display_idle()` (`DISPLAY_IDLE=1`).
+- **Network:** as the Apple's, through fujinet-lib (1.7 KB): one status call, then one read of what fits in the
+  ring. A status call is a DriveWire exchange with interrupts off, so while nothing comes `net_poll` asks about
+  10 times a second, by the 60 Hz clock; while bytes arrive, and after sending, every call. On the serial port
+  FujiNet also signals waiting bytes on carrier detect (its firmware, `lib/bus/drivewire/drivewire.cpp`), which
+  sets PIA1's CA1 flag ($FF21 bit 7): `net_poll` asks at once when it is set. It is only a hint (a Becker port
+  has no such line), and not yet tried on a real CoCo.
+- **The shot clock** is Color BASIC's TIMER ($0112, 60 a second); fujinet-lib holds interrupts off while it talks
+  to FujiNet, so it runs a little slow, and the countdown shows one second short, as on the Apple.
+- **Keys:** Color BASIC's keyboard scan. **?** the instructions, **CLEAR** move hints, **SHIFT+CLEAR** sound
+  (switched where the keys are read), **up arrow** colours, **BREAK** for Esc, **left arrow** deletes, **ENTER**
+  confirms, **right arrow** and **left arrow** turn the instruction pages.
+- **Sound:** the 6-bit DAC ($FF20) through the analog switch to the TV: the Apple's chords, a note at a time,
+  timed by a delay loop, pitches scaled to the 0.89 MHz clock. $FF20's bit 1 is the serial line to FujiNet, so
+  every write keeps bits 1-0 as they were.
+- **Instructions:** `SYNACK.HLP`, from `help/coco/screen/HELP*.TXT` (the MS-DOS pages' format and text, with
+  the CoCo's keys) by `tools/help_coco.py`: each page a 6144-byte PMODE 4 screen image, drawn with the same
+  font and margins as `text.c` (checked against MAME's dump: the same bytes), and the QR code in pixels, 4 to a
+  module. `help.c` reads the directory entry and the FAT once, then a page's 24 sectors straight onto the
+  screen through DSKCON (HDB-DOS sends it to FujiNet): no file code, no buffer but the 68-byte FAT. The game
+  goes on writing `txt_cells` underneath, and closing draws it.
+- **Tested** (2026-10-27): the screen test in MAME's CoCo 2 (timings, both colours, artifacting on and off); the
+  display with `pc-coco` against a scratch server, a whole game and the next. With FujiNet, in xroar 1.13.0.dev
+  (a CoCo 2B, HDB-DOS for the Becker port) and FujiNet-PC built `FUJINET_TARGET=COCO`, the Becker port on 65507,
+  the disk as its `autorun.dsk` (and its `AUTOLOAD.DWL` taken away, so HDB-DOS stops at BASIC):
+  `make coco-auto` played whole games against a scratch server (hivejacks, infiltrations, game over, the next
+  game), rejoined after xroar restarted, and read its help pages from the disk through FujiNet.
+  `tools/xroar_dump.py` saved the screens through xroar's GDB port (`-gdb -gdb-port N`), stopping at each
+  `pc_dump`, or every so often with `--poll`. Not yet tried: the lobby's AppKey, sound, carrier detect, a real
+  CoCo. MAME 0.289's Becker port stops it at start ("Attempt to register save state entry after state
+  registration is closed"), so MAME is for the screen test only.
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -426,6 +528,20 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
 | `input.c` | 203 | keys from INT 16h (F4 and F5 call the display's width and colour swaps), `ticks()` from the BIOS tick |
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
 | Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
+| **coco** (2026-10-27, CMOC 0.1.100 `-O2`) | | |
+| `synack.bin` | 18679 | whole Disk BASIC file; loads at $2600, ends at $775F with its variables, under the $7B00 limit |
+| `display_text.c` | 4517 | + 1084 rodata (screen words, title art), 48 bss/data |
+| `game.c` | 3183 | + 376 rodata, 389 bss/data (the game state) |
+| `main.c` | 1457 | + 152 rodata |
+| `text.c` | 1193 | + 600 rodata (the font: $20-$5F and the box glyphs), 1098 bss: the 960 cells, each cell's two flips for a row, the temporaries |
+| `help.c` | 822 | + 89 rodata, 152 bss (the FAT, a row of cells for "no file"); reads through DSKCON |
+| `net_fn.c` | 547 | + 281 bss (the 256-byte `rx_ring`); status paced to ~10 a second, carrier detect as a hint |
+| `proto.c` | 222 | + 26-byte length table, 128-byte `msg[]` |
+| `sound.c` | 174 | + 42 rodata (7 chords) |
+| `snow.c` | 178 | + 1233 rodata (806 of line records and their 36 offsets, 99 line numbers, the 256 random bytes), 4 bss/data |
+| `input.c` | 99 | keys from Color BASIC's POLCAT, `ticks()` from TIMER |
+| fujinet-lib | 1730 | open, status, read, write, close, AppKey read; DriveWire through HDB-DOS |
+| CMOC runtime | 852 | start-up, memcpy/memset/memmove, multiply, divide and shift helpers |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |

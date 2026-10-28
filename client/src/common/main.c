@@ -101,6 +101,9 @@ static void title(void)
                 display_title_update();
             }
         }
+#if TITLE_IDLE
+        display_title_idle();
+#endif
         c = key();
         if (c == K_RETURN && edit_len) {
             refused = status_code != ST_FULL;   /* REFUSED_LATE, should it turn out full */

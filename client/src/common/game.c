@@ -52,7 +52,7 @@ static void unpack_snapshot(void)
     for (i = 0; i < NSYN; ++i)
         hive_size[i] = msg[55 + i];
     for (i = 0; i < SEATS; ++i)
-        cash[i] = msg[62 + 2 * i] | (msg[63 + 2 * i] << 8);
+        cash[i] = msg[62 + 2 * i] | ((unsigned)msg[63 + 2 * i] << 8);
     for (i = 0; i < SEATS; ++i)
         for (j = 0; j < NSYN; ++j)
             coins[i][j] = msg[74 + i * NSYN + j];
@@ -189,7 +189,7 @@ void game_frame(void)
         break;
     case 'm':                           /* seat, cash */
         n = msg[1];
-        cash[n] = msg[2] | (msg[3] << 8);
+        cash[n] = msg[2] | ((unsigned)msg[3] << 8);
         display_seat(n);
         break;
     case 'k':                           /* seat, syn, count */
@@ -350,7 +350,7 @@ static void send_buy(unsigned char end)
  * flags, price[7], supply[7]. */
 static unsigned left_cash(void)
 {
-    unsigned m = pr[1] | (pr[2] << 8);
+    unsigned m = pr[1] | ((unsigned)pr[2] << 8);
     for (j = 0; j < edit_len; ++j)
         m -= pr[4 + syn_of(edit[j])];
     return m;

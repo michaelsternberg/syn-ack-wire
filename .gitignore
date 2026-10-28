@@ -9,6 +9,9 @@ client/src/atari/title_art.inc
 client/src/apple2/title_art.h
 client/src/msdos/title_art.h
 client/src/msdos/margins.h
+client/src/coco/font.h
+client/src/coco/title_art.h
+client/src/coco/title_snow.h
 docs/style/theme.tex
 
 # LaTeX leftovers if a build fails

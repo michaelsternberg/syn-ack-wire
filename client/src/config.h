@@ -37,6 +37,12 @@
 #define DISPLAY_IDLE 0
 #endif
 
+/* 1 = the title's loop calls display_title_idle() on every pass (coco: the
+ * static in the logo's letters). */
+#ifndef TITLE_IDLE
+#define TITLE_IDLE 0
+#endif
+
 /* 1 = Esc on the title screen asks QUIT_ASK, and Y calls platform_quit(): for
  * a platform with somewhere to go back to (msdos: DOS). */
 #ifndef QUIT_TO_OS
