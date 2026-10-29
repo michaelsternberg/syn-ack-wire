@@ -11,7 +11,9 @@
  * MS-DOS display, src/msdos/display_text.c, and each dump is the 40x24 game area
  * of its 80x25 screen, as the DOS autoplay build writes it (test/dos_dump.c).
  * With PC_COCO (make pc-coco), it is the CoCo's, src/coco/display_text.c, over
- * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells).
+ * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells). With PC_H89 (make pc-h89), it is the
+ * H89's, src/h89/display_text.c, and each dump is the whole 80x24 screen it would send the H19, each cell
+ * a character then its attributes (vch[], vat[]).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +105,9 @@ unsigned char ticks_per_sec(void)
 unsigned short PC_SCREEN[25 * 80];      /* character and attribute, as in DOS video memory */
 #elif defined(PC_COCO)
 extern unsigned char PC_SCREEN[24 * 40];    /* test/coco_text_pc.c */
+#elif defined(PC_H89)
+extern unsigned char vch[24 * 80], vat[24 * 80];    /* src/h89/display_text.c */
+unsigned char PC_SCREEN;                /* unused */
 #else
 unsigned char PC_SCREEN[1024], pc_switch;
 #endif
@@ -120,6 +125,11 @@ void pc_dump(void)
 #ifdef PC_MSDOS
         for (int r = 0; r < 24; ++r)    /* little-endian, as on the PC: character, then attribute */
             fwrite(PC_SCREEN + r * 80 + 20, 2, 40, f);
+#elif defined(PC_H89)
+        for (int k = 0; k < 24 * 80; ++k) {
+            fputc(vch[k], f);
+            fputc(vat[k], f);
+        }
 #else
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
 #endif
@@ -132,7 +142,7 @@ void snd_init(void) {}
 void play_chord(unsigned char n) { (void)n; }
 void snd_toggle(void) {}
 
-#ifndef PC_MSDOS                        /* the DOS display has its own */
+#if !defined(PC_MSDOS) && !defined(PC_H89)     /* the DOS and H89 displays have their own */
 void help_open(void) { }
 unsigned char help_key(unsigned char k) { return k != K_ESC; }
 #endif

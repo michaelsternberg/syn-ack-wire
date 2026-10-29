@@ -37,6 +37,7 @@ cd client && make && make atr                                # build/atari/syn-a
 cd client && make atrtest                                    # build/atari/local/..., dialing localhost:6502
 cd client && make apple2_text-po PRODOS=<ProDOS disk>        # build/apple2_text/syn-ack-wire-apple2.po
 cd client && make msdos-img WATCOM=<Open Watcom dir>         # build/msdos/syn-ack-wire-msdos.img (360 KB floppy)
+cd client && make h89-disk H89SYS=<CP/M 2.2.04 H17 disk>      # build/h89/syn-ack-wire-h89.h8d (z88dk's zcc, cpmtools)
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)

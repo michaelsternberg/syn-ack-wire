@@ -56,7 +56,11 @@
 
 #include "screens.h"                    /* margins[], MARGIN_W, title_art[], TITLE_END */
 
+#ifdef PC_SCREEN                        /* the PC build for the manual's captures dumps them (test/pc_harness.c) */
+unsigned char vch[CELLS], vat[CELLS];
+#else
 static unsigned char vch[CELLS], vat[CELLS];    /* the screen as the H19 should show it */
+#endif
 static unsigned char sch[CELLS], sat[CELLS];    /* as the H19 shows it now */
 static unsigned char dirty[ROWS];               /* rows with a cell changed since the last flush */
 static unsigned char *ch = vch, *at_ = vat;     /* what the game draws into: the screen, or under help */

@@ -379,9 +379,17 @@ pc-coco: $(HDRS) src/coco/title_art.h
 	    src/common/main.c src/common/game.c src/common/proto.c src/coco/display_text.c test/coco_text_pc.c \
 	    test/autoplay.c test/pc_harness.c
 
+# --- the same for the H89 display (src/h89/display_text.c): build/pc/pc-h89 [host] [port]
+pc-h89: $(HDRS) src/h89/screens.h
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -Wno-pointer-to-int-cast -funsigned-char -D__fastcall__= -DAUTOPLAY \
+	    -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 -DPC_SCREEN=pc_screen -DPC_H89 -DAUTO_HANDLE='"H89"' \
+	    -DBOARD_LETTERS='"$(H89LETTERS)"' -o build/pc/pc-h89 \
+	    src/common/main.c src/common/game.c src/common/proto.c src/h89/display_text.c test/autoplay.c test/pc_harness.c
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto h89 h89-disk h89-wiremon clean
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto h89 h89-disk h89-wiremon clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o
 .DELETE_ON_ERROR:

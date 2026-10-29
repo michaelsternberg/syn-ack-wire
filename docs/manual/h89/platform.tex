@@ -1,0 +1,20 @@
+% The H89's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // HEATHKIT H89}
+\renewcommand{\PlatformShort}{H89}                         % as in "on the H89"
+\newcommand{\PlatformLong}{Heathkit H89}                   % the title page
+\newcommand{\PlatformMachines}{HEATHKIT H89 / ZENITH Z-89}  % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{RETURN}                          % the H19's name for the key that confirms
+
+% On the H89, Holy Daemon's letter is H: the board's D was too like O on the CoCo's picture. The other
+% platforms take it on later, when theme.toml's letter changes, and this goes.
+\expandafter\def\csname th@syn@2@letter\endcsname{H}
+
+% The captures are the whole 4:3 screen: narrower than the others' so they are as tall, and a chapter's
+% legend stays on its page.
+\renewcommand{\capwidth}{4.6in}
+
+% Where the 40 x 24 game sits in a capture of the whole 80 x 24 screen, in image pixels (see \capgeom):
+\makeatletter
+\newcommand{\rendered}{\capgeom{352}{24}{16}{40}{1344}{1008}}  % client/tools/h89/render.py
+\makeatother
