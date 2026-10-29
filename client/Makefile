@@ -1,4 +1,4 @@
-# SYN-ACK WIRE client: Atari, Apple II, MS-DOS, CoCo, NES, Adam, H89.
+# SYN-ACK WIRE client: Atari, Apple II, MS-DOS, CoCo, NES, Adam, H89, Intellivision.
 #   make                      build/atari/synack.xex (the game), build/atari/wiremon.xex, wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
@@ -16,6 +16,7 @@
 #   make h89                  build/h89/SYNACK.COM: the Heathkit H89 client (CP/M 2.2.04, 64K, the H89 FujiNet card)
 #   make h89-disk H89SYS=disk build/h89/syn-ack-wire-h89.h8d: an H17 disk that boots CP/M, with SYNACK.COM and its help
 #   make h89-wiremon H89SYS=disk      build/h89/wiremon.h8d: the protocol monitor for the H89, on a CP/M disk that boots
+#   make intv                 build/intv/syn-ack-wire-intv.rom: the Intellivision client (IntyBASIC, the FujiNet cartridge)
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -476,6 +477,62 @@ $(H89B)/WIREMON.COM: test/wiremon.c $(H89NET) $(H89LIB)/fujinet-h89.lib $(HDRS) 
 $(H89B)/wiremon.h8d: $(H89B)/WIREMON.COM
 	$(call h89-disk,$@,$<)
 h89-wiremon: $(H89B)/wiremon.h8d
+# --- Intellivision: the FujiNet Intellivision cartridge (its mailbox at $9C00, its RAM at $8000-$9BFF). There is no
+# C compiler for the CP1610, so src/intv/ is the common code again in IntyBASIC 1.5, built here from its source
+# (IB_SRC, as M.U.L.E.'s client builds it: the IntyBASIC on PATH may be 1.4, which has no OPTION MAP). tools/bas_pp.py
+# fills the theme's and the protocol's {NAME}s in from theme_tab.h and proto_tab.h, and keeps or drops the '#if lines;
+# as1600 (on PATH) makes the .rom, and tools/checkcfg.py fails a ROM that would land on the ECS's ROM, the cartridge's
+# RAM or a GRAM mirror. The ROM uses an ECS keyboard when one is there.
+INTV    = build/intv
+IB_SRC  ?= $(HOME)/Workspace/IntyBASIC
+IB      = build/intybasic
+AS1600  ?= as1600
+INTVBAS = main memory fujinet net proto input ecskbd sound isr display prompt title help game autoplay
+INTVHELP = $(sort $(wildcard help/intv/screen/HELP*.TXT))
+INTVDEFS = -D URL="$(URL)" -D LOBBY_KEY=$(if $(LOBBY_KEY),$(LOBBY_KEY),11) -D TABLE=0 -D HINTS=$(if $(HINTS),$(HINTS),1) \
+           -D AUTOPLAY=$(INTVAUTO) -D AUTO_HANDLE=INTV
+INTVGEN = $(addprefix $(INTV)/,$(addsuffix .bas,$(INTVBAS)) title_art.bas help_pages.bas ecskbd.asm)
+
+$(IB)/intybasic: $(wildcard $(IB_SRC)/*.cpp $(IB_SRC)/*.h)
+	@mkdir -p $(IB)
+	$(CXX) -O2 -o $@ $(IB_SRC)/node.cpp $(IB_SRC)/microcode.cpp $(IB_SRC)/code.cpp $(IB_SRC)/IntyBASIC.cpp
+# its prologue and epilogue beside it; 1.5.2's prologue has a comment written with ' (line 251), which as1600 rejects
+$(IB)/intybasic_prologue.asm: $(IB_SRC)/intybasic_prologue.asm
+	@mkdir -p $(IB)
+	sed "s/  ' Max internal index/  ; Max internal index/" $< > $@
+$(IB)/intybasic_epilogue.asm: $(IB_SRC)/intybasic_epilogue.asm
+	@mkdir -p $(IB)
+	cp $< $@
+
+$(INTV):
+	mkdir -p $@
+$(INTV)/%.bas: src/intv/%.bas tools/bas_pp.py src/common/theme_tab.h src/common/proto_tab.h Makefile | $(INTV)
+	python3 tools/bas_pp.py -H src/common/theme_tab.h -H src/common/proto_tab.h $(INTVDEFS) $< $@
+$(INTV)/ecskbd.asm: src/intv/ecskbd.asm | $(INTV)
+	cp $< $@
+# the Atari's title art in colored squares, its letters' strokes the static
+$(INTV)/title_art.bas: $(TITLE) tools/title_art.py | $(INTV)
+	python3 tools/title_art.py i 0 $< > $@
+$(INTV)/help_pages.bas: $(INTVHELP) tools/help_nes.py | $(INTV)
+	python3 tools/help_nes.py --rows 12 --cols 20 --top 0 --left 0 --bas $@ $(INTVHELP)
+
+INTVROM = $(INTV)/syn-ack-wire-intv.rom
+$(INTV)/synack.asm: $(INTVGEN) $(IB)/intybasic $(IB)/intybasic_prologue.asm $(IB)/intybasic_epilogue.asm
+	cd $(INTV) && $(abspath $(IB))/intybasic main.bas synack.asm $(abspath $(IB))/ 2>&1 | grep -v '^Warning' | tee intybasic.log
+	@! grep -q '^Error' $(INTV)/intybasic.log || { rm -f $@; exit 1; }
+# the .bin and .cfg only for checkcfg (the .cfg is the memory map); the .rom is the cartridge's, and jzIntv's
+$(INTVROM): $(INTV)/synack.asm tools/checkcfg.py
+	cd $(INTV) && $(AS1600) -o synack.bin -l synack.lst synack.asm
+	python3 tools/checkcfg.py $(INTV)/synack.cfg
+	cd $(INTV) && $(AS1600) -o syn-ack-wire-intv.rom -s syn-ack-wire-intv.sym synack.asm
+	@echo "$@: $$(stat -c %s $@) bytes"
+intv: $(INTVROM)
+# its own build folder, so the local and public builds never share files
+intvtest:
+	$(MAKE) INTV=$(INTV)/local URL=$(LOCAL_URL) intv
+# plays by itself: make intv-auto URL=N:TCP://host:port/ LOBBY_KEY=0, then tools/run-intv.sh
+intv-auto:
+	$(MAKE) INTV=$(INTV)/auto INTVAUTO=1 intv
 
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
@@ -526,6 +583,6 @@ pc-h89: $(HDRS) src/h89/screens.h
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto h89 h89-disk h89-wiremon nes adam
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto h89 h89-disk h89-wiremon adam adamtest adam-auto intv intvtest intv-auto clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o $(ADAM)/%.o
 .DELETE_ON_ERROR:

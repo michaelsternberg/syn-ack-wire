@@ -26,6 +26,8 @@ players: a summary, not a specification.
   are the exceptions). LaTeX uses `\V{}`, `\Say{}{}` and the other macros in `docs/style/synack.sty`.
 - Keep the 6502 code minimal: measure the size change of client work and say it (`client/README.md` has the
   sizes table).
+- The Intellivision client (`client/src/intv/`) is the common code again in IntyBASIC: a change to `main.c`,
+  `game.c` or `proto.c` that the player sees needs making there too.
 - A new platform manual is `docs/manual/<platform>/` with its own `platform.tex`, Jack-in, Screen and Keys
   chapters, and captures; everything else is shared.
 
@@ -43,6 +45,8 @@ cd client && tools/run-nes.sh build/nes/syn-ack-wire-nes.nes # MAME (-nes_slot f
 cd client && make adam                                       # build/adam/syn-ack-wire-adam.ddp (z88dk, from defoogi)
 cd client && tools/run-adam.sh build/adam/syn-ack-wire-adam.ddp   # adamcore (EMU=adamem) + FujiNet-PC on BoIP 9990+n
 cd client && make h89-disk H89SYS=<CP/M 2.2.04 H17 disk>      # build/h89/syn-ack-wire-h89.h8d (z88dk's zcc, cpmtools)
+cd client && make intv                                       # build/intv/syn-ack-wire-intv.rom (IntyBASIC 1.5 from IB_SRC)
+cd client && tools/run-intv.sh build/intv/syn-ack-wire-intv.rom SCEN   # jzIntv headless (intvsim.py) + FujiNet-PC on BoIP 9980+n
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)

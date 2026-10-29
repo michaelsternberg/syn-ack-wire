@@ -1,0 +1,12 @@
+{ECS KEYBOARD   16/17}
+The ECS works too:
+{A-Z}  handle, buy
+{0-9}  the keypad's
+{RTN}  confirm
+{<-}   undo
+{Y} {N}  yes, no
+{?}    this help
+{ESC}  options
+{->} {UP} {DOWN} view
+
+{<PREV  BUTTON  NEXT>}

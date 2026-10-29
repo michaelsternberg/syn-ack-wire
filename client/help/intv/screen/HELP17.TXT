@@ -1,0 +1,12 @@
+{MANUAL, CREDITS17/17}
+The manual:
+SYN-ACK-WIRE.FLY.DEV
+/INTV
+Concept: Michael
+ Sternberg
+Code: Claude
+ (Anthropic)
+Rules: Sid Sackson's
+ ACQUIRE (1964)
+GPL-3.0
+{<PREV  BUTTON       }

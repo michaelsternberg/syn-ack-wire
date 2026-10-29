@@ -93,6 +93,10 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/run-adam.sh` | Runs the Adam image in adamcore (FujiNet Go Adam's core) or ADAMEm, booted from FujiNet-PC on BoIP: keys and the controller on a schedule, pictures |
 | `tools/render_adam.py` | Draws a `pc-adam` dump or an Adam instruction page as the screen looks, or as text |
 | `tools/z88dk`, `fnlib_adam.sh`, `adam_end.py` | z88dk from the defoogi container; fujinet-lib built with zsdcc; where the program ends, against the bootstrap |
+| `src/intv/` | The Intellivision client: the common code again in IntyBASIC (`main.bas`, `game.bas`, `proto.bas`), its display (`display.bas`, `prompt.bas`, `title.bas`, `help.bas`), the FujiNet cartridge (`fujinet.bas`, `net.bas`), the controller and the ECS keyboard (`input.bas`, `ecskbd.bas`, `ecskbd.asm`), `sound.bas`, `isr.bas`, `memory.bas` (the cartridge RAM's map) |
+| `tools/bas_pp.py` | Fills the theme's and the protocol's `{NAME}`s into the IntyBASIC sources from `theme_tab.h` and `proto_tab.h`, keeps or drops `'#if` lines, and fails a filled-in string too long for its place (`'fit N`) |
+| `tools/checkcfg.py` | Fails an Intellivision ROM that would land on the ECS's ROM, the cartridge's RAM or a GRAM mirror |
+| `tools/run-intv.sh`, `intvsim.py` | Runs the Intellivision ROM in jzIntv with FujiNet-PC: headless, a scenario of presses (the keypad, the buttons, the disc, the ECS keyboard), the screen as text and pictures; or in a window |
 
 ## Build
 ```sh
@@ -119,12 +123,14 @@ make h89                                 # build/h89/SYNACK.COM and SYNACK.HLP: 
 make h89-disk H89SYS=disk                # build/h89/syn-ack-wire-h89.h8d: an H17 disk that boots CP/M, with both
 make h89-wiremon H89SYS=disk             # build/h89/wiremon.h8d: the protocol monitor on the H89
 make pc-h89                              # build/pc/pc-h89: the common code with the H89 display, for captures
+make intv                                # build/intv/syn-ack-wire-intv.rom: the Intellivision client (the FujiNet cartridge)
 ```
 Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. Adam: z88dk
 `v25230-82c677065d` with zsdcc, in the `fozztexx/defoogi:1.4.7` container (`tools/z88dk` runs it). MS-DOS: Open
 Watcom v2 (`2.0 beta Sep 22 2025`), as the FujiNet team builds its DOS programs; `WATCOM` is its folder (default
 `~/openwatcom`). The game needs `FUJINET.SYS` (fujinet-rs232) loaded in CONFIG.SYS, from the same firmware version as
-the FujiNet.
+the FujiNet. Intellivision: IntyBASIC 1.5.2 (9393a28), built by `make intv` from its source (`IB_SRC`, default
+`~/Workspace/IntyBASIC`), and jzIntv's `as1600` on PATH.
 
 ## Play it in the emulator
 ```sh
@@ -747,6 +753,97 @@ make h89-disk H89SYS=cpm-2.2.04-64k.h8d     # build/h89/syn-ack-wire-h89.h8d; bo
 - **Tested** (2026-10-29, FujiNet Go H89 0.2.1, its FujiNet built in): the protocol monitor through 10 resyncs
   and a game, 0 bad frames; the client through a whole game against bots, the title, the instructions and the
   bell. Not yet on a real H89.
+## Intellivision (intv)
+For the Intellivision with the FujiNet cartridge, which serves the console a mailbox at $9C00-$9F3F and RAM at
+$8000-$9BFF, 8 bits a location. There is no C compiler for the CP1610, so `src/intv/` is the common code again, in
+IntyBASIC: `main.bas` is `main.c`, `game.bas` is `game.c` (every frame and every local check: `why_not`, the hivejack
+and buy checks), `proto.bas` is `proto.c`. A change to the common code's behaviour needs making here too.
+```sh
+make intv                                    # build/intv/syn-ack-wire-intv.rom
+make intvtest                                # build/intv/local/...: dialing LOCAL_URL
+make intv-auto URL=N:TCP://host:port/ LOBBY_KEY=0   # build/intv/auto/...: plays by itself
+tools/run-intv.sh build/intv/syn-ack-wire-intv.rom SCENARIO    # headless in jzIntv with FujiNet-PC
+WINDOW=1 ECS=1 tools/run-intv.sh build/intv/syn-ack-wire-intv.rom   # in jzIntv's window, an ECS attached
+```
+The image is `syn-ack-wire-intv.rom`, the cartridge's and jzIntv's format (the FujiNet lobby and CONFIG boot a `.rom`
+from TNFS, as M.U.L.E.'s Intellivision client is booted); `synack.bin` and `synack.cfg` beside it are only for
+`tools/checkcfg.py`.
+
+- **Build:** `tools/bas_pp.py` fills each `{NAME}` in the sources from `theme_tab.h`, `proto_tab.h` and the Makefile
+  (URL, LOBBY_KEY, TABLE, HINTS), so every word that names a game thing still comes from `theme.toml`; a line ending
+  `'fit N` fails the build if its filled-in strings are longer than N, the room they have on a 20-column screen.
+  IntyBASIC 1.5 (`OPTION MAP 2`), then as1600. The ROM keeps to $4810-$4FFF, $5000-$6FFF, $A000-$B7FF and
+  $C040-$DFFF: `checkcfg.py` fails it on $2000-$2FFF, $7000-$7FFF or $E000-$EFFF (the ECS's ROM; the EXEC also runs
+  whatever is at $7000 at power-up), on $8000-$9FFF (the cartridge's RAM and mailbox), or on $B800-$BFFF and
+  $F800-$FFFF (where some consoles show GRAM).
+- **Memory:** IntyBASIC has about 220 8-bit and 50 16-bit variables and a 24-word stack, so the game state, the frame
+  buffer and a 1K receive ring are in the cartridge's RAM (`memory.bas` has the map), reached with PEEK and POKE.
+  The stack is the tight one: 21 of its 24 words used at most, measured through play and a redial
+  (`intvsim.py`'s `stack`). Keep the frame handler shallow and the main loop's calls few deep.
+- **Network** (`net.bas`, `fujinet.bas` after M.U.L.E.'s): one mailbox transaction out at a time, never waited on
+  while the game runs. Once a frame the main loop looks for its answer and posts the next: frames queued by
+  `net_send` first, else a STATUS (at once while bytes arrive or an answer is due, else every 6 frames), and after a
+  STATUS that says bytes wait, a READ of as many as the mailbox's 512 and the ring's room allow. The open, the close
+  and the AppKey reads wait: they come before play, or after it.
+- **Screen:** 20 x 12 cards in foreground/background mode: upper case from the GROM, any background colour per card,
+  the yen sign a GRAM card. Too small for the other platforms' layout, so three views, which the disc (or the lower
+  right button) steps through; rows 10 and 11 are the same in all of them:
+  - GRID: the column letters (or NO SIGNAL, in red), the Grid with its row digits, each syndicate's hive a letter on
+    the syndicate's colour (`syn_cw` in `display.bas`; the colours are the theme's, as near as the Intellivision's
+    16 come); empty nodes dim dots, spikes white; the kit as digits where each exploit would run, yellow if it can,
+    red if not yet (move hints). Beside it a line per syndicate: its keypad digit while a prompt asks for one, its
+    letter, its hive's size (Black ICE black on white), your crypto (yellow), or while buying its price; then your
+    cash and the last move, which blinks for 5 seconds on the Grid.
+  - SEATS: the region, the six seats (> you, * bot, ? away; whose turn in green; cash in 6 columns), the log's last
+    3 rows (a line over 20 wraps at a word).
+  - CRYPTO: who holds how much of each syndicate's crypto (handles cut to 5), what is left in the bank, the hives'
+    sizes, and while buying the prices.
+  - Row 10 says what the open prompt is about (the kit, `INFILTRATION!`, `I TAKES O. HOLD 2`, the letters bought),
+    a refusal (game.c's, worded to fit 20), or the newest log line, scrolling when it is longer than 20. Row 11 is the
+    question (17 columns) and the clock. Both turn purple while this seat has a decision to make; a new prompt brings
+    GRID back.
+- **Title:** colour-stack mode. The Atari's logo in colored squares, a square for each character of
+  `title4.atascii` (`tools/title_art.py i`): its outline green, its letters' strokes static, black and tan squares
+  that the frame handler rewrites a third of a frame at a time (`SNOW`, in `title.bas`). Under it the region, the
+  status (wrapped), the handle and a line of keys that changes every 2.5 seconds.
+- **Controller:** the keypad answers: 1-6 run an exploit (or the
+  host's seat count), 1-7 pick a syndicate by its line in the GRID's panel, digits and ENTER the hivejack's counts,
+  CLEAR undoes, and 1 and 0 are yes and no (so ENTER after a buy never calls the null-route). The top buttons open
+  the instructions, the lower left the options on rows 10-11 (1 move hints, 2 sound, 3 log off, which asks again),
+  the lower right the next view. The handle is the lobby's name, or dialled: the disc up and down changes the letter
+  at the dial (A-Z, 0-9, punctuation; past the end it starts a new one), right and left move it, CLEAR deletes.
+  `input.bas` is M.U.L.E.'s decoding, which every FujiNet Intellivision client shares (a keypad key, a button and the
+  disc all report on the controller's one byte): the frame handler puts each press into a 16-key ring with the ECS's,
+  so none is lost while the main loop redraws a view (about 6 frames) or waits on the cartridge.
+- **ECS keyboard**, when one is attached (`ECS.AVAILABLE`; the ROM says `ecs_compat = 2`: it runs without one):
+  netcat's scan of the keyboard's matrix every frame (`ecskbd.asm`, Joe Zbiciak's CC0 scanner). It types as the
+  computers do: the handle, syndicate letters, digits, RTN, the left arrow to delete, Y and N, `?` for the
+  instructions, ESC for the options; the other arrows step the views.
+- **Sound** (`sound.bas`): the Atari's chords on the PSG's three tone channels, faded by the frame handler. The PSG's
+  periods are the Adam's SN76489 dividers (the same 3.58 MHz clock); a PAL console's PSG is a little sharp.
+- **Instructions:** `help/intv/screen/HELP*.TXT`, 17 pages of 11 lines of 20 and a page bar, written for the keypad
+  (`tools/help_nes.py --rows 12 --cols 20 --top 0 --left 0 --bas`), 1.8K words in the ROM. They draw over the screen
+  (from the title too, which then comes back); the disc turns them, any button closes them. No QR code: the manual's
+  address needs a version-2 code, 25 modules, and colored squares give 24 rows; the last page gives it as text.
+- **The lobby:** AppKey 11 holds the server's address, AppKey 0 the player's name, as on the other platforms.
+  `fujinet-intv-auto-racing` registered key 11 as well: the lobby writes the key before it boots either game, but a
+  SYN-ACK WIRE cartridge started on its own after Auto Racing was played from the lobby, on the same FujiNet, dials
+  Auto Racing's relay. Moving Auto Racing to a free key fixes it.
+- **Emulator** (`tools/run-intv.sh`): jzIntv (the FujiNet-patched build in `~/Workspace/jzintv-20200712-src`) with a
+  private FujiNet-PC (an RS-232 build, `~/Workspace/fujinet-pc-rs232/build/dist`) listening on BoIP 9980 + INSTANCE,
+  its web page on 8040 + n, CONFIG off. Headless, `tools/intvsim.py` steps jzIntv's debugger a frame at a time and
+  plays a scenario: keypad keys, buttons and the disc through `input.bas`'s TEST_HOOK, ECS keys through `ecskbd.bas`'s
+  ECS_HOOK, the screen as text and pictures, the autoplay build's pictures at each prompt (`dump_hook`), and the
+  stack's high-water mark.
+- **Tested** (2026-10-29, jzIntv a06a24a, FujiNet-PC rs232 1c5dcb807, on BoIP): the autoplay build played half an
+  hour, two whole games to their TOP NETRUNNER, hosting the next each time, and rejoined its seat by its handle after
+  being stopped (206 answers: 90 exploits, 87 buys, 16 hivejack answers, 8 brokers, a tie, 4 seat counts; the server
+  rejected none, no resyncs). By hand,
+  through TEST_HOOK: a dialled handle, the seat count, exploits, a buy, the three views, the instructions (from the
+  title and mid-game), the options and log off. The ECS keyboard: a typed handle, `?`, ESC, letters at a buy. The
+  lobby's AppKeys from the SD card (the name, and an address over the built-in URL), a taken handle, NO SIGNAL with
+  the server stopped 40 s and the seat taken back on the redial. Not yet: a real Intellivision and cartridge, the
+  lobby's own boot, FujiNet Go INTV, a tie (K), PAL.
 
 ## Sizes (bytes)
 | Piece | Code | Notes |
@@ -838,6 +935,19 @@ make h89-disk H89SYS=cpm-2.2.04-64k.h8d     # build/h89/syn-ack-wire-h89.h8d; bo
 | `input.c` | 194 | keys and the H19's escape sequences, `ticks()` from the BIOS's clock |
 | `sound.c` | 83 | the bell |
 | fujinet-lib | 6291 | open, status, read, write, close, AppKey read; FujiBus over SLIP to the card |
+| **intv** (2026-10-29, IntyBASIC 1.5.2 9393a28, as1600; in 16-bit words) | | |
+| `syn-ack-wire-intv.rom` | 16454 | words of ROM, of the 24K the map allows (`checkcfg.py` prints each segment); 33896 bytes of file |
+| `prompt.bas` | 3292 | rows 10-11: what each prompt is about, its question, the refusals, the options, the messages |
+| `display.bas` | 2760 | the three views, the Grid, the seats, the log and its ticker, numbers and cash |
+| `game.bas` | 1927 | the frames and the keys: `game.c` |
+| `main.bas` | 1817 | `main.c`, with IntyBASIC's runtime (its epilogue: PRINT, division, the frame handler's own share) |
+| `help_pages.bas` | 1801 | the 17 instruction pages, two characters a word |
+| `title.bas` | 1436 | + 617 `title_art.bas` (the logo's 87 cards, the static's 60 and its 256 random words) |
+| `net.bas`, `fujinet.bas` | 969 | the mailbox, the stream's state machine, the AppKeys, the 1K ring |
+| `input.bas`, `ecskbd.bas` | 774 | the controller, the key ring, the ECS's scanner (its decode tables 192) |
+| `help.bas`, `sound.bas` | 608 | the pages drawn; the chords (11, 12 periods) |
+| `proto.bas` | 200 | + 1K ring, 128-byte frame in the cartridge's RAM |
+| cartridge RAM | 1824 | bytes of $8000-$9BFF used ($8000-$871F) (`memory.bas`): the ring 1024, the frame 128, the game state, the log, the key ring |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |
