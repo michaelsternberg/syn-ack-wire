@@ -52,6 +52,22 @@ make -C docs                                                 # rulebook and manu
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
 ```
 
+## Deploying
+
+1. Build every disk the image serves, with the default URL (the public server, not a test one), in
+   `client/build/`: `atari/syn-ack-wire-atari.atr`, `apple2_text/syn-ack-wire-apple2.po`,
+   `msdos/syn-ack-wire-msdos.img`, `coco/syn-ack-wire-coco.dsk`, `nes/syn-ack-wire-nes.nes`,
+   `adam/syn-ack-wire-adam.ddp`, `intv/syn-ack-wire-intv.rom` and `h89/syn-ack-wire-h89.h8d` (the builds above).
+   The image takes them as they are at deploy time.
+2. `fly auth login` once, if flyctl isn't logged in.
+3. From the repository root, `deploy/deploy.sh`: it stops unless every disk is there, the FujiNet lobby shows no
+   players on this app's servers and `fly logs` has no game activity for 10 minutes (`QUIET`), then runs
+   `fly deploy --ha=false` (one machine). `--check` only reports; `--force` skips the checks.
+4. Afterwards: `fly ssh console -C "ls -l /srv/tnfs"` lists the disks served, and the four servers relist in the
+   lobby within seconds (a refused post retries at the next keepalive, 5 minutes).
+
+`server/README.md` ("Deploying to fly.io") has the setup from scratch.
+
 ## Working here
 
 - Stage files by name; commit only what the task changed.
@@ -63,12 +79,8 @@ client/tools/capture.sh                                      # redo the staged c
   checksum is unchanged afterwards (`capture.sh` does this).
 - Bind scratch servers to this machine (`--host 127.0.0.1`).
 - Never post to the FujiNet lobby, public or QA, unless asked. Never echo a token or other secret.
-- `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked, and with
-  `deploy/deploy.sh`, which first checks no one is playing. The disks it serves are
-  `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
-  `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
-  `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp` and
-  `client/build/h89/syn-ack-wire-h89.h8d` and `client/build/intv/syn-ack-wire-intv.rom` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
+- `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked, and only as
+  in "Deploying" below.
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else
