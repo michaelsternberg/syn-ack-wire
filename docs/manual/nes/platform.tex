@@ -1,0 +1,22 @@
+% The NES's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // NES}
+\renewcommand{\PlatformShort}{NES}                         % as in "on the NES"
+\newcommand{\PlatformLong}{Nintendo Entertainment System}  % the title page
+\newcommand{\PlatformMachines}{NES \quad // \quad FUJINET NES CARTRIDGE}   % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar turns purple and reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{START}                           % the pad's buttons for confirming
+\renewcommand{\KeyEsc}{SELECT+START}                       % and backing out
+\renewcommand{\typeword}{dial}                             % a handle goes in with a letter dial
+\renewcommand{\Typeword}{Dial}
+\renewcommand{\HostAsk}{SEATS: <\Rule{minplayers}>   A: START}
+\renewcommand{\HostStart}{set the number with \key{UP} and \key{DOWN} and press \key{A}}
+\renewcommand{\LogOffAsk}{\MakeUppercase{\V{logoff}} NOW? A:YES B:NO}
+\renewcommand{\KeyYes}{A}
+\renewcommand{\StayKeys}{\key{B} or \key{START} stays}
+\renewcommand{\TooLate}{TOO LATE: LAST SEAT TAKEN}
+
+% Where the screen sits in a capture, in image pixels (see \capgeom): client/tools/render_nes.py at --scale 3
+% draws the 224 lines a TV shows, name table rows 1-28, so a callout's (column, row) is the name table's.
+\makeatletter
+\newcommand{\rendered}{\capgeom{0}{-24}{24}{24}{768}{672}}
+\makeatother

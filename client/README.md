@@ -72,7 +72,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco` |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`; `PLATFORM=nes`: the autoplay image in MAME |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
@@ -585,6 +585,11 @@ value first, a spurious event).
   table ($2400), which is shown once the NMI has copied it all, without the sprites; the game goes on drawing into
   its own underneath, so closing simply shows it again. The QR code (page 10, `NES_QR_URL`) is in 16 quarter-block
   tiles, 2x2 modules each, so every module is exact (zbarimg reads MAME's snapshot).
+- **Manual:** `docs/manual/nes/`, its captures from `PLATFORM=nes tools/capture.sh`: the autoplay image in MAME
+  against the staged games (`run-nes.sh`, the dumps from `nes.lua`, drawn by `render_nes.py`), so the cursor is
+  where the console puts it. The rules text names the pad's buttons through `platform.tex` (`\typeword`,
+  `\HostStart`, `\LogOffAsk`...; `docs/style/synack.sty` has the keyboard's words as defaults). Help page 10's QR
+  code links to it by the fly.io short link (`NES_QR_URL`).
 - **Tested** (2026-10-28, MAME 0.289 from `~/Workspace/mame` with the FujiNet NES cartridge, FujiNet-PC built
   `FUJINET_TARGET=RS232` on BoIP): `make nes-auto` played four minutes, jacked in for a bot in a game in progress (every
   prompt kind answered, 0 refused, 0 resyncs); `NES_PADBOT=1` (tools/nes.lua) played three whole games with the pad alone, through the
