@@ -3,10 +3,11 @@
 and as pictures. After M.U.L.E.'s (fujinet-multiplayer-mule, clients/intv/tools/intvsim.py, GPL-3.0).
 
 It drives jzIntv's debugger (-d) over a pipe: a breakpoint on frame_isr makes each 'r' one frame.
-Pictures are drawn here from BACKTAB, GRAM and the GROM in the mode the game is in (scr_mode: 0 colour
-stack, with colored squares, 1 foreground/background), as a TV would show them. The controller goes
+Pictures are drawn by render_intv.py from BACKTAB, GRAM and the GROM in the mode the game is in (scr_mode: 0
+colour stack, with colored squares, 1 foreground/background), as a TV would show them; with DUMPDIR set, each
+picture's dump goes there too, scr001.bin and on (tools/capture.sh picks the manual's from them). The controller goes
 through input.bas's TEST_HOOK ($8FF0 = $A5, $8FF1 = the controller's byte); the ECS keyboard through
-ecskbd.bas's ring (when the game found an ECS: ECS=1).
+ecskbd.bas's ECS_HOOK ($8FF2: a key as its scanner gives it), when the game found an ECS (ECS=1).
 
 usage: intvsim.py ROM SCENARIO OUTDIR     (SCENARIO "-": stdin; the .sym beside the ROM)
 Scenario lines ('#' starts a comment):
@@ -30,28 +31,26 @@ Scenario lines ('#' starts a comment):
     poke ADDR VAL...        write them
     stack                   how much of IntyBASIC's 24-word stack has been used at most: at the start its
                             free words are marked $BEEF, and the highest one overwritten since is reported
-Environment: JZINTV_DIR, JZINTV, FUJINET (host:port, default 127.0.0.1:9980), ECS (1: attach one).
+Environment: JZINTV_DIR, JZINTV, FUJINET (host:port, default 127.0.0.1:9980), ECS (1: attach one), DUMPDIR.
 """
 import os
 import re
 import subprocess
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import render_intv  # noqa: E402
+
 JZ = os.environ.get("JZINTV_DIR", os.path.expanduser("~/Workspace/jzintv-20200712-src"))
 JZINTV = os.environ.get("JZINTV", os.path.join(JZ, "bin", "linux", "jzintv"))
 FUJINET = os.environ.get("FUJINET", "127.0.0.1:9980")
+DUMPDIR = os.environ.get("DUMPDIR")
 HOOK = 0x8FF0
 ECS_HOOK = 0x8FF2
 KEYPAD = {"1": 0x81, "2": 0x41, "3": 0x21, "4": 0x82, "5": 0x42, "6": 0x22, "7": 0x84, "8": 0x44,
           "9": 0x24, "C": 0x88, "0": 0x48, "E": 0x28}
 BUTTON = {"T": 0xA0, "L": 0x60, "R": 0xC0}
 DISC = {"N": 0x04, "E": 0x02, "S": 0x01, "W": 0x08}
-
-PAL = [(0x00, 0x00, 0x00), (0x00, 0x2D, 0xFF), (0xFF, 0x3D, 0x10), (0xC9, 0xCF, 0xAB),
-       (0x38, 0x6B, 0x3F), (0x00, 0xA7, 0x56), (0xFA, 0xEA, 0x50), (0xFF, 0xFC, 0xFF),
-       (0xBD, 0xAC, 0xC8), (0x24, 0xB8, 0xFF), (0xFF, 0xB4, 0x1F), (0x54, 0x6E, 0x00),
-       (0xFF, 0x4E, 0x57), (0xA4, 0x96, 0xFF), (0x75, 0xCC, 0x80), (0xB5, 0x1A, 0x58)]
-
 
 class Jz:
     def __init__(self, rom, sym):
@@ -70,10 +69,10 @@ class Jz:
             if n and re.match(r"^[0-9A-Fa-f]+$", a):
                 self.syms[n] = int(a, 16)
         self.isr = self.syms["label_FRAME_ISR"]
-        self.dump = self.syms.get("label_DUMP_HOOK")
+        self.dump_pc = self.syms.get("label_DUMP_HOOK")
         self.cmd("b label_FRAME_ISR")
-        self.grom = open(os.path.join(JZ, "rom", "grom.bin"), "rb").read()
         self.frames = 0
+        self.dumps = 0
         self.pc = None
         self.sp = self.low_sp = 0           # R6 at the breakpoints, and the deepest seen (the stack grows up)
 
@@ -107,7 +106,7 @@ class Jz:
             if regs:
                 self.sp = int(regs[-1][6], 16)
                 self.low_sp = max(self.low_sp, self.sp)
-            if self.pc != self.dump:
+            if self.pc != self.dump_pc:
                 self.frames += 1
 
     def mem(self, addr, n):
@@ -134,65 +133,22 @@ class Jz:
     def var(self, name):
         return self.mem(self.addr(name), 1)[0]
 
-    def screen_text(self, bt=None):
-        bt = bt or self.mem(0x200, 240)
-        mode = self.var("scr_mode") & 1
-        rows = []
-        for r in range(12):
-            s = ""
-            for c in range(20):
-                w = bt[r * 20 + c]
-                if not mode and w & 0x1800 == 0x1000:
-                    s += "#" if w & 0x27FF else " "        # colored squares
-                elif w & 0x800:
-                    s += "\\" if (w >> 3) & 0x3F == 0 else "%"
-                else:
-                    card = (w >> 3) & (0x3F if mode else 0xFF)
-                    s += chr(card + 32) if card < 95 else "?"
-            rows.append(s)
-        return rows
+    def dump(self):
+        """The screen as render_intv.py's dump: BACKTAB, GRAM, the mode."""
+        return render_intv.pack(self.mem(0x200, 240), [w & 0xFF for w in self.mem(0x3800, 512)],
+                                self.var("scr_mode") & 1)
+
+    def screen_text(self):
+        return render_intv.text(self.dump())
 
     def render(self, path):
-        from PIL import Image
-        bt = self.mem(0x200, 240)
-        gram = [w & 0xFF for w in self.mem(0x3800, 512)]
-        mode = self.var("scr_mode") & 1
-        img = Image.new("RGB", (176, 208), PAL[0])     # an 8 px border round the 160 x 192 lines
-        px = img.load()
-
-        def card_bits(gram_card, n):
-            if gram_card:
-                return gram[(n & 63) * 8:(n & 63) * 8 + 8]
-            return self.grom[n * 8:n * 8 + 8]
-
-        for r in range(12):
-            for c in range(20):
-                w = bt[r * 20 + c]
-                if not mode and w & 0x1800 == 0x1000:  # colored squares: 4 squares of 4 x 4
-                    cols = [w & 7, (w >> 3) & 7, (w >> 6) & 7, (w >> 9) & 3 | (w >> 11) & 4]
-                    for y in range(8):
-                        for x in range(8):
-                            k = (x >= 4) + 2 * (y >= 4)
-                            col = PAL[0] if cols[k] == 7 else PAL[cols[k]]
-                            for s in (0, 1):
-                                px[8 + c * 8 + x, 8 + (r * 8 + y) * 2 + s] = col
-                    continue
-                g = bool(w & 0x800)
-                if mode:
-                    n = (w >> 3) & 0x3F
-                    fg = w & 7
-                    bg = (w >> 9 & 1) | (w >> 9 & 2) | ((w >> 13) & 1) << 2 | ((w >> 12) & 1) << 3
-                else:
-                    n = (w >> 3) & (0x3F if g else 0xFF)
-                    fg = (w & 7) | ((w >> 9) & 8 if g else 0)
-                    bg = 0
-                bits = card_bits(g, n)
-                for y in range(8):
-                    for x in range(8):
-                        col = PAL[fg] if (bits[y] >> (7 - x)) & 1 else PAL[bg]
-                        for s in (0, 1):
-                            px[8 + c * 8 + x, 8 + (r * 8 + y) * 2 + s] = col
-        img.resize((176 * 4, 208 * 2), Image.NEAREST).save(path)
+        d = self.dump()
+        render_intv.render(d, path)
+        if DUMPDIR:                                     # the dumps too, numbered (tools/capture.sh)
+            self.dumps += 1
+            with open(os.path.join(DUMPDIR, "scr%03d.bin" % self.dumps), "wb") as f:
+                f.write(d)
+        return d
 
     def press(self, byte, frames=4):
         self.poke(HOOK, 0xA5)
@@ -282,13 +238,13 @@ def main():
             parts = arg.split()
             pre, count = parts[0], int(parts[1])
             mx = int(parts[2]) if len(parts) > 2 else 36000
-            if jz.dump is None:
+            if jz.dump_pc is None:
                 raise SystemExit("dumps: no dump_hook (the autoplay build has one)")
             jz.cmd("b label_DUMP_HOOK")
             got, start = 0, jz.frames
             while got < count and jz.frames - start < mx:
                 jz.run(1)
-                if jz.pc == jz.dump:
+                if jz.pc == jz.dump_pc:
                     name = "%s_%03d" % (pre, got)
                     jz.render(os.path.join(outdir, name + ".png"))
                     show(jz, name)

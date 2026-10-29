@@ -1,0 +1,20 @@
+% The Intellivision's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // INTELLIVISION}
+\renewcommand{\PlatformShort}{Intellivision}               % as in "on the Intellivision"
+\newcommand{\PlatformLong}{Mattel Intellivision}           % the title page
+\newcommand{\PlatformMachines}{INTELLIVISION \quad // \quad FUJINET INTELLIVISION CARTRIDGE}   % the title page, the screen chapter
+\newcommand{\SignalLost}{the top line turns red and reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{ENTER}                           % the keypad's key that confirms
+\renewcommand{\KeyEsc}{LOWER LEFT, 3}                      % the options button, then the options' 3
+\renewcommand{\typeword}{dial}                             % a handle goes in with a letter dial (or the ECS)
+\renewcommand{\Typeword}{Dial}
+\renewcommand{\HostAsk}{SEATS? \Rule{minplayers}-\Rule{maxplayers}}
+\renewcommand{\LogOffAsk}{\MakeUppercase{\V{logoff}}? 1:YES}
+\renewcommand{\KeyYes}{1}
+\renewcommand{\TooLate}{TOO LATE: SEAT TAKEN}
+
+% Where the screen sits in a capture, in image pixels (see \capgeom): client/tools/render_intv.py draws the
+% 20 x 12 cards inside an 8-pixel border, each card 32 x 32 image pixels, so a callout's (column, row) is the card's.
+\makeatletter
+\newcommand{\rendered}{\capgeom{32}{16}{32}{32}{704}{416}}
+\makeatother

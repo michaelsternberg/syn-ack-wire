@@ -38,6 +38,8 @@ auto_key: PROCEDURE
         au_typed = au_typed + 1
         RETURN
     END IF
+    ' In a lobby with no question, the seats (the manual's capture of one)
+    IF field <> 0 AND turn = NONE AND pr_kind = 0 AND view <> V_SEATS THEN in_k = K_NEXT : RETURN
     au_seed = au_seed * 2 XOR (au_seed AND $80) / 128 * $1D     ' an 8-bit LFSR
     IF au_seed = 0 THEN au_seed = $5A
     IF pr_kind = P_SEATS THEN in_k = 51

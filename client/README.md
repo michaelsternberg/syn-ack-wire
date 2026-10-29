@@ -82,7 +82,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`, `adam`; `PLATFORM=nes`: the autoplay image in MAME |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`, `adam`; `PLATFORM=nes`: the autoplay image in MAME; `PLATFORM=intv`: the autoplay ROM in jzIntv |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
@@ -97,6 +97,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/bas_pp.py` | Fills the theme's and the protocol's `{NAME}`s into the IntyBASIC sources from `theme_tab.h` and `proto_tab.h`, keeps or drops `'#if` lines, and fails a filled-in string too long for its place (`'fit N`) |
 | `tools/checkcfg.py` | Fails an Intellivision ROM that would land on the ECS's ROM, the cartridge's RAM or a GRAM mirror |
 | `tools/run-intv.sh`, `intvsim.py` | Runs the Intellivision ROM in jzIntv with FujiNet-PC: headless, a scenario of presses (the keypad, the buttons, the disc, the ECS keyboard), the screen as text and pictures; or in a window |
+| `tools/render_intv.py` | Draws an Intellivision dump (BACKTAB, GRAM, the mode: `intvsim.py` saves them) as a TV shows it, or as text |
 
 ## Build
 ```sh
@@ -825,6 +826,9 @@ from TNFS, as M.U.L.E.'s Intellivision client is booted); `synack.bin` and `syna
   (`tools/help_nes.py --rows 12 --cols 20 --top 0 --left 0 --bas`), 1.8K words in the ROM. They draw over the screen
   (from the title too, which then comes back); the disc turns them, any button closes them. No QR code: the manual's
   address needs a version-2 code, 25 modules, and colored squares give 24 rows; the last page gives it as text.
+- **Manual:** `docs/manual/intv/`, its captures from `PLATFORM=intv tools/capture.sh`: the autoplay ROM in jzIntv
+  against the staged games, a dump at each new prompt (in a lobby the autoplay shows the seats, for the
+  lobby-join capture), drawn by `render_intv.py`. The Controller is its own chapter, the ECS keyboard in it.
 - **The lobby:** AppKey 11 holds the server's address, AppKey 0 the player's name, as on the other platforms.
   `fujinet-intv-auto-racing` registered key 11 as well: the lobby writes the key before it boots either game, but a
   SYN-ACK WIRE cartridge started on its own after Auto Racing was played from the lobby, on the same FujiNet, dials
