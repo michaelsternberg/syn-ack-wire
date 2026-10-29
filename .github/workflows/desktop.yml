@@ -21,7 +21,7 @@ jobs:
             cmake: -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
           - os: macos-14
             name: macos
-            cmake: -DCMAKE_OSX_ARCHITECTURES=arm64;x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+            cmake: "'-DCMAKE_OSX_ARCHITECTURES=arm64;x86_64' -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0"
           - os: ubuntu-22.04          # an older glibc, so the program runs on more Linux systems
             name: linux
             cmake: ""
@@ -40,7 +40,8 @@ jobs:
             libgl1-mesa-dev libasound2-dev libpulse-dev libpipewire-0.3-dev libdbus-1-dev libudev-dev
       - name: Configure
         shell: bash
-        run: cmake -S desktop -B build -DCMAKE_BUILD_TYPE=Release -DSAW_FETCH_DEPS=ON "${{ matrix.cmake }}"
+        # matrix.cmake is shell words: several options, quoted where a value has a ";" in it
+        run: cmake -S desktop -B build -DCMAKE_BUILD_TYPE=Release -DSAW_FETCH_DEPS=ON ${{ matrix.cmake }}
       - name: Build
         run: cmake --build build --config Release --parallel
       - name: Test
