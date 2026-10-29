@@ -1,0 +1,12 @@
+#!/bin/sh
+# z88dk TOOL ARGS... -- run a z88dk tool (zcc, z80asm, z88dk-appmake...) for the Adam build.
+# z88dk is used from the host if it is installed there, otherwise from the defoogi container
+# (fozztexx/defoogi: z88dk with zsdcc and the Adam's EOS library), which mounts only this
+# repository: paths given to the tool must stay inside it. As fujinet-multiplayer-mule's
+# tools/z80/z88dk.
+if command -v zcc >/dev/null 2>&1; then
+    exec "$@"
+fi
+here=$(pwd -P)
+root=$(git -C "$here" rev-parse --show-toplevel)
+exec defoogi --directory "$root" sh -c 'cd "$0" && exec "$@"' "$here" "$@"
