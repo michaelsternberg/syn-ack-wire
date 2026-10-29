@@ -1,6 +1,7 @@
 /* The desktop's text display: the MS-DOS client's 80-column screen
  * (src/msdos/display_text.c), its layout and its colour rules, with the
- * circuit-board art either side. Cells hold code page 437 characters and a
+ * circuit-board art either side, and the title's logo with each column doubled
+ * over panels cleared round it, as there. Cells hold code page 437 characters and a
  * role (desk.h), not a colour: the window's colour theme gives each role its
  * colours, so the drawing code here is the DOS code with BIOS attributes
  * swapped for roles:
@@ -140,9 +141,11 @@ static void clear_row(unsigned char r)
     spaces(40);
 }
 
-static void clear_screen(void)
+/* `title`: the title screen, whose panels are cleared round the logo */
+static void clear_screen(unsigned char title)
 {
     unsigned char r, c;
+    const unsigned char *m;
     mode = NORMAL;
     for (r = 0; r < SCR_ROWS; ++r)
         for (c = 0; c < SCR_COLS; ++c) {
@@ -151,9 +154,10 @@ static void clear_screen(void)
         }
     for (r = 0; r < SCR_ROWS; ++r)      /* the side panels */
         for (c = 0; c < MARGIN_W; ++c) {
-            screen[r][c].ch = margins[r][c];
+            m = title && r < TITLE80_ROWS ? title_margins[r] : margins[r];
+            screen[r][c].ch = m[c];
             screen[r][c].role = R_ART;
-            screen[r][SCR_COLS - MARGIN_W + c].ch = margins[r][MARGIN_W + c];
+            screen[r][SCR_COLS - MARGIN_W + c].ch = m[MARGIN_W + c];
             screen[r][SCR_COLS - MARGIN_W + c].role = R_ART;
         }
     for (r = 0; r < SCR_ROWS; ++r)      /* the game's 40 columns, cell by cell for the panels' colour */
@@ -209,10 +213,18 @@ void display_title_screen(void)
     const unsigned char *p;
     scr_lock();
     field = 0;
-    clear_screen();
+    clear_screen(1);
     for (p = title_art; *p != 0xFF; p += 3 + p[2]) {
-        at(p[0], p[1]);
-        textn(p + 3, p[2]);
+        cur = &screen[p[0]][2 * p[1] + TITLE80_SHIFT];     /* each column doubled, as MS-DOS's 80 columns */
+        cr = p[0];
+        for (n = 0; n < p[2]; ++n) {
+            v = p[3 + n];
+            put(v);
+            /* a piece with an arm to the right goes on with a line; the hyphen's half block, and the cell
+             * before the hyphen, with a half block (the hyphen centred between the letters' lines) */
+            put(strchr("\xC4\xC3\xDA\xC0\xC2\xC1\xC5", v) ? 0xC4
+                : v == 0xDF || (n + 1 < p[2] && p[4 + n] == 0xDF) ? 0xDF : ' ');
+        }
     }
     at(ROW_REGION, 4);
     text("REGION");                     /* from the server, once it answers */
@@ -646,7 +658,7 @@ void display_playfield(void)
 {
     scr_lock();
     field = 1;
-    clear_screen();
+    clear_screen(0);
     mode = INV;
     clear_row(0);
     at(0, 39 - (sizeof TH_TITLE - 1));
