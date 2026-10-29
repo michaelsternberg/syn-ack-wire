@@ -68,7 +68,7 @@ client/tools/capture.sh                                      # redo the staged c
   `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
   `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
   `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp` and
-  `client/build/h89/syn-ack-wire-h89.h8d` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
+  `client/build/h89/syn-ack-wire-h89.h8d` and `client/build/intv/syn-ack-wire-intv.rom` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else

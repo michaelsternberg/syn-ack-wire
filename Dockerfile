@@ -3,7 +3,7 @@
 # tnfsd, which serves the client disks to the FujiNet lobby: client/build/atari/syn-ack-wire-atari.atr,
 # client/build/apple2_text/syn-ack-wire-apple2.po, client/build/msdos/syn-ack-wire-msdos.img,
 # client/build/coco/syn-ack-wire-coco.dsk, client/build/nes/syn-ack-wire-nes.nes,
-# client/build/adam/syn-ack-wire-adam.ddp and client/build/h89/syn-ack-wire-h89.h8d, as built when you deploy.
+# client/build/adam/syn-ack-wire-adam.ddp, client/build/h89/syn-ack-wire-h89.h8d and client/build/intv/syn-ack-wire-intv.rom, as built when you deploy.
 
 # tnfsd from upstream at a fixed release, with deploy/tnfsd-bind-address.patch (fly.io's UDP needs it).
 FROM python:3.13-slim AS tnfsd
@@ -23,7 +23,8 @@ COPY --from=tnfsd /src/bin/tnfsd /usr/local/bin/tnfsd
 COPY client/build/atari/syn-ack-wire-atari.atr client/build/apple2_text/syn-ack-wire-apple2.po \
      client/build/msdos/syn-ack-wire-msdos.img client/build/coco/syn-ack-wire-coco.dsk \
      client/build/nes/syn-ack-wire-nes.nes client/build/adam/syn-ack-wire-adam.ddp \
-     client/build/h89/syn-ack-wire-h89.h8d /srv/tnfs/
+     client/build/h89/syn-ack-wire-h89.h8d \
+     client/build/intv/syn-ack-wire-intv.rom /srv/tnfs/
 # also under the names they had until v0.2.0, so TNFS links saved then still boot (copies: tnfsd may not follow links)
 RUN cp /srv/tnfs/syn-ack-wire-atari.atr /srv/tnfs/synack.atr && cp /srv/tnfs/syn-ack-wire-apple2.po /srv/tnfs/synack.po
 # and the CoCo disk as synack.dsk too, for the lobby: it runs RUNM"<the disk's name>", which takes at most 8 letters
