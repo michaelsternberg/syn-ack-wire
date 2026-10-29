@@ -1,0 +1,28 @@
+{ PRICE CHART             8/11 }
+
+Find the hive's size under its
+tier:
+low: {G} {R}  mid: {D} {I} {B}
+high: {L} {O}
++-----+-----+-----+-----+
+|  LOW|  MID| HIGH|PRICE|
++-----+-----+-----+-----+
+|    2|    -|    -| \200|
+|    3|    2|    -| \300|
+|    4|    3|    2| \400|
+|    5|    4|    3| \500|
+| 6-10|    5|    4| \600|
+|11-20| 6-10|    5| \700|
+|21-30|11-20| 6-10| \800|
+|31-40|21-30|11-20| \900|
+|  41+|31-40|21-30|\1000|
+|    -|  41+|31-40|\1100|
+|    -|    -|  41+|\1200|
++-----+-----+-----+-----+
+ROOT: 10x the price. SUDO: 5x.
+
+{GHOSTMDM} and {RATKING} are the
+least valuable, {LOTUS-12} and
+{OBSIDIAN} the most.
+
+{<- PREV     B:BACK     NEXT ->}

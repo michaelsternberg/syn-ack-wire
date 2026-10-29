@@ -1,4 +1,4 @@
-# SYN-ACK WIRE client (Atari for now).
+# SYN-ACK WIRE client: Atari, Apple II, MS-DOS, CoCo, NES.
 #   make                      build/atari/synack.xex (the game), build/atari/wiremon.xex, wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
@@ -10,6 +10,8 @@
 #   make msdos WATCOM=dir     build/msdos/SYNACK.EXE: the MS-DOS client (8088 and up, FUJINET.SYS)
 #   make msdos-img WATCOM=dir build/msdos/syn-ack-wire-msdos.img: a 360 KB floppy with SYNACK.EXE and its help pages
 #   make msdos-wiremon WATCOM=dir     build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for MS-DOS
+#   make coco                 build/coco/synack.bin: the CoCo 1/2 client (make coco-dsk: its disk)
+#   make nes                  build/nes/syn-ack-wire-nes.nes: the NES client (the FujiNet NES cartridge)
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -300,6 +302,62 @@ $(COCOAUTO)/syn-ack-wire-coco.dsk: $(COCOAUTO)/synack.bin $(COCO)/synack.hlp
 	$(DECB) copy -1 -b $(COCO)/synack.hlp $@,SYNACK.HLP
 coco-auto: $(COCOAUTO)/syn-ack-wire-coco.dsk
 
+# --- NES: the FujiNet NES cartridge (its mailbox at $5000, its 8K WRAM at $6000) through fujinet-lib (a pinned
+# copy in lib/). NROM-256: 32K of PRG, the tiles made in CHR-RAM at start-up, the instruction pages in the ROM
+# (help_nes.py). nes-romstamp.py writes the cartridge's FUJI claim at $FFF0 and checks that nothing writes the
+# mailbox's write-only pages with a read-modify-write instruction; a failing image is deleted.
+NES     = build/nes
+NESLIB  = lib/fujinet-lib/nes-a29e57f
+NESFLAGS = -t nes -O -Or -Cl -I $(NESLIB)/include -I $(NES) -DDISPLAY_IDLE=1 -DNARROW_SAYS=1
+NESPLAT = $(NES)/crt0.o $(NES)/ppu.o $(NES)/pad.o $(NES)/sound.o $(NES)/ring.o $(NES)/text.o $(NES)/input.o \
+          $(NES)/net_fn.o
+NESGAME = $(NES)/main.o $(NES)/game.o $(NES)/proto.o $(NES)/display_text.o $(NES)/help.o $(NESPLAT)
+# the autoplay build (NESAUTO=1, by make nes-auto): plays by itself, its dumps saved by tools/nes.lua
+ifneq ($(NESAUTO),)
+NESFLAGS += -DAUTOPLAY -DDUMP_TICKS=240 -DAUTO_HANDLE='"NES"'
+NESGAME += $(NES)/autoplay.o $(NES)/nes_dump.o
+endif
+NESHELP = $(sort $(wildcard help/nes/screen/HELP*.TXT))
+# what a help page's [QR] marker links to: the NES manual, by the fly.io server's short link
+NES_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/NES
+NESHDRS = src/nes/font.h src/nes/title_art.h src/nes/text.h
+
+src/nes/font.h: src/nes/font.txt tools/font_nes.py
+	python3 tools/font_nes.py $< > $@
+# the Atari's title art in the box tiles, its letters' strokes in the static's tiles
+src/nes/title_art.h: $(TITLE) tools/title_art.py
+	python3 tools/title_art.py n 1 $< > $@
+$(NES)/help_pages.h: $(NESHELP) tools/help_nes.py tools/qr.py | $(NES)
+	python3 tools/help_nes.py --qr "$(NES_QR_URL)" $@ $(NESHELP)
+$(NES)/help.s: $(NES)/help_pages.h
+
+$(NES):
+	mkdir -p $@
+$(NES)/%.s: src/common/%.c $(HDRS) | $(NES)
+	$(CC) $(NESFLAGS) $(DEFS) -o $@ $<
+$(NES)/%.s: src/nes/%.c $(HDRS) $(NESHDRS) | $(NES)
+	$(CC) $(NESFLAGS) $(DEFS) -o $@ $<
+$(NES)/%.s: test/%.c $(HDRS) $(NESHDRS) | $(NES)
+	$(CC) $(NESFLAGS) $(DEFS) -o $@ $<
+$(NES)/%.o: src/nes/%.s | $(NES)
+	$(AS) -t nes -o $@ $<
+$(NES)/%.o: $(NES)/%.s
+	$(AS) -t nes -o $@ $<
+
+NESROM  = $(NES)/syn-ack-wire-nes.nes
+$(NESROM): $(NESGAME) src/nes/game.cfg $(NESLIB)/fujinet-nes-a29e57f.lib
+	$(LD) -C src/nes/game.cfg -m $(NES)/synack.map -Ln $(NES)/synack.lbl -o $@ $(NESGAME) \
+	    $(NESLIB)/fujinet-nes-a29e57f.lib nes.lib
+	python3 $(NESLIB)/nes-romstamp.py --stamp --map $(NES)/synack.map $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+nes: $(NESROM)
+# its own build folder, so the local and public builds never share objects
+nestest:
+	$(MAKE) NES=$(NES)/local URL=$(LOCAL_URL) nes
+# plays by itself: make nes-auto URL=N:TCP://host:port/ LOBBY_KEY=0, then DUMPDIR=dir tools/run-nes.sh
+nes-auto:
+	$(MAKE) NES=$(NES)/auto NESAUTO=1 nes
+
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
 pc-apple2: $(HDRS) src/apple2/title_art.h
@@ -323,9 +381,17 @@ pc-coco: $(HDRS) src/coco/title_art.h
 	    src/common/main.c src/common/game.c src/common/proto.c src/coco/display_text.c test/coco_text_pc.c \
 	    test/autoplay.c test/pc_harness.c
 
+# --- the same for the NES display (src/nes/display_text.c, over test/nes_text_pc.c): build/pc/pc-nes [host] [port]
+pc-nes: $(HDRS) src/nes/title_art.h src/nes/text.h
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 \
+	    -DNARROW_SAYS=1 -DPC_SCREEN=txt_cells -DPC_NES -DAUTO_HANDLE='"NES"' -o build/pc/pc-nes \
+	    src/common/main.c src/common/game.c src/common/proto.c src/nes/display_text.c test/nes_text_pc.c \
+	    test/autoplay.c test/pc_harness.c
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto clean
-.PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-nes apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto clean
+.PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o
 .DELETE_ON_ERROR:

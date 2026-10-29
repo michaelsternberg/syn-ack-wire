@@ -11,7 +11,9 @@
  * MS-DOS display, src/msdos/display_text.c, and each dump is the 40x24 game area
  * of its 80x25 screen, as the DOS autoplay build writes it (test/dos_dump.c).
  * With PC_COCO (make pc-coco), it is the CoCo's, src/coco/display_text.c, over
- * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells).
+ * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells). With PC_NES
+ * (make pc-nes), the NES's, src/nes/display_text.c, over test/nes_text_pc.c:
+ * its 960 cells, its attribute table and its sprites.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -103,6 +105,8 @@ unsigned char ticks_per_sec(void)
 unsigned short PC_SCREEN[25 * 80];      /* character and attribute, as in DOS video memory */
 #elif defined(PC_COCO)
 extern unsigned char PC_SCREEN[24 * 40];    /* test/coco_text_pc.c */
+#elif defined(PC_NES)
+extern unsigned char PC_SCREEN[30 * 32], attr[128], pc_oam[256];  /* test/nes_text_pc.c */
 #else
 unsigned char PC_SCREEN[1024], pc_switch;
 #endif
@@ -120,6 +124,10 @@ void pc_dump(void)
 #ifdef PC_MSDOS
         for (int r = 0; r < 24; ++r)    /* little-endian, as on the PC: character, then attribute */
             fwrite(PC_SCREEN + r * 80 + 20, 2, 40, f);
+#elif defined(PC_NES)
+        fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);  /* the cells, the attribute table, the sprites */
+        fwrite(attr, 1, 64, f);
+        fwrite(pc_oam, 1, sizeof pc_oam, f);
 #else
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
 #endif

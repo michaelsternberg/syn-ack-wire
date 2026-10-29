@@ -43,6 +43,16 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/coco/sound.c` | Chords as short notes from the 6-bit DAC |
 | `src/coco/snow.c` | The CoCo title's static: random pixels in the logo's letters, written to the screen in 6809 code |
 | `src/coco/title_art.h`, `title_snow.h` | The Atari's title art in the font's box glyphs, and which pixels get the static, **generated** by `tools/title_art.py k` and `m` |
+| `src/nes/crt0.s`, `game.cfg` | NES: the iNES header (NROM-256, CHR-RAM, the cartridge's WRAM), start-up, the NMI, the FujiNet claim at $FFF0 |
+| `src/nes/ppu.s` | NES: the NMI's share of drawing: the rows written since the last frame, the attributes, the title's static, in the vertical blank |
+| `src/nes/text.c`, `text.h` | NES: the tiles (from `font.txt`), palettes and blank name tables at start-up; the first screen shown whole |
+| `src/nes/font.txt` | The NES's 8x8 font (the NES CONFIG's) and the logo's box tiles; `font.h` is **generated** by `tools/font_nes.py` |
+| `src/nes/display_text.c` | NES text screens: 30 columns of tiles, colour bands, the pad's cursor as sprites |
+| `src/nes/input.c`, `pad.s` | NES: the pad (latched by the NMI) turned into keys, with a cursor on the open prompt's answers; the title's letter dial; `ticks()` |
+| `src/nes/net_fn.c` | Network calls for the NES: the FujiNet NES cartridge's mailbox, through fujinet-lib |
+| `src/nes/help.c` | NES: the instruction pages, from the ROM onto the second name table |
+| `src/nes/sound.s`, `ring.s` | NES: the Atari's chords on the APU, from the NMI; `rx_ring` at $0300 |
+| `src/nes/title_art.h` | The Atari's title art in the box tiles, its letters the static's tiles, **generated** by `tools/title_art.py n` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
@@ -51,6 +61,8 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `test/coco_text_pc.c` | `text.c`'s calls on a PC (`make pc-coco`): only the cells, which the dumps save |
 | `test/coco_dump.c` | The CoCo autoplay build's dump hook: an empty `pc_dump` a debugger stops on |
 | `test/coco/` | The CoCo screen test (`screentest.c`): the font, both colour sets, the title's static and the drawing speed, on a PMODE 4 screen |
+| `test/nes_text_pc.c` | What `src/nes/display_text.c` needs on a PC (`make pc-nes`): the cells, attributes and sprites, which the dumps save |
+| `test/nes_dump.c` | The NES autoplay build's dump hook: it counts dumps for `tools/nes.lua`, which saves the screen |
 | `test/dos_glitch.c` | A flaky serial line for testing MS-DOS builds: with `-Dnetwork_status=glitch_status`, the status call fails 1 second in 20 |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/run-dos.sh` | Plays the MS-DOS client in a DOSBox-X window, booting your PC-DOS disk with `FUJINET.SYS`, FujiNet-PC (RS-232) on COM1 |
@@ -65,6 +77,9 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
 | `tools/render_coco.py` | Draws a CoCo screen dump (6144 bytes of PMODE 4, or `pc-coco`'s 960 cells, a title's logo with its static) as the screen looks |
+| `tools/run-nes.sh`, `nes.lua` | Runs the NES image in MAME (`-nes_slot fujinet`) with FujiNet-PC: the pad on a schedule or a pad bot, the screen as text, snapshots, the autoplay build's dumps |
+| `tools/help_nes.py` | Checks the NES instruction pages and packs them for the ROM (`help_pages.h`), the QR code in quarter-block tiles |
+| `tools/render_nes.py` | Draws an NES dump (`pc-nes`'s or the autoplay build's) or an instruction page as the screen looks, or as text |
 
 ## Build
 ```sh
@@ -83,6 +98,8 @@ make msdos-img WATCOM=dir                # build/msdos/syn-ack-wire-msdos.img: t
 make msdos-test WATCOM=dir               # build/msdos/SYNAUTO.EXE: plays by itself, saving its screen
 make msdos-wiremon WATCOM=dir            # build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for DOS
 make pc-msdos                            # build/pc/pc-msdos: the common code with the MS-DOS display, for captures
+make nes                                 # build/nes/syn-ack-wire-nes.nes: the NES client (the FujiNet NES cartridge)
+make pc-nes                              # build/pc/pc-nes: the common code with the NES display, for captures
 ```
 Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. MS-DOS: Open
 Watcom v2 (`2.0 beta Sep 22 2025`), as the FujiNet team builds its DOS programs; `WATCOM` is its folder (default
@@ -502,6 +519,80 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
   start ("Attempt to register save state entry after state
   registration is closed"), so MAME is for the screen test only.
 
+## NES (nes)
+The same common code with an NES platform layer (`src/nes/`), for the FujiNet NES cartridge, which serves the
+console a mailbox at $5000-$57FF and 8K of WRAM at $6000. Built with cc65 (`-t nes`), our own start-up and link
+config: NROM-256, 32K of PRG, 8K of CHR-RAM, vertical mirroring.
+```sh
+make nes                                     # build/nes/syn-ack-wire-nes.nes
+make nestest                                 # build/nes/local/...: dialing LOCAL_URL
+make nes-auto URL=N:TCP://host:port/ LOBBY_KEY=0   # build/nes/auto/...: plays by itself
+make pc-nes && build/pc/pc-nes host port     # the display on this PC against a server, saving its screen
+tools/run-nes.sh build/nes/syn-ack-wire-nes.nes   # play it in MAME with FujiNet-PC
+```
+The image is `syn-ack-wire-nes.nes`, as the other platforms' are named. The FujiNet game lobby mounts a `.nes` over
+TNFS and boots it, having written the server's address to the AppKey (fujinet-lobby, branch `nes`, `st_boot.c`), so
+the client's AppKey dial is the other platforms'. `nes-romstamp.py` (in the pinned fujinet-lib) writes `FUJI` at
+$FFF0, without which the cartridge shuts its mailbox off once the game boots, and fails the build if any code would
+write the mailbox's write-only pages ($5500-$57FF) with a read-modify-write instruction (the 6502 writes the old
+value first, a spurious event).
+
+- **Screen:** 8x8 tiles, so 32 columns where the others have 40: the screens are laid out anew in columns 1-30 and
+  rows 1-28 of the name table, inside a TV's overscan. The Grid at the left (rows 3-11), beside it the hives panel
+  with the syndicates' `short` names (`SYN_SHORTS`), the seats (14-19: handle, cash in 6 columns, 7 holdings of 2),
+  the log (20-25: each line on 1 row, or wrapped at a word onto 2), then the info row and the question with the
+  clock (26-27). No game name in the title bar: the region and the link take it. game.c's own refusals are worded
+  for the question's 26 columns (`NARROW_SAYS`, `config.h`).
+- **Drawing:** the display writes `txt_cells` (WRAM) and marks the rows it changed; the NMI copies at most 3 rows a
+  frame in the vertical blank (`ppu.s`), so a whole screen takes 10 frames, in view, and a row drawn over itself
+  doesn't flicker. Measured in MAME (a write tap on the NMI's first store and on PPUMASK, two minutes of autoplay):
+  at most 2146 cycles to the last PPU write, inside the 2273 of the blank; 4 rows took 2568. The cells start on a
+  page ($6000), so no row's `(ptr),y` crosses one. Only the first title is drawn with the display off.
+- **Tiles and colour:** made in CHR-RAM at start-up (`text.c`) from `font.txt`, the NES CONFIG's 7x7 Family BASIC
+  style: each glyph colour 3 on colour 2 (plane 1 all set), and its inverse at code | $80. So each palette gives
+  its text its own background: green on black; the Grid and the seats on a dark green panel, as on the Atari; cash
+  and every other syndicate's crypto in yellow there, so two-digit holdings side by side read apart; the bottom
+  two rows purple while this seat has a decision to make, the title bar too while the link is down (NO SIGNAL).
+  Attribute blocks are 2x2 tiles, which is why the bands and the holdings sit on even rows and columns.
+- **Title:** the Atari's logo in box tiles (`tools/title_art.py n`), its letters' strokes in 4 static tiles that the
+  NMI rewrites every frame, 64 random bytes from a different place in a table each time (the static pauses while
+  rows are waiting, as the Atari's pauses for SIO). Under it the region, the status (no label: 28 columns of it),
+  the handle and the buttons.
+- **Pad:** the NMI reads it every frame and keeps the presses in an 8-event ring (`pad.s`), so none is lost while the
+  program waits on the cartridge. `input.c` turns them into the keys `platform.h` promises, with a cursor (`pick`)
+  on the answers the open prompt can take, from `game.h`'s state: **left/right** (or up/down) move it over the
+  kit's exploits (an underline, and a box on the node it would spike), the offered syndicates (F, K) or, while
+  buying, the panel's syndicates with a price (an arrow); **up/down** count a hivejack's cash-out and swap (written
+  into `edit[]` as typing would; the swap by 2, up to what is held and twice the Darkpool's supply) and the host's
+  seats. **A** sends the answer, or YES; **B** is Delete, or NO; **START** is Return. **SELECT**, on its own as it is
+  let go, opens the instructions; **SELECT+A** move hints, **SELECT+B** sound, **SELECT+START** Esc (log off). On
+  the title the d-pad is a dial: up/down step the letter it is on (A-Z, 0-9, then the signs a handle can have),
+  left/right move along the handle, B deletes the letter. A direction held repeats.
+- **Network:** as the CoCo's, through fujinet-lib (1.8 KB, built from fujinet-lib-experimental's `add-nes`, pinned).
+  No "data waiting" signal: status about 10 times a second while nothing comes, every pass while bytes arrive. The
+  read is `network_bus_read`, for no more than the status said (fujinet-lib's `network_read` asks for the status
+  again first, and spins while nothing is there). fujinet-lib's wait is set to 95 s, past the cartridge's 90 s
+  for a network call: one that gave up sooner would leave its reply to be taken for the next call's. At start it
+  waits up to 15 s for the cartridge's link to the FujiNet, and the first call gets a second try.
+- **The shot clock** is the NMI's frame count. fujinet-lib waits on the cartridge in a counted loop with interrupts
+  on, so it keeps time through a call. `ticks_per_sec()` is measured at start-up, the cycles between two NMIs: 60 on
+  NTSC, 50 on PAL or a Dendy (MAME's `nes` and `nespal`: 60 and 50).
+- **Sound:** the Atari's chords (`sound.s`): the first note on the triangle an octave down, the others on the two
+  pulses, faded by the NMI, which stops the triangle once they are quiet. NTSC periods; PAL plays about a semitone
+  flat.
+- **Instructions:** `help/nes/screen/HELP*.TXT`, 28 lines of 30 (`{` `}` inverse, `\` the yen sign), checked and
+  packed into the ROM by `tools/help_nes.py` (6 KB: runs of spaces counted). A page is drawn into the second name
+  table ($2400), which is shown once the NMI has copied it all, without the sprites; the game goes on drawing into
+  its own underneath, so closing simply shows it again. The QR code (page 10, `NES_QR_URL`) is in 16 quarter-block
+  tiles, 2x2 modules each, so every module is exact (zbarimg reads MAME's snapshot).
+- **Tested** (2026-10-28, MAME 0.289 from `~/Workspace/mame` with the FujiNet NES cartridge, FujiNet-PC built
+  `FUJINET_TARGET=RS232` on BoIP): `make nes-auto` played four minutes, jacked in for a bot in a game in progress (every
+  prompt kind answered, 0 refused, 0 resyncs); `NES_PADBOT=1` (tools/nes.lua) played three whole games with the pad alone, through the
+  cursor (53 exploits, 50 buys, 17 hivejacks, infiltrations, seat counts, the handle typed with the dial), none
+  refused, one connection; `pc-nes` played whole games. Every screen captured in MAME from staged games
+  (`server/stage.py`): the prompts, a tie, a refusal, log off, NO SIGNAL, a taken handle, the 11 instruction
+  pages. Not yet: a real cartridge (none exists yet), the lobby boot, MesenCE (FujiNet Go NES).
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -551,6 +642,22 @@ FujiNet boots; under plain Disk BASIC it falls back to BASIC at once.
 | `input.c` | 99 | keys from Color BASIC's POLCAT, `ticks()` from TIMER |
 | fujinet-lib | 1730 | open, status, read, write, close, AppKey read; DriveWire through HDB-DOS |
 | CMOC runtime | 852 | start-up, memcpy/memset/memmove, multiply, divide and shift helpers |
+| **nes** (2026-10-28, cc65 V2.19 Git 92fa7cb23) | | |
+| `syn-ack-wire-nes.nes` | 32784 | whole iNES file; 25.6 KB of its 32K PRG used, 7.2 KB free |
+| `display_text.c` | 5182 | + 1057 rodata (screen words, title art), 73 bss/data |
+| `game.c` | 2800 | + 340 rodata, 321 bss/data (the game state) |
+| fujinet-lib | 1781 | open, status, read, write, close, AppKey read; the mailbox bus layer |
+| `input.c` | 1582 | the pad's cursor on each prompt, the title's dial, `ticks()` |
+| cc65 runtime | 1341 | the C stack helpers, memcpy/memset/memmove, multiply, divide |
+| `main.c` | 1152 | + 141 rodata |
+| `text.c` | 774 | + 912 rodata (the font, 95 glyphs and 11 box tiles one bit a pixel; palettes; sprite tiles) |
+| `net_fn.c` | 643 | the link wait and the first call's retry, status paced to ~10 a second |
+| `ppu.s` | 572 | the NMI's row copier, attributes, the static; 2405 bss (the two name tables' cells, attributes, 256 random bytes) |
+| `help.c` | 394 | + 6009 rodata: the 11 instruction pages |
+| `sound.s` | 235 | + 79 rodata (11 chords, 12 periods) |
+| `crt0.s` | 210 | start-up, the TV check, the NMI; 256 bss (the sprites) |
+| `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]` |
+| `pad.s` | 103 | the pad and its event ring |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |

@@ -37,6 +37,9 @@ cd client && make && make atr                                # build/atari/syn-a
 cd client && make atrtest                                    # build/atari/local/..., dialing localhost:6502
 cd client && make apple2_text-po PRODOS=<ProDOS disk>        # build/apple2_text/syn-ack-wire-apple2.po
 cd client && make msdos-img WATCOM=<Open Watcom dir>         # build/msdos/syn-ack-wire-msdos.img (360 KB floppy)
+cd client && make coco-dsk DECB=<toolshed decb>              # build/coco/syn-ack-wire-coco.dsk
+cd client && make nes                                        # build/nes/syn-ack-wire-nes.nes (FujiNet NES cartridge)
+cd client && tools/run-nes.sh build/nes/syn-ack-wire-nes.nes # MAME (-nes_slot fujinet) + FujiNet-PC on BoIP 9985+n
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)

@@ -4,7 +4,8 @@
  * and the server's refusals both get exercised. When a new prompt opens, and
  * every DUMP_TICKS, it executes BRK; atari800 -bbrk stops in its monitor there, and tools/run-test.sh feeds
  * the monitor commands that save screen memory to a file. On a PC (make pc-apple2) it calls pc_dump()
- * instead, which saves the screen array. */
+ * instead, which saves the screen array; on the NES, where a BRK would only go to the IRQ handler, it
+ * calls test/nes_dump.c's, which the emulator watches (tools/nes.lua). */
 #include "../src/platform.h"
 #include "../src/common/game.h"
 
@@ -24,10 +25,10 @@ static const char name[] = AUTO_HANDLE "\r";
 /* first, the help pages: open, page to the end (extra presses are ignored), back one, leave */
 static const unsigned char paging[] = { K_HELP, '>', '>', '>', '>', '>', '>', '>', '>', '<', K_ESC, 0 };
 
-#ifdef __CC65__
+#if defined(__CC65__) && !defined(__NES__)
 #define DUMP() do { __asm__ ("brk"); __asm__ ("nop"); } while (0)
 #else
-void pc_dump(void);                         /* test/pc_harness.c */
+void pc_dump(void);                         /* test/pc_harness.c, test/nes_dump.c */
 #define DUMP() pc_dump()
 #endif
 
