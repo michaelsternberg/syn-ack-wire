@@ -648,11 +648,11 @@ value first, a spurious event).
 | fujinet-lib | 1730 | open, status, read, write, close, AppKey read; DriveWire through HDB-DOS |
 | CMOC runtime | 852 | start-up, memcpy/memset/memmove, multiply, divide and shift helpers |
 | **nes** (2026-10-28, cc65 V2.19 Git 92fa7cb23) | | |
-| `syn-ack-wire-nes.nes` | 32784 | whole iNES file; 25.6 KB of its 32K PRG used, 7.2 KB free |
-| `display_text.c` | 5182 | + 1057 rodata (screen words, title art), 73 bss/data |
+| `syn-ack-wire-nes.nes` | 32784 | whole iNES file; 25.6 KB of its 32K PRG used (25615), 7.1 KB free |
+| `display_text.c` | 5198 | + 1057 rodata (screen words, title art), 73 bss/data |
 | `game.c` | 2800 | + 340 rodata, 321 bss/data (the game state) |
 | fujinet-lib | 1781 | open, status, read, write, close, AppKey read; the mailbox bus layer |
-| `input.c` | 1582 | the pad's cursor on each prompt, the title's dial, `ticks()` |
+| `input.c` | 1594 | the pad's cursor on each prompt (set as a prompt is drawn), the title's dial, `ticks()` |
 | cc65 runtime | 1341 | the C stack helpers, memcpy/memset/memmove, multiply, divide |
 | `main.c` | 1152 | + 141 rodata |
 | `text.c` | 774 | + 912 rodata (the font, 95 glyphs and 11 box tiles one bit a pixel; palettes; sprite tiles) |
