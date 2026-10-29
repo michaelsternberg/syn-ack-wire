@@ -159,7 +159,8 @@ add_executable(syn-ack-wire WIN32 MACOSX_BUNDLE
   src/crt.cpp
   src/fonts.cpp
   src/glyphs.cpp
-  src/settings.cpp)
+  src/settings.cpp
+  src/snow.cpp)
 target_link_libraries(syn-ack-wire PRIVATE saw_game saw_theme imgui SDL3::SDL3 OpenGL::GL)
 target_compile_options(syn-ack-wire PRIVATE ${SAW_WARNINGS})
 target_include_directories(syn-ack-wire PRIVATE ${SAW_GEN})

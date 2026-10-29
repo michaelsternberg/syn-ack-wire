@@ -29,6 +29,7 @@ struct Settings {
     int width = 0, height = 0;
     bool fullscreen = false;
     bool autoHideMenu = false;                   // the menu bar shows only when the mouse is at the top
+    bool titleStatic = true;                     // the title's letters filled with TV static
 
     static Settings load(const std::string& path);
     bool save(const std::string& path) const;

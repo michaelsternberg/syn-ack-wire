@@ -72,6 +72,7 @@ Settings Settings::load(const std::string& path)
         else if (k == "height") s.height = std::atoi(v.c_str());
         else if (k == "fullscreen") s.fullscreen = flag(v);
         else if (k == "auto_hide_menu") s.autoHideMenu = flag(v);
+        else if (k == "title_static") s.titleStatic = flag(v);
     }
     return s;
 }
@@ -87,7 +88,8 @@ bool Settings::save(const std::string& path) const
     if (!token.empty())
         out << "token = " << token << "\ntoken_server = " << tokenServer << "\n";
     out << "hints = " << hints << "\nsound = " << sound << "\nwidth = " << width << "\nheight = " << height
-        << "\nfullscreen = " << fullscreen << "\nauto_hide_menu = " << autoHideMenu << "\n";
+        << "\nfullscreen = " << fullscreen << "\nauto_hide_menu = " << autoHideMenu
+        << "\ntitle_static = " << titleStatic << "\n";
     return static_cast<bool>(out);
 }
 

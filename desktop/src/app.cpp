@@ -145,6 +145,8 @@ void App::setOption(const std::string& key, const std::string& value)
         settings_.font = value;
     else if (key == "auto_hide_menu")
         settings_.autoHideMenu = value == "on" || value == "1" || value == "true";
+    else if (key == "title_static")
+        settings_.titleStatic = value == "on" || value == "1" || value == "true";
     else if (key == "crt") {
         settings_.crt = value;
         crtLevel_ = crtLevelFromKey(value.c_str());
@@ -376,6 +378,8 @@ void App::menus()
             toggleFullscreen();
         if (ImGui::MenuItem("Auto-Hide Menu Bar", nullptr, settings_.autoHideMenu))
             settings_.autoHideMenu = !settings_.autoHideMenu;
+        if (ImGui::MenuItem("Title Static", nullptr, settings_.titleStatic))
+            settings_.titleStatic = !settings_.titleStatic;
         ImGui::Separator();
         if (ImGui::MenuItem("Move Hints", "F2", game_hints() != 0))
             key_push(K_OPTION);
@@ -571,11 +575,16 @@ void App::drawScreen()
             if (p.bg != theme_->role[R_TEXT].bg)
                 content_->AddRectFilled(ImVec2(edgeX(c), edgeY(r)), ImVec2(edgeX(c + 1), edgeY(r + 1)), col(p.bg));
         }
+    // The title: its logo's lines drawn thick, its letters filled with static under them
+    const bool title = snow_.showing(snap);
+    if (title && settings_.titleStatic)
+        snow_.draw(content_, edgeX, edgeY, col(theme_->role[R_TEXT].fg), ImGui::GetTime());
     for (int r = 0; r < SCR_ROWS; ++r)
         for (int c = 0; c < SCR_COLS; ++c) {
             const int role = snap[r][c].role < NROLES ? int(snap[r][c].role) : int(R_TEXT);
             drawGlyph(content_, ImVec2(edgeX(c), edgeY(r)), edgeX(c + 1) - edgeX(c), edgeY(r + 1) - edgeY(r),
-                      snap[r][c].ch, col(theme_->role[role].fg), cf, role >= R_HIVE);
+                      snap[r][c].ch, col(theme_->role[role].fg), cf, role >= R_HIVE,
+                      title && snow_.logo(r, c) ? TitleSnow::kLogoLine : 0);
         }
 }
 

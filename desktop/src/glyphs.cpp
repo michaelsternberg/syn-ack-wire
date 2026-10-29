@@ -36,9 +36,9 @@ void rect(ImDrawList* dl, float x0, float y0, float x1, float y1, ImU32 col)
 // One cell's lines: each arm from the edge to the middle, a double arm as two lines either side of
 // it. Arms run on past the middle (a single by half a line, a double to the far side of the other
 // direction's lines), so corners close and crossings meet.
-void box(ImDrawList* dl, ImVec2 p, float w, float h, Arms a, ImU32 col)
+void box(ImDrawList* dl, ImVec2 p, float w, float h, Arms a, ImU32 col, float line)
 {
-    const float t = std::max(1.0f, std::round(w * 0.14f));
+    const float t = std::max(1.0f, std::round(w * (line > 0 ? line : 0.14f)));
     const float gap = std::max(t + 1.0f, std::round(w * 0.2f));
     const float cx = std::round(p.x + w / 2 - t / 2), cy = std::round(p.y + h / 2 - t / 2);
     const float reach = gap + t;
@@ -63,12 +63,13 @@ void box(ImDrawList* dl, ImVec2 p, float w, float h, Arms a, ImU32 col)
 
 }  // namespace
 
-void drawGlyph(ImDrawList* dl, ImVec2 p, float w, float h, unsigned char ch, ImU32 fg, const CellFont& cf, bool bold)
+void drawGlyph(ImDrawList* dl, ImVec2 p, float w, float h, unsigned char ch, ImU32 fg, const CellFont& cf, bool bold,
+               float line)
 {
     if (ch == ' ')
         return;
     if (ch >= 0xB3 && ch <= 0xDA) {
-        box(dl, p, w, h, kBox[ch - 0xB3], fg);
+        box(dl, p, w, h, kBox[ch - 0xB3], fg, line);
         return;
     }
     const float t = std::max(1.0f, std::round(w * 0.14f));

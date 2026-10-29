@@ -5,6 +5,7 @@
 #include <SDL3/SDL.h>
 
 #include "crt.hpp"
+#include "snow.hpp"
 #include "imgui.h"
 #include "settings.hpp"
 #include "theme.hpp"
@@ -58,6 +59,7 @@ private:
     const Theme* theme_;
     CrtLevel crtLevel_;
     CrtEffect crt_;
+    TitleSnow snow_;
     bool quit_ = false;
     bool started_ = false;
 
