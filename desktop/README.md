@@ -29,7 +29,8 @@ generated headers (`theme_tab.h`, `proto_tab.h`, the MS-DOS `title_art.h` and `m
 Releases: pushing a tag `desktop-v*` runs `.github/workflows/desktop.yml`, which builds Windows (zip), macOS (a
 zipped app, for Apple silicon and Intel; it isn't signed, so the first time it needs right-click, Open) and Linux
 (tar.gz) and attaches them to a GitHub release, titled "SYN-ACK WIRE desktop v0.1.0" for the tag
-`desktop-v0.1.0`, with `RELEASE.md` (the install notes for players) as its description.
+`desktop-v0.1.0`, with `RELEASE.md` (the install notes for players) as its description. The same notes go in
+each download as `README.txt`; keep the tag and the version in `CMakeLists.txt` (Help, About) the same.
 
 ## How it works
 

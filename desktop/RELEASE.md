@@ -3,7 +3,8 @@ players without a vintage machine. It plays at the same tables, so you can join 
 
 ## Install
 
-Download the file for your computer from **Assets** below. Nothing else needs installing.
+Each download (**Assets** on the [release page](https://github.com/michaelsternberg/syn-ack-wire/releases)) has
+everything the game needs: nothing else to install.
 
 **Windows** (`syn-ack-wire-windows.zip`): unzip it, open the `syn-ack-wire` folder and run `syn-ack-wire.exe`. The
 game isn't signed, so the first time Windows may say "Windows protected your PC": click **More info**, then
