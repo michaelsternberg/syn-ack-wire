@@ -530,8 +530,7 @@ make h89-disk H89SYS=cpm-2.2.04-64k.h8d     # build/h89/syn-ack-wire-h89.h8d; bo
   move (ESC Y), switching reverse (ESC p/q) and graphics (ESC F/G) as the cells need: graphics only matter for
   the codes 5Eh-7Eh they replace, lower case among them, so the game's upper case never switches. A whole new
   screen takes about a second; a move, a few milliseconds. The last move flips between normal and reverse for 4
-  seconds (the H19 has no blink). Money shows as `Y3200`. Holy Daemon is **H** on the H89 (`BOARD_LETTERS`, from
-  theme.toml's letters with D as H), as every client will be.
+  seconds (the H19 has no blink). Money shows as `Y3200`.
 - **Title:** the Atari's logo as an outline in the graphics characters, each column doubled to keep its
   proportions on the H19's narrow cells and centred, over the board, which is cleared a cell round it
   (`tools/h89/screens.py`: a chip the clearing touches goes whole, cut traces end in pads).
