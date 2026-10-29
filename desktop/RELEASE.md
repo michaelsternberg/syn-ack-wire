@@ -1,5 +1,5 @@
-SYN-ACK WIRE for Windows, macOS and Linux: the cyberpunk network game for the Atari, Apple II, MS-DOS and CoCo, for
-players without a vintage machine. It plays at the same tables, so you can join friends on their 8-bit machines.
+SYN-ACK WIRE for Windows, macOS and Linux: the cyberpunk network game for the Atari, Apple II, MS-DOS, CoCo, NES,
+Adam, Intellivision and Heathkit H89, for players without a vintage machine. It plays at the same tables, so you can join friends on their 8-bit machines.
 
 ## Install
 

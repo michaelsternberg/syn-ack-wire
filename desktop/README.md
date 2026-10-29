@@ -1,7 +1,7 @@
 # SYN-ACK WIRE for the desktop
 
 The game for Windows, macOS and Linux, for players without a vintage machine. It dials the same servers as the
-Atari, Apple II, MS-DOS and CoCo clients and sits at the same tables: the server can't tell it from an 8-bit
+Atari, Apple II, MS-DOS, CoCo, NES, Adam, Intellivision and H89 clients and sits at the same tables: the server can't tell it from an 8-bit
 machine, so desktop and 8-bit players take seats, see each other and play each other (and the bots).
 
 It **is** the 8-bit client: `client/src/common/` (main loop, game state, frame assembler) built unchanged for a
