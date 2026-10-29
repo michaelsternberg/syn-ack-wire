@@ -6,6 +6,7 @@
 !client/build/apple2_text/syn-ack-wire-apple2.po
 !client/build/msdos/syn-ack-wire-msdos.img
 !client/build/coco/syn-ack-wire-coco.dsk
+!client/build/h89/syn-ack-wire-h89.h8d
 !deploy/
 server/tests/
 **/__pycache__

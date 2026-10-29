@@ -134,12 +134,13 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
 4. Build the game disks for it: `cd client && make atr URL=N:TCP://<app>.fly.dev:6502/` and
    `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` and
    `make msdos-img URL=N:TCP://<app>.fly.dev:6502/ WATCOM=...` and
-   `make coco-dsk URL=N:TCP://<app>.fly.dev:6502/ DECB=...` (the default URL is this project's own app,
+   `make coco-dsk URL=N:TCP://<app>.fly.dev:6502/ DECB=...` and
+   `make h89-disk URL=N:TCP://<app>.fly.dev:6502/ H89SYS=...` (the default URL is this project's own app,
    syn-ack-wire.fly.dev). The image takes `client/build/atari/syn-ack-wire-atari.atr`,
-   `client/build/apple2_text/syn-ack-wire-apple2.po`, `client/build/msdos/syn-ack-wire-msdos.img` and
-   `client/build/coco/syn-ack-wire-coco.dsk` as they are when you deploy, and serves them at
-   `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`, `.../syn-ack-wire-msdos.img` and
-   `.../syn-ack-wire-coco.dsk`; the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
+   `client/build/apple2_text/syn-ack-wire-apple2.po`, `client/build/msdos/syn-ack-wire-msdos.img`,
+   `client/build/coco/syn-ack-wire-coco.dsk` and `client/build/h89/syn-ack-wire-h89.h8d` as they are when you
+   deploy, and serves them at `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`,
+   `.../syn-ack-wire-msdos.img`, `.../syn-ack-wire-coco.dsk` and `.../syn-ack-wire-h89.h8d`; the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
    before), for links saved then, and the CoCo's as `synack.dsk`, the name the lobby boots: it runs
    `RUNM"<the disk's name>"`, which Disk BASIC takes only up to 8 letters. A disk booted directly dials that one
    server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
@@ -152,7 +153,7 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    disks above, one for each platform), keep `url` on the QA lobby until a listing looks right, and deploy again.
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
-`deploy/deploy.sh`; to change a disk, `make atr`, `make apple2_text-po`, `make msdos-img` or `make coco-dsk` and
+`deploy/deploy.sh`; to change a disk, `make atr`, `make apple2_text-po`, `make msdos-img`, `make coco-dsk` or `make h89-disk` and
 `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
