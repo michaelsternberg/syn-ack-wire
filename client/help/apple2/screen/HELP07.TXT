@@ -6,7 +6,7 @@
 {R} {RATKING}  - Rat King Cartel
   Underground Data Smugglers
 
-{D} {DAEMON}   - Church of the Holy Daemon
+{H} {DAEMON}   - Church of the Holy Daemon
   Fanatical devotees of the init process
 
 {I} {IRONVEC}  - Iron Vector

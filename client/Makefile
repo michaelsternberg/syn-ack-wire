@@ -437,9 +437,6 @@ H89ZCC  = zcc +cpm -compiler=sdcc -SO3 -pragma-define:CRT_INITIALIZE_BSS=1     #
 H89FLAGS = -D__H89__ -D__fastcall__= -I$(H89LIB)/include
 H89NET  = src/common/proto.c src/h89/net_fn.c
 H89DEFS = $(filter-out -DURL=%,$(DEFS)) -DURL='"\"$(URL)\""'     # zcc hands a define on through a shell: quoted twice
-# theme.toml's board letters with Holy Daemon's D as H, which the other clients take on later (src/common/game.c)
-H89LETTERS = $(shell sed -n 's/^\#define SYN_LETTERS "\(.*\)"/\1/p' src/common/theme_tab.h | tr D H)
-H89DEFS += -DBOARD_LETTERS='"\"$(H89LETTERS)\""'
 H89TOOLS = ASM.COM DDT.COM ED.COM LOAD.COM MOVCPM17.COM SUBMIT.COM XSUB.COM CONFIGUR.COM ASSIGN.COM
 # h89-disk OUT FILES...: H89SYS less its tools, with FILES (paths from here) on it
 define h89-disk
@@ -577,7 +574,7 @@ pc-h89: $(HDRS) src/h89/screens.h
 	mkdir -p build/pc
 	gcc -g -std=gnu99 -Wall -Wno-main -Wno-pointer-to-int-cast -funsigned-char -D__fastcall__= -DAUTOPLAY \
 	    -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 -DPC_SCREEN=pc_screen -DPC_H89 -DAUTO_HANDLE='"H89"' \
-	    -DBOARD_LETTERS='"$(H89LETTERS)"' -o build/pc/pc-h89 \
+	    -o build/pc/pc-h89 \
 	    src/common/main.c src/common/game.c src/common/proto.c src/h89/display_text.c test/autoplay.c test/pc_harness.c
 
 clean:

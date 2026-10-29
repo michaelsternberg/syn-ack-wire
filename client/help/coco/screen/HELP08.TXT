@@ -2,7 +2,7 @@
 
 Find the hive's size under its tier:
 
-low: {G} {R}   mid: {D} {I} {B}   high: {L} {O}
+low: {G} {R}   mid: {H} {I} {B}   high: {L} {O}
 +-----+-----+-----+-----+------+-----+
 |  LOW|  MID| HIGH|PRICE|  ROOT| SUDO|
 +-----+-----+-----+-----+------+-----+

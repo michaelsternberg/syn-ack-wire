@@ -12,12 +12,7 @@
 #include "proto_tab.h"
 #include "game.h"
 
-/* A build can show other letters on the board (the H89: H for Holy Daemon, whose D is too like O on the CoCo,
- * until theme.toml's letter changes for every client). */
-#ifndef BOARD_LETTERS
-#define BOARD_LETTERS SYN_LETTERS
-#endif
-const char syn_letter[NSYN + 1] = BOARD_LETTERS;
+const char syn_letter[NSYN + 1] = SYN_LETTERS;
 const char *const syn_name[NSYN] = SYN_NAMES;
 
 unsigned char board[NODES];

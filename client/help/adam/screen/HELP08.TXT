@@ -1,6 +1,6 @@
 { PRICE CHART             8/11 }
 Find its size under its tier:
-low: {G} {R}  mid: {D} {I} {B}
+low: {G} {R}  mid: {H} {I} {B}
 high: {L} {O}
 +-----+-----+-----+-----+
 |  LOW|  MID| HIGH|PRICE|
