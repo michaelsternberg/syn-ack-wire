@@ -167,6 +167,9 @@ def gen_c(t):
           "#define SYN_NAMES { /* for the screen: `screen`, else `name` */ \\"]
     for s in syns:
         L.append(f"    {wire(s.get('screen', s['name']))}, \\")
+    L += ["}", "#define SYN_SHORTS { /* `short`, for a narrow screen's hive panel (nes) */ \\"]
+    for s in syns:
+        L.append(f"    {wire(s['short'])}, \\")
     L += ["}", "", "#endif", ""]
     return "\n".join(L)
 
