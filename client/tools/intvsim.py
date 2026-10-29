@@ -25,6 +25,8 @@ Scenario lines ('#' starts a comment):
     dumps PREFIX N [MAX]    run until dump_hook (the autoplay build's) has been called N times, a picture
                             and the text at each: OUTDIR/PREFIX_000.png ...
     film PREFIX EVERY COUNT a picture every EVERY frames, COUNT times
+    rec DIR EVERY           from now on, while any command runs, the screen's dump every EVERY frames:
+                            OUTDIR/DIR/fNNNNN.bin, by frame number (render_intv.py draws them); "rec off" stops
     vars NAME...            IntyBASIC variables
     trace N EVERY NAME...   them every EVERY frames, N times
     peek ADDR N             N words from ADDR (hex)
@@ -75,6 +77,7 @@ class Jz:
         self.dumps = 0
         self.pc = None
         self.sp = self.low_sp = 0           # R6 at the breakpoints, and the deepest seen (the stack grows up)
+        self.rec, self.rec_every = None, 2  # rec: the folder each frame's dump goes to
 
     def read_prompt(self):
         while True:
@@ -108,6 +111,9 @@ class Jz:
                 self.low_sp = max(self.low_sp, self.sp)
             if self.pc != self.dump_pc:
                 self.frames += 1
+                if self.rec and self.frames % self.rec_every == 0:
+                    with open(os.path.join(self.rec, "f%05d.bin" % self.frames), "wb") as f:
+                        f.write(self.dump())
 
     def mem(self, addr, n):
         out = self.cmd("m %x %x" % (addr, n))
@@ -257,6 +263,14 @@ def main():
                 jz.run(int(every))
                 jz.render(os.path.join(outdir, "%s_%03d.png" % (pre, i)))
                 print("film %s_%03d frame %d" % (pre, i, jz.frames))
+        elif op == "rec":
+            d, _, every = arg.partition(" ")
+            if d == "off":
+                jz.rec = None
+            else:
+                jz.rec, jz.rec_every = os.path.join(outdir, d), int(every or 2)
+                os.makedirs(jz.rec, exist_ok=True)
+            print("rec %s at frame %d" % (d, jz.frames))
         elif op == "trace":
             # trace N EVERY NAME...: the variables every EVERY frames, N times
             parts = arg.split()
