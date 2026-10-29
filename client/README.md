@@ -115,6 +115,10 @@ make nes                                 # build/nes/syn-ack-wire-nes.nes: the N
 make pc-nes                              # build/pc/pc-nes: the common code with the NES display, for captures
 make adam                                # build/adam/syn-ack-wire-adam.ddp: the Coleco Adam client
 make pc-adam                             # build/pc/pc-adam: the common code with the Adam display, for captures
+make h89                                 # build/h89/SYNACK.COM and SYNACK.HLP: the Heathkit H89 client (CP/M)
+make h89-disk H89SYS=disk                # build/h89/syn-ack-wire-h89.h8d: an H17 disk that boots CP/M, with both
+make h89-wiremon H89SYS=disk             # build/h89/wiremon.h8d: the protocol monitor on the H89
+make pc-h89                              # build/pc/pc-h89: the common code with the H89 display, for captures
 ```
 Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. Adam: z88dk
 `v25230-82c677065d` with zsdcc, in the `fozztexx/defoogi:1.4.7` container (`tools/z88dk` runs it). MS-DOS: Open
@@ -697,6 +701,53 @@ stack is below D390h and EOS above.
   NES, Atari and Apple images build byte for byte as before. `pc-adam` played a whole game to GAME OVER and the
   rematch. Not yet: a real Adam, the VDP's timing on one, FujiNet Go Adam itself, the lobby's boot.
 
+## Heathkit H89 (h89)
+The same common code with an H89 platform layer (`src/h89/`), for a Heathkit H89 (or Zenith Z-89) with 64K under
+Heath/Zenith CP/M 2.2.04, and the H89 FujiNet card. z88dk with its zsdcc back end (`zcc +cpm -compiler=sdcc
+-SO3`), as FujiNet's own M.U.L.E. client builds for the H89; zcc and zsdcc on the PATH. A string `-D` goes
+through a shell twice in zcc, so the Makefile quotes it twice (`H89DEFS`).
+```sh
+make h89-disk H89SYS=cpm-2.2.04-64k.h8d     # build/h89/syn-ack-wire-h89.h8d; boot it, then SYNACK
+```
+- **The disk:** `H89SYS` is a 64K CP/M 2.2.04 system disk for the H17 (fujinet-go-h89-desktop has one,
+  `tools/disks/boot/cpm-2.2.04-64k.h8d`); the Makefile copies it, takes off its development tools and copies the
+  game and its help on, with cpmtools and `tools/h89/diskdefs` (the H17 format: 40 tracks of ten 256-byte
+  sectors, skew 4, three system tracks). The H89 can't boot from FujiNet, so the game comes on a disk of its own.
+- **Network:** fujinet-lib built from source (`lib/fujinet-lib/README.md`: no release has the H89 yet), over
+  the card's 82C55 at D0h. `net_fn.c` is MS-DOS's, with the BIOS's 2 ms clock for the tick: asked once a
+  tick while nothing comes, 3 seconds of failed exchanges before the line counts as dropped.
+- **The shot clock:** the word at 000Bh, which the BIOS counts up every 2 ms; `ticks()` is it in eighths, 62 a
+  second (62.5: the countdown shows one second short, as elsewhere).
+- **Screen:** the H19 terminal, 80x24, on a serial line inside the H89 at 9600 bps, about a millisecond a
+  character. MS-DOS's layout, in columns 20-59, with its circuit board either side (`src/h89/margins.txt`, its 24
+  rows), drawn into memory: each cell a character and its attributes (reverse, the graphics characters).
+  `display_flush()`, with every key check, sends the H19 only the cells that changed, each run after a cursor
+  move (ESC Y), switching reverse (ESC p/q) and graphics (ESC F/G) as the cells need: graphics only matter for
+  the codes 5Eh-7Eh they replace, lower case among them, so the game's upper case never switches. A whole new
+  screen takes about a second; a move, a few milliseconds. The last move flips between normal and reverse for 4
+  seconds (the H19 has no blink). Money shows as `Y3200`. Holy Daemon is **H** on the H89 (`BOARD_LETTERS`, from
+  theme.toml's letters with D as H), as every client will be.
+- **Title:** the Atari's logo as an outline in the graphics characters, each column doubled to keep its
+  proportions on the H19's narrow cells and centred, over the board, which is cleared a cell round it
+  (`tools/h89/screens.py`: a chip the clearing touches goes whole, cut traces end in pads).
+- **Keys:** the H19's f1-f3 and arrows send ESC and a letter; ESC alone, with nothing after it in about 50 ms, is
+  the ESC key. **F1** or **?** the instructions, **F2** move hints, **F3** sound, **ESC** on the title quits to
+  CP/M after a Y (`QUIT_TO_OS=1`), **BACK SPACE** or **DELETE** undoes a letter, **RETURN** confirms.
+- **Sound:** the H19's bell, for your turn, a hivejack and the null-route; the other chords stay quiet.
+- **Instructions:** `SYNACK.HLP` from `help/h89/screen/HELP*.TXT` (MS-DOS's pages, with the H89's keys and manual
+  link) by `tools/h89/help.py`, which lays them out with `tools/help_msdos.py` and turns each cell into the H19's
+  (the QR code in the graphics characters' half block). Read with CP/M's random reads from the logged-in drive:
+  page 1 at start, while the drive still turns from loading the program, and each page reads the next one ahead
+  into a second buffer, so a page starts drawing as soon as its key is pressed (the H17's motor is off by then,
+  and waiting for it was most of a second).
+- **The .COM** is cut where its uninitialised variables start (`tools/h89/trimcom.py`): z88dk writes their zeros
+  into the file, and the start-up clears them anyway.
+- **Captures:** `make pc-h89` and `PLATFORM=h89 tools/capture.sh`; `tools/h89/render.py` draws a dump of the whole
+  screen in the H19's own font (MAME's `heath_tlb.zip`).
+- **Tested** (2026-10-29, FujiNet Go H89 0.2.1, its FujiNet built in): the protocol monitor through 10 resyncs
+  and a game, 0 bad frames; the client through a whole game against bots, the title, the instructions and the
+  bell. Not yet on a real H89.
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -777,6 +828,16 @@ stack is below D390h and EOS above.
 | `proto.c` | 225 | + 26-byte length table, 128-byte `msg[]` |
 | `vdp.asm`, `eoscall.asm` | 94 | paced VRAM writes; the keyboard through EOS |
 | z88dk runtime | 348 | start-up (the restart vectors and the NMI's jump), memcpy/memset/memmove, multiply, divide; its console left out (2.5 KB) |
+| **h89** (2026-10-29, z88dk zsdcc `-SO3`) | | |
+| `SYNACK.COM` | 21729 | whole file (the public server built in), without its 16.9 KB of zeros; loads at $0100, runs to $97D7 with its variables |
+| `display_text.c` | 5460 | + 2794 rodata (screen words, the board, the title: `screens.h`), 15407 bss: the screen, the H19's copy of it, the cells under the instructions (3840 each) and two help pages |
+| `game.c` | 2966 | + 382 rodata, 310 bss (the game state) |
+| `main.c` | 1316 | + 170 rodata; Esc and Y on the title quit to CP/M (`QUIT_TO_OS`) |
+| `net_fn.c` | 616 | + 283 bss (the 256-byte `rx_ring`) |
+| `proto.c` | 220 | + 26-byte length table, 128-byte `msg[]` |
+| `input.c` | 194 | keys and the H19's escape sequences, `ticks()` from the BIOS's clock |
+| `sound.c` | 83 | the bell |
+| fujinet-lib | 6291 | open, status, read, write, close, AppKey read; FujiBus over SLIP to the card |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |

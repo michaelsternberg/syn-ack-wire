@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.24)
-project(syn_ack_wire_desktop VERSION 0.1.0 LANGUAGES C CXX)
+project(syn_ack_wire_desktop VERSION 0.1.1 LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 17)
@@ -185,7 +185,9 @@ install(TARGETS syn-ack-wire RUNTIME DESTINATION . BUNDLE DESTINATION .)
 if(NOT APPLE)
   install(FILES ${SAW_FONTS} ${SAW_DATA}/SYNACK.HLP DESTINATION data)
 endif()
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/README.md DESTINATION .)
+# The players' notes (the same as each GitHub release's description) as README.txt, which opens anywhere
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE DESTINATION .)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/RELEASE.md DESTINATION . RENAME README.txt)
 
 # --- Tests ---
 enable_testing()

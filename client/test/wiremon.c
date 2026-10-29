@@ -15,11 +15,16 @@
  * memory, shown in the middle of the 80-column text screen. The AUTOTEST build
  * also writes it to WIREMON.TXT every few seconds and when it stops, for a test
  * script to read from the disk.
+ *
+ * On the Heathkit H89 (z88dk, __H89__) the same buffer goes to the H19 terminal's columns 20-59, only the
+ * cells that changed since the last time, each run of them after a cursor move (ESC Y).
  */
 #include <string.h>
 #ifdef __DOS__
 #include <stdio.h>
 #include <bios.h>
+#elif defined(__H89__)
+#include "../src/h89/h89.h"
 #else
 #include <atari.h>
 #endif
@@ -38,6 +43,11 @@ static unsigned char screen[24 * 40];
 #define RTCLOK (*(volatile unsigned char __far *)0x0040006CL)  /* BIOS tick, 18.2 a second */
 #define SECOND 18
 #define CHAR(c) (c)                     /* the buffer holds ASCII; 0 shows as blank */
+#elif defined(__H89__)
+static unsigned char screen[24 * 40], shown[24 * 40];
+#define RTCLOK TICK
+#define SECOND TICKS_PER_SEC
+#define CHAR(c) (c)
 #else
 #define SAVMSC (*(unsigned char **)0x58)
 #define RTCLOK (*(volatile unsigned char *)0x14)
@@ -96,10 +106,17 @@ static void newline(void)
     memset(cur, 0, 40);
 }
 
+#ifdef __H89__
+static void show_screen(void);
+#endif
+
 static void say(const char *s)
 {
     newline();
     puts_(s);
+#ifdef __H89__
+    show_screen();                      /* now: a call to FujiNet that hangs shows what it was */
+#endif
 }
 
 #ifdef __DOS__
@@ -130,6 +147,28 @@ static void save_screen(void)
     fclose(f);
 }
 #endif
+#elif defined(__H89__)
+/* Send the H19 the cells that changed: a cursor move, then the run. BDOS 6 writes a byte as it is. */
+static void show_screen(void)
+{
+    unsigned i = 0;
+    unsigned char c;
+    while (i < 24 * 40) {
+        if (screen[i] == shown[i]) {
+            ++i;
+            continue;
+        }
+        bdos(6, 0x1B);
+        bdos(6, 'Y');
+        bdos(6, 32 + i / 40);
+        bdos(6, 32 + 20 + i % 40);
+        do {
+            c = screen[i];
+            shown[i] = c;
+            bdos(6, c ? c : ' ');
+        } while (++i % 40 && screen[i] != shown[i]);
+    }
+}
 #endif
 
 static void status(void)
@@ -141,7 +180,7 @@ static void status(void)
     dec(bytes);
     puts_("  BAD ");
     hex(bad);
-#ifdef __DOS__
+#if defined(__DOS__) || defined(__H89__)
     show_screen();
 #endif
 }
@@ -190,6 +229,9 @@ static void connect(void)
             break;
         say("OPEN FAILED ");
         hex(e);
+#ifdef __H89__
+        show_screen();
+#endif
         net_close();
         wait(2 * SECOND);
     }
@@ -283,6 +325,19 @@ static void keys(void)
     case 'Q': send1('Q', 0, 1); break;
     }
 }
+#elif defined(__H89__)
+static void keys(void)
+{
+    switch (bdos(6, 0xFF) & 0xDF) {     /* a key or 0, upper case */
+    case '2' & 0xDF: send1('S', 2, 2); break;
+    case '3' & 0xDF: send1('S', 3, 2); break;
+    case '4' & 0xDF: send1('S', 4, 2); break;
+    case '5' & 0xDF: send1('S', 5, 2); break;
+    case '6' & 0xDF: send1('S', 6, 2); break;
+    case 'R': send1('R', 0, 1); break;
+    case 'Q': send1('Q', 0, 1); break;
+    }
+}
 #else
 static void keys(void)
 {
@@ -304,10 +359,15 @@ static void keys(void)
 
 void main(void)
 {
-#ifdef __DOS__
+#if defined(__DOS__) || defined(__H89__)
     scr = screen;
 #else
     scr = SAVMSC;
+#endif
+#ifdef __H89__
+    bdos(6, 0x1B);                      /* clear the H19 */
+    bdos(6, 'E');
+    memset(shown, 0, sizeof shown);
 #endif
     for (cur = scr; cur < scr + 24 * 40; ++cur)
         *cur = 0;

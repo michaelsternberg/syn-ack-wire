@@ -1,0 +1,24 @@
+{ CREDITS                          11/11 }
+ SYN-ACK WIRE
+
+ Concept, Direction, Testing
+   Michael Sternberg
+ Code
+   Claude (Anthropic)
+
+ The rules are Sid Sackson's
+ ACQUIRE (1964), rethemed.
+
+ Made with and for
+   FujiNet     fujinet.online
+   fujinet-lib and FUJINET.SYS
+               the FujiNet team
+   Open Watcom C compiler
+   tnfsd       Dylan Smith and the
+               FujiNet team
+
+ Free software, GPL-3.0:
+ github.com/michaelsternberg/
+   syn-ack-wire
+
+{<- PREV         ESC:EXIT                }

@@ -135,14 +135,17 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` and
    `make msdos-img URL=N:TCP://<app>.fly.dev:6502/ WATCOM=...` and
    `make coco-dsk URL=N:TCP://<app>.fly.dev:6502/ DECB=...` and `make nes URL=N:TCP://<app>.fly.dev:6502/` and
-   `make adam URL=N:TCP://<app>.fly.dev:6502/` (the default URL is this project's own app, syn-ack-wire.fly.dev).
+   `make adam URL=N:TCP://<app>.fly.dev:6502/` and `make h89-disk URL=N:TCP://<app>.fly.dev:6502/ H89SYS=...`
+   (the default URL is this project's own app, syn-ack-wire.fly.dev).
    The image takes `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
    `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
-   `client/build/nes/syn-ack-wire-nes.nes` and `client/build/adam/syn-ack-wire-adam.ddp` as they are when you
-   deploy, and serves them at `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`,
-   `.../syn-ack-wire-msdos.img`, `.../syn-ack-wire-coco.dsk`, `.../syn-ack-wire-nes.nes` and
-   `.../syn-ack-wire-adam.ddp` (the NES lobby mounts a `.nes` and boots it: fujinet-lobby, branch `nes`; the
-   Adam's mounts the `.ddp` in slot 0 and reboots: its shared client, branch `client-qr-screen`); the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
+   `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp` and
+   `client/build/h89/syn-ack-wire-h89.h8d` as they are when you deploy, and serves them at
+   `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`,
+   `.../syn-ack-wire-msdos.img`, `.../syn-ack-wire-coco.dsk`, `.../syn-ack-wire-nes.nes`,
+   `.../syn-ack-wire-adam.ddp` and `.../syn-ack-wire-h89.h8d` (the NES lobby mounts a `.nes` and boots it:
+   fujinet-lobby, branch `nes`; the Adam's mounts the `.ddp` in slot 0 and reboots: its shared client, branch
+   `client-qr-screen`); the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
    before), for links saved then, and the CoCo's as `synack.dsk`, the name the lobby boots: it runs
    `RUNM"<the disk's name>"`, which Disk BASIC takes only up to 8 letters. A disk booted directly dials that one
    server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
@@ -156,7 +159,7 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
 `deploy/deploy.sh`; to change a disk, `make atr`, `make apple2_text-po`, `make msdos-img`, `make coco-dsk`,
-`make nes` or `make adam` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
+`make nes`, `make adam` or `make h89-disk` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s

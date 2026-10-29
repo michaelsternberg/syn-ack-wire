@@ -66,10 +66,16 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v7       # for the release notes
       - uses: actions/download-artifact@v8
         with:
           merge-multiple: true
+      - name: Version
+        id: version
+        run: echo "number=${GITHUB_REF_NAME#desktop-}" >> "$GITHUB_OUTPUT"   # desktop-v0.1.0 -> v0.1.0
       - uses: softprops/action-gh-release@v3
         with:
-          name: SYN-ACK WIRE desktop ${{ github.ref_name }}
+          name: SYN-ACK WIRE desktop ${{ steps.version.outputs.number }}
+          body_path: desktop/RELEASE.md
           files: syn-ack-wire-*
+          make_latest: false            # "Latest" stays the 8-bit release; the two link to each other

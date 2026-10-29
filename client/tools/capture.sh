@@ -10,6 +10,7 @@
 #   PLATFORM=coco tools/capture.sh       the CoCo 1/2: its display code on this PC (make pc-coco), no emulator
 #   PLATFORM=nes tools/capture.sh        the NES: the autoplay image in MAME (tools/run-nes.sh), its dumps from nes.lua
 #   PLATFORM=adam tools/capture.sh       the Adam: its display code on this PC (make pc-adam), no emulator
+#   PLATFORM=h89 tools/capture.sh        the Heathkit H89: its display code on this PC (make pc-h89), no emulator
 #   PORT=6599 INSTANCE=7 tools/capture.sh    the defaults: the server's port, run-test.sh's instance
 #   KEEP=1 tools/capture.sh tied-root    keep the dumps and logs (the script says where)
 #
@@ -27,9 +28,9 @@ PLATFORM=${PLATFORM:-atari}
 DUMPS=$ROOT/docs/manual/$PLATFORM/screens/dumps
 case $PLATFORM in
     atari) ports="$PORT $((9997 + INSTANCE)) $((8000 + INSTANCE))" ;;
-    apple2 | msdos | coco | adam) ports=$PORT ;;
+    apple2 | msdos | coco | adam | h89) ports=$PORT ;;
     nes) ports="$PORT $((9985 + INSTANCE)) $((8020 + INSTANCE))" ;;
-    *) echo "PLATFORM: atari, apple2, msdos, coco, nes or adam" >&2; exit 1 ;;
+    *) echo "PLATFORM: atari, apple2, msdos, coco, nes, adam or h89" >&2; exit 1 ;;
 esac
 mkdir -p "$DUMPS"
 
@@ -69,8 +70,10 @@ fi
 cat > "$WORK/pick.py" <<'EOF'
 import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
+sys.path.insert(0, "tools/h89")
 from screen2txt import char
 import render_adam, render_apple2, render_coco, render_msdos, render_nes
+import render as render_h89
 scenarios, name, dumps, out, platform = sys.argv[1:]
 all_ = tomllib.load(open(scenarios, "rb"))
 sc = all_[name]
@@ -90,6 +93,8 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         rows = [line.upper().strip() for line in render_nes.text(d)[26:28]]
     elif platform == "adam":
         rows = [line.upper().strip() for line in render_adam.text(d)[22:24]]
+    elif platform == "h89":
+        rows = [line.upper().strip() for line in render_h89.text(d)[22:24]]
     else:
         rows = ["".join(char(b) for b in d[r * 40:r * 40 + 40]).upper().strip() for r in (22, 23)]
     if any(r.startswith(want) for r in rows):
@@ -102,7 +107,7 @@ EOF
 
 # Where the Atari's screen memory is depends on the emulated machine: $9C40 with the BASIC ROM in (BASIC=1), else
 # $BC40. That follows the owner's atari800 settings, so try one, fall back to the other, and keep the one that
-# worked. The Apple II, MS-DOS and CoCo builds on this PC have one screen: one try.
+# worked. The Apple II, MS-DOS, CoCo and H89 builds on this PC have one screen: one try.
 order="1 0"
 [ "$PLATFORM" != atari ] && order=0
 run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a dump matched
@@ -150,10 +155,12 @@ live() {
     python3 - "$WORK/d" "$DUMPS" "$PLATFORM" "$@" <<'PICK'
 import glob, os, shutil, sys
 sys.path.insert(0, "tools")
+sys.path.insert(0, "tools/h89")
 import render_adam, render_apple2, render_coco, render_msdos, render_nes
+import render as render_h89
 dumps, out, platform, *names = sys.argv[1:]
 text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text,
-        "adam": render_adam.text}.get(platform, render_apple2.text)
+        "adam": render_adam.text, "h89": render_h89.text}.get(platform, render_apple2.text)
 if platform == "nes":       # its own layout: the foot on row 27, the seats on 14-19, the log on 20-25
     ask, seats, log, hint = 27, slice(14, 20), slice(20, 26), "PICK A HANDLE"
 elif platform == "adam":    # the NES's in 24 rows: the seats on 12-17, the log on 18-21

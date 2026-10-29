@@ -1,0 +1,13 @@
+# cpmtools' definition of the H17 disk Heath/Zenith CP/M 2.2.04 uses: 40 tracks of ten 256-byte sectors, hard
+# sectored, 1 KB blocks, 64 directory entries, the system on the first three tracks (appmake's hz89; z88dk's
+# skew table 0 4 8 2 6 1 5 9 3 7 is cpmtools' skew 4). cpmtools reads diskdefs from the current directory.
+diskdef h17
+  seclen 256
+  tracks 40
+  sectrk 10
+  blocksize 1024
+  maxdir 64
+  skew 4
+  boottrk 3
+  os 2.2
+end

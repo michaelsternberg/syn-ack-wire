@@ -42,6 +42,7 @@ cd client && make nes                                        # build/nes/syn-ack
 cd client && tools/run-nes.sh build/nes/syn-ack-wire-nes.nes # MAME (-nes_slot fujinet) + FujiNet-PC on BoIP 9985+n
 cd client && make adam                                       # build/adam/syn-ack-wire-adam.ddp (z88dk, from defoogi)
 cd client && tools/run-adam.sh build/adam/syn-ack-wire-adam.ddp   # adamcore (EMU=adamem) + FujiNet-PC on BoIP 9990+n
+cd client && make h89-disk H89SYS=<CP/M 2.2.04 H17 disk>      # build/h89/syn-ack-wire-h89.h8d (z88dk's zcc, cpmtools)
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
@@ -62,7 +63,8 @@ client/tools/capture.sh                                      # redo the staged c
   `deploy/deploy.sh`, which first checks no one is playing. The disks it serves are
   `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
   `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
-  `client/build/nes/syn-ack-wire-nes.nes` and `client/build/adam/syn-ack-wire-adam.ddp` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
+  `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp` and
+  `client/build/h89/syn-ack-wire-h89.h8d` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else

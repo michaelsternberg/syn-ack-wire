@@ -15,7 +15,9 @@
  * (make pc-nes), the NES's, src/nes/display_text.c, over test/nes_text_pc.c:
  * its 960 cells, its attribute table and its sprites. With PC_ADAM (make
  * pc-adam), the Adam's, src/adam/display_text.c, over test/adam_text_pc.c: its
- * 768 cells, their 768 palettes and its sprites.
+ * 768 cells, their 768 palettes and its sprites. With PC_H89 (make pc-h89), it
+ * is the H89's, src/h89/display_text.c, and each dump is the whole 80x24 screen
+ * it would send the H19, each cell a character then its attributes (vch[], vat[]).
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,6 +113,9 @@ extern unsigned char PC_SCREEN[24 * 40];    /* test/coco_text_pc.c */
 extern unsigned char PC_SCREEN[30 * 32], attr[128], pc_oam[256];  /* test/nes_text_pc.c */
 #elif defined(PC_ADAM)
 extern unsigned char PC_SCREEN[24 * 32], txt_pal[24 * 32], sat[24];  /* test/adam_text_pc.c */
+#elif defined(PC_H89)
+extern unsigned char vch[24 * 80], vat[24 * 80];    /* src/h89/display_text.c */
+unsigned char PC_SCREEN;                /* unused */
 #else
 unsigned char PC_SCREEN[1024], pc_switch;
 #endif
@@ -136,6 +141,11 @@ void pc_dump(void)
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);  /* the cells, their palettes, the sprites */
         fwrite(txt_pal, 1, sizeof txt_pal, f);
         fwrite(sat, 1, sizeof sat, f);
+#elif defined(PC_H89)
+        for (int k = 0; k < 24 * 80; ++k) {
+            fputc(vch[k], f);
+            fputc(vat[k], f);
+        }
 #else
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
 #endif
@@ -148,7 +158,7 @@ void snd_init(void) {}
 void play_chord(unsigned char n) { (void)n; }
 void snd_toggle(void) {}
 
-#ifndef PC_MSDOS                        /* the DOS display has its own */
+#if !defined(PC_MSDOS) && !defined(PC_H89)     /* the DOS and H89 displays have their own */
 void help_open(void) { }
 unsigned char help_key(unsigned char k) { return k != K_ESC; }
 #endif

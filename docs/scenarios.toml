@@ -10,8 +10,8 @@
 #   last     with no play: the node of the move before seat 0's turn, shown as the last move
 #   end      true: after the move, seat 0 buys nothing and calls the null-route
 #   capture  the moment to capture: how the prompt line (or the info line above it) starts, as on screen
-#   capture_<platform>  the same, where that platform's prompt words differ (MS-DOS and the CoCo name their own keys;
-#                       the NES, its pad's buttons; the Adam has the NES's narrow screen)
+#   capture_<platform>  the same, where that platform's prompt words differ (MS-DOS, the CoCo and the H89 name their own
+#                       keys; the NES, its pad's buttons; the Adam has the NES's narrow screen)
 #   like     start from that scenario, and change what is given here
 #
 # Names and numbers follow the example they illustrate; change both together.
@@ -75,6 +75,7 @@ capture_msdos = "LETTERS, BACKSPACE, ENTER TO BUY"
 capture_coco = "LETTERS, <-, ENTER TO BUY"
 capture_nes = "A ADD, B UNDO, START BUY"
 capture_adam = "LETTERS, BS, RETURN TO BUY"
+capture_h89 = "LETTERS, BACKSPACE, RETURN TO BUY"
 
 [nullroute]
 about = "Ending the Game: ZER0COOL's spike on H2 wraps the last hive in Black ICE (Lockdown); the null-route question."
