@@ -101,12 +101,12 @@ def gen_tex(t):
         for f in ("name", "short", "letter", "coin", "tier", "alias", "flavor"):
             L.append(setcs(f"th@syn@{i}@{f}", tex(cap(s[f]) if f == "tier" else s[f])))
     for tier in TIERS:
-        coins = [f"\\textcolor{{syn{i}}}{{\\textbf{{{tex(s['letter'])}}}}}"
+        coins = [f"\\textcolor{{syn{i}}}{{\\textbf{{\\Syn{{{i}}}{{letter}}}}}}"
                  for i, s in enumerate(t["syndicate"]) if s["tier"] == tier]
         L.append(setcs(f"th@tiercoins@{tier}", " ".join(coins)))
     rows = []
     for i, s in enumerate(t["syndicate"]):
-        rows.append(f"\\cellcolor{{syn{i}}}\\textcolor{{white}}{{\\textbf{{{tex(s['letter'])}}}}} & "
+        rows.append(f"\\cellcolor{{syn{i}}}\\textcolor{{white}}{{\\textbf{{\\Syn{{{i}}}{{letter}}}}}} & "
                     f"{tex(s['name'])} & {tex(cap(s['tier']))} & "
                     f"{tex(s['flavor'])} \\\\")
     L.append("\\newcommand{\\SynTableRows}{%\n" + "\n".join(rows) + "}")
