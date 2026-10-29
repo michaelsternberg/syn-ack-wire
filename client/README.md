@@ -940,16 +940,16 @@ from TNFS, as M.U.L.E.'s Intellivision client is booted); `synack.bin` and `syna
 | `sound.c` | 83 | the bell |
 | fujinet-lib | 6291 | open, status, read, write, close, AppKey read; FujiBus over SLIP to the card |
 | **intv** (2026-10-29, IntyBASIC 1.5.2 9393a28, as1600; in 16-bit words) | | |
-| `syn-ack-wire-intv.rom` | 16454 | words of ROM, of the 24K the map allows (`checkcfg.py` prints each segment); 33896 bytes of file |
+| `syn-ack-wire-intv.rom` | 16603 | words of ROM, of the 24K the map allows (`checkcfg.py` prints each segment); 34408 bytes of file |
 | `prompt.bas` | 3292 | rows 10-11: what each prompt is about, its question, the refusals, the options, the messages |
 | `display.bas` | 2760 | the three views, the Grid, the seats, the log and its ticker, numbers and cash |
 | `game.bas` | 1927 | the frames and the keys: `game.c` |
-| `main.bas` | 1817 | `main.c`, with IntyBASIC's runtime (its epilogue: PRINT, division, the frame handler's own share) |
+| `main.bas` | 1971 | `main.c` (with the lobby's AppKeys), and IntyBASIC's runtime (its epilogue: PRINT, division, the frame handler's own share) |
 | `help_pages.bas` | 1801 | the 17 instruction pages, two characters a word |
 | `title.bas` | 1436 | + 617 `title_art.bas` (the logo's 87 cards, the static's 60 and its 256 random words) |
 | `net.bas`, `fujinet.bas` | 969 | the mailbox, the stream's state machine, the AppKeys, the 1K ring |
 | `input.bas`, `ecskbd.bas` | 774 | the controller, the key ring, the ECS's scanner (its decode tables 192) |
-| `help.bas`, `sound.bas` | 608 | the pages drawn; the chords (11, 12 periods) |
+| `help.bas`, `sound.bas` | 603 | the pages drawn; the chords (11, 12 periods) |
 | `proto.bas` | 200 | + 1K ring, 128-byte frame in the cartridge's RAM |
 | cartridge RAM | 1824 | bytes of $8000-$9BFF used ($8000-$871F) (`memory.bas`): the ring 1024, the frame 128, the game state, the log, the key ring |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
