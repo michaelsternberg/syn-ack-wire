@@ -10,6 +10,9 @@
 #   make msdos WATCOM=dir     build/msdos/SYNACK.EXE: the MS-DOS client (8088 and up, FUJINET.SYS)
 #   make msdos-img WATCOM=dir build/msdos/syn-ack-wire-msdos.img: a 360 KB floppy with SYNACK.EXE and its help pages
 #   make msdos-wiremon WATCOM=dir     build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for MS-DOS
+#   make h89                  build/h89/SYNACK.COM: the Heathkit H89 client (CP/M 2.2.04, 64K, the H89 FujiNet card)
+#   make h89-disk H89SYS=disk build/h89/syn-ack-wire-h89.h8d: an H17 disk that boots CP/M, with SYNACK.COM and its help
+#   make h89-wiremon H89SYS=disk      build/h89/wiremon.h8d: the protocol monitor for the H89, on a CP/M disk that boots
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -300,6 +303,59 @@ $(COCOAUTO)/syn-ack-wire-coco.dsk: $(COCOAUTO)/synack.bin $(COCO)/synack.hlp
 	$(DECB) copy -1 -b $(COCO)/synack.hlp $@,SYNACK.HLP
 coco-auto: $(COCOAUTO)/syn-ack-wire-coco.dsk
 
+# --- Heathkit H89 under Heath/Zenith CP/M 2.2.04 (64K): the H19 terminal, FujiNet through the H89 FujiNet card
+# and fujinet-lib, built from source with zsdcc (lib/fujinet-lib/README.md). z88dk's zcc and zsdcc on the PATH.
+# A disk boots: H89SYS is a 64K CP/M 2.2.04 system disk for the H17 (fujinet-go-h89-desktop's
+# tools/disks/boot/cpm-2.2.04-64k.h8d); its development tools come off, the program goes on (cpmtools, with
+# tools/h89/diskdefs).
+H89B    = build/h89
+H89LIB  = lib/fujinet-lib/h89-194824b
+H89SYS  ?=
+ZCC     = zcc +cpm -compiler=sdcc -SO3 -pragma-define:CRT_INITIALIZE_BSS=1     # variables start at 0, as C says
+H89FLAGS = -D__H89__ -D__fastcall__= -I$(H89LIB)/include
+H89NET  = src/common/proto.c src/h89/net_fn.c
+H89DEFS = $(filter-out -DURL=%,$(DEFS)) -DURL='"\"$(URL)\""'     # zcc hands a define on through a shell: quoted twice
+# theme.toml's board letters with Holy Daemon's D as H, which the other clients take on later (src/common/game.c)
+H89LETTERS = $(shell sed -n 's/^\#define SYN_LETTERS "\(.*\)"/\1/p' src/common/theme_tab.h | tr D H)
+H89DEFS += -DBOARD_LETTERS='"\"$(H89LETTERS)\""'
+H89TOOLS = ASM.COM DDT.COM ED.COM LOAD.COM MOVCPM17.COM SUBMIT.COM XSUB.COM CONFIGUR.COM ASSIGN.COM
+# h89-disk OUT FILES...: H89SYS less its tools, with FILES (paths from here) on it
+define h89-disk
+	@test -n "$(H89SYS)" || { echo "H89SYS=<a 64K CP/M 2.2.04 H17 system disk> is needed"; exit 1; }
+	cp $(H89SYS) $(1).tmp
+	cd tools/h89 && cpmrm -f h17 $(CURDIR)/$(1).tmp $(foreach f,$(H89TOOLS),0:$(f))
+	cd tools/h89 && cpmcp -f h17 $(CURDIR)/$(1).tmp $(foreach f,$(2),$(CURDIR)/$(f)) 0:
+	cd tools/h89 && cpmls -f h17 -D $(CURDIR)/$(1).tmp
+	mv $(1).tmp $(1)
+endef
+
+H89GAME = src/common/main.c src/common/game.c src/h89/display_text.c src/h89/input.c src/h89/sound.c $(H89NET)
+
+src/h89/screens.h: $(TITLE) src/h89/margins.txt tools/h89/screens.py tools/title_art.py   # the board and the title
+	python3 tools/h89/screens.py $(TITLE) src/h89/margins.txt > $@
+
+$(H89B):
+	mkdir -p $@
+$(H89B)/SYNACK.COM: $(H89GAME) $(H89LIB)/fujinet-h89.lib $(HDRS) src/h89/h89.h src/h89/screens.h | $(H89B)
+	$(ZCC) $(H89FLAGS) $(H89DEFS) -DDISPLAY_IDLE=1 -DQUIT_TO_OS=1 -DQUIT_ASK='"\"QUIT TO CP/M? Y/N\""' \
+	    -m -o $@ $(H89GAME) -L$(H89LIB) -lfujinet-h89
+	python3 tools/h89/trimcom.py $(@:.COM=.map) $@
+h89: $(H89B)/SYNACK.COM $(H89B)/SYNACK.HLP
+# the instruction pages; a help page's [QR] marker links to the H89 manual, by the fly.io server's short link
+H89HELP = $(sort $(wildcard help/h89/screen/HELP*.TXT))
+H89_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/H89
+$(H89B)/SYNACK.HLP: $(H89HELP) tools/h89/help.py tools/help_msdos.py tools/qr.py | $(H89B)
+	python3 tools/h89/help.py --qr "$(H89_QR_URL)" $@ $(H89HELP)
+$(H89B)/syn-ack-wire-h89.h8d: $(H89B)/SYNACK.COM $(H89B)/SYNACK.HLP
+	$(call h89-disk,$@,$^)
+h89-disk: $(H89B)/syn-ack-wire-h89.h8d
+$(H89B)/WIREMON.COM: test/wiremon.c $(H89NET) $(H89LIB)/fujinet-h89.lib $(HDRS) src/h89/h89.h | $(H89B)
+	$(ZCC) $(H89FLAGS) $(H89DEFS) -m -o $@ test/wiremon.c $(H89NET) -L$(H89LIB) -lfujinet-h89
+	python3 tools/h89/trimcom.py $(@:.COM=.map) $@
+$(H89B)/wiremon.h8d: $(H89B)/WIREMON.COM
+	$(call h89-disk,$@,$<)
+h89-wiremon: $(H89B)/wiremon.h8d
+
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
 pc-apple2: $(HDRS) src/apple2/title_art.h
@@ -326,6 +382,6 @@ pc-coco: $(HDRS) src/coco/title_art.h
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto clean
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto h89 h89-disk h89-wiremon clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o
 .DELETE_ON_ERROR:

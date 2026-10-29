@@ -18,6 +18,14 @@ can't break the build. The Atari client doesn't use it (it talks raw SIO: `src/a
 `fujinet-msdos-5.0.0.lib`; its zip has the files at the top level, so the headers were moved into `include/`. `coco-5.0.0/` likewise:
 `fujinet-coco-5.0.0.lib`, `Changelog.md`, and the headers (and `fujinet-err.inc`) moved into `include/`.
 
+The H89 (`h89-194824b/`) is the exception: no release has an H89 library yet, so it is built from source,
+fujinet-lib's `master` at commit `194824ba1fb6713752cbc0af9e14f6febc59b6fa` (2026-10-28), by
+`tools/h89/fnlib.sh SRC h89-194824b` with z88dk's zsdcc, the client's compiler (fujinet-lib's own `h89-cpm`
+target uses sccz80, and the two don't mix). The script makes two fixes to its copies, both from FujiNet's
+M.U.L.E. client: a duplicate table in `bus/h89/fuji_bus_call.c` goes, and `network_open` sends the URL with
+its NUL. The folder holds `fujinet-h89.lib`, the headers in `include/`, and the commit in `VERSION`.
+When a release has the H89, it moves to that like the others.
+
 To move to another version: download its release zip for each platform used, check the sha256 against the
 release page, unpack it into a new `<platform>-<version>/` folder beside the old one, point `A2LIB` (or the
 MS-DOS or CoCo build's library path) in `client/Makefile` at it, build, play a game, then delete the old folder and
