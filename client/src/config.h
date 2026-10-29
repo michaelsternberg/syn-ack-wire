@@ -52,4 +52,41 @@
 #define QUIT_ASK "QUIT TO DOS? Y/N"
 #endif
 
+/* What game.c says when it refuses an answer itself, on the question line.
+ * NARROW_SAYS=1 words it for a narrower one (nes: 26 columns beside the clock),
+ * and names START, the NES's Return. Any one can also be set on its own (adam:
+ * the narrow ones, RETURN in SAY_MAXBUY). */
+#if NARROW_SAYS
+#ifndef SAY_MAXBUY
+#define SAY_MAXBUY  "3 PER TURN: START TO BUY"
+#endif
+#ifndef SAY_JOINS
+#define SAY_JOINS   "JOINS 2 " T_SAFE " HIVES"
+#endif
+#ifndef SAY_NOSYN
+#define SAY_NOSYN   "NO SYNDICATE LEFT"
+#endif
+#ifndef SAY_EVEN
+#define SAY_EVEN    T_SWAP " AN EVEN NUMBER"
+#endif
+#ifndef SAY_POOL
+#define SAY_POOL    "NOT ENOUGH IN THE " T_BANK
+#endif
+#endif
+#ifndef SAY_MAXBUY
+#define SAY_MAXBUY  "3 PER TURN: RETURN TO BUY"
+#endif
+#ifndef SAY_JOINS
+#define SAY_JOINS   T_PATCHED ": JOINS 2 " T_SAFE " HIVES"
+#endif
+#ifndef SAY_NOSYN
+#define SAY_NOSYN   "NO SYNDICATE LEFT FOR A NEW " T_HIVE
+#endif
+#ifndef SAY_EVEN
+#define SAY_EVEN    T_SWAP_P " GO 2 FOR 1: EVEN ONLY"
+#endif
+#ifndef SAY_POOL
+#define SAY_POOL    "NOT ENOUGH LEFT IN THE " T_BANK
+#endif
+
 #endif

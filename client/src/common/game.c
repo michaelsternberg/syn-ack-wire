@@ -284,8 +284,8 @@ static const char *why_not(unsigned char node)
     if (n < RULE_COLS - 1)
         look(node + 1);
     if (seen & (seen - 1))              /* two or more syndicates */
-        return T_PATCHED ": JOINS 2 " T_SAFE " HIVES";
-    return "NO SYNDICATE LEFT FOR A NEW " T_HIVE;
+        return SAY_JOINS;
+    return SAY_NOSYN;
 }
 
 /* The number typed so far (0 if nothing). */
@@ -314,11 +314,11 @@ static void key_dispose(unsigned char c)
             sell = n;
             step = 1;
         } else if (n & 1) {
-            { refuse(T_SWAP_P " GO 2 FOR 1: EVEN ONLY"); return; }
+            { refuse(SAY_EVEN); return; }
         } else if (sell + n > pr[3]) {
             { refuse("YOU DON'T HOLD THAT MANY"); return; }
         } else if (n / 2 > pr[4]) {
-            { refuse("NOT ENOUGH LEFT IN THE " T_BANK); return; }
+            { refuse(SAY_POOL); return; }
         } else {
             tx[0] = 'D';
             tx[1] = sell;
@@ -386,7 +386,7 @@ static void key_buy(unsigned char c)
     if (b == NONE)
         return;
     if (edit_len == RULE_MAXBUY)
-        { refuse("3 PER TURN: RETURN TO BUY"); return; }
+        { refuse(SAY_MAXBUY); return; }
     if (!pr[4 + b])
         { refuse("NO HIVE ON THE GRID"); return; }
     n = 0;

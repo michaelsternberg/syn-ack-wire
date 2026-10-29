@@ -166,6 +166,16 @@
 \newcommand{\KeyReturn}{Return}
 % And the key that backs out (the CoCo: BREAK).
 \newcommand{\KeyEsc}{Esc}
+% Where a platform's controls aren't a keyboard's (the NES: a pad), it renames these too; the defaults are the
+% keyboard's words, as the shared text (rules/hosting.tex) had them.
+\newcommand{\typeword}{type}                                     % how a handle goes in
+\newcommand{\Typeword}{Type}                                     % ...at the start of a sentence
+\newcommand{\HostAsk}{START WITH HOW MANY SEATS? \Rule{minplayers}-\Rule{maxplayers}}  % the host's prompt
+\newcommand{\HostStart}{press \key{\Rule{minplayers}}--\key{\Rule{maxplayers}}}         % ...and how to answer it
+\newcommand{\LogOffAsk}{\MakeUppercase{\V{logoff}} NOW? Y/N}     % the log-off question
+\newcommand{\KeyYes}{Y}                                          % ...its yes
+\newcommand{\StayKeys}{Any other key stays}                     % ...and what keeps the seat
+\newcommand{\TooLate}{TOO LATE: THE LAST SEAT WAS TAKEN}        % the title's refusal when the last bot seat went
 % Key tables: the keys on the left as keycaps, what they do on the right.
 \newenvironment{keytable}{\par\noindent\renewcommand{\arraystretch}{1.5}%
   \tabularx{\linewidth}{@{}>{\raggedright\arraybackslash}p{1.55in}>{\RaggedRight\arraybackslash}X@{}}}

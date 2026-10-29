@@ -1,0 +1,28 @@
+{ THE SCREEN AND THE PAD  9/11 }
+
+ .    empty node
+ +    lone spike
+ {G}    hive (syndicate letter)
+ 1-6  an exploit can run here
+ The last move flashes.
+
+ > you    inverse: whose turn
+ * bot    ? away
+
+{D-PAD}     pick an exploit or a
+          syndicate; up and
+          down set a number
+{A}         run it, pick it, buy
+          it; YES
+{B}         undo a buy; NO
+{START}     confirm
+{SELECT}    this help, any time
+{SEL+A}     move hints on, off
+{SEL+B}     sound on, off
+{SEL+START} leave the game
+
+A yellow cursor marks what A
+picks, a box where it spikes.
+
+
+{<- PREV     B:BACK     NEXT ->}

@@ -8,7 +8,7 @@ Times given here are the usual ones; whoever runs the server can change them.
 
 \subsection{The title screen's status}
 The title screen dials the server as soon as it appears, and its status line stays up to date while you
-type your handle.
+\typeword\ your handle.
 
 \begin{description}[leftmargin=0pt,labelsep=0.5em]
   \item[\code{\Status{lobby}{2}}] No game yet; 2 \Vp{player} wait to play. \key{\KeyReturn} takes a seat in the lobby.
@@ -21,15 +21,15 @@ People at the title screen don't hold a seat yet, and nobody waits for them.
 
 \subsection{Handles}
 Your handle is your name at the table, up to 8 letters and digits. Only one seat can use it: a handle
-already at the table, a bot's included, is refused with \code{THAT HANDLE IS TAKEN}, and you can type another.
+already at the table, a bot's included, is refused with \code{THAT HANDLE IS TAKEN}, and you can \typeword\ another.
 Upper and lower case count as the same. The one exception is coming back to your own seat (see
 \emph{Rejoining}).
 
 \subsection{Hosting}
 \begin{itemize}
   \item \textbf{Who hosts:} the first \V{player} into an empty lobby. Your prompt line reads
-    \code{START WITH HOW MANY SEATS? \Rule{minplayers}-\Rule{maxplayers}}.
-  \item \textbf{Starting:} press \key{\Rule{minplayers}}--\key{\Rule{maxplayers}}. The game starts at once; seats
+    \code{\HostAsk}.
+  \item \textbf{Starting:} \HostStart. The game starts at once; seats
     nobody has joined go to bots, named like \Bot{0} and \Bot{1}. You can't choose fewer seats than there are
     \Vp{player} waiting: with four in the lobby, the server says \code{\Refusal{seats}{4}{\Rule{maxplayers}}}.
   \item \textbf{Who might come:} the seat rows show who has joined, and the log counts the people at the title
@@ -45,7 +45,7 @@ Upper and lower case count as the same. The one exception is coming back to your
 \end{itemize}
 
 \subsection{Joining a lobby}
-Type your handle and press \key{\KeyReturn}. You take the next empty seat and appear in everyone's seat rows. If
+\Typeword\ your handle and press \key{\KeyReturn}. You take the next empty seat and appear in everyone's seat rows. If
 the host clock is running, the log tells you how long the host has left. You play when the host starts.
 
 \atscreen{lobby}
@@ -57,7 +57,7 @@ A newcomer to a game in progress takes over the bot seat worth least (cash plus 
 making stays the bot's; you play from the next one.
 \begin{itemize}
   \item Two people going for the last bot seat: the first \key{\KeyReturn} wins. The other reads
-    \code{TOO LATE: THE LAST SEAT WAS TAKEN} and stays on the title screen.
+    \code{\TooLate} and stays on the title screen.
   \item The server may disable the jack in function for a game among friends. A game in progress then shows
     \code{\Status{full}}.
 \end{itemize}
@@ -74,12 +74,12 @@ making stays the bot's; you play from the next one.
 \end{itemize}
 
 \subsection{\VC{logoff}: leaving on purpose}
-Any time after joining, \key{\KeyEsc} asks \code{\MakeUppercase{\V{logoff}} NOW? Y/N} on the prompt line.
+Any time after joining, \key{\KeyEsc} asks \code{\LogOffAsk} on the prompt line.
 \begin{itemize}
-  \item \key{Y} leaves for good. In a game, a bot takes your seat at once, under a bot's name, and plays at bot
+  \item \key{\KeyYes} leaves for good. In a game, a bot takes your seat at once, under a bot's name, and plays at bot
     speed: nobody waits on your shot clock. Everyone reads \code{\Say{logoff}{\Bot{5}}{MAMBA}}. Your old seat is now
     an ordinary bot seat, which anyone, you too, can jack in for. In the lobby, your seat is simply freed.
-  \item Any other key stays, and the question you were answering comes back.
+  \item \StayKeys, and the question you were answering comes back.
 \end{itemize}
 You land on the title screen with your handle filled in.
 
@@ -96,7 +96,7 @@ about a minute; meanwhile the shot clock covers any decision.
 \begin{itemize}
   \item \textbf{The connection drops:} after 20 seconds with nothing from the server, \SignalLost. At 30 seconds the game hangs up and dials again by itself. Once back, the
     server sends the whole game again, any decision waiting included. No key needed.
-  \item \textbf{After a reboot:} type the same handle on the title screen and press \key{\KeyReturn}. You get your
+  \item \textbf{After a reboot:} \typeword\ the same handle on the title screen and press \key{\KeyReturn}. You get your
     own seat back, not a bot's, as long as it is shown away. If the server hasn't noticed the drop yet, your
     handle is still in use (\code{THAT HANDLE IS TAKEN}): wait a minute and try again.
 \end{itemize}

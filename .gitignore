@@ -12,6 +12,9 @@ client/src/msdos/margins.h
 client/src/coco/font.h
 client/src/coco/title_art.h
 client/src/coco/title_snow.h
+client/src/nes/font.h
+client/src/nes/title_art.h
+client/src/adam/title_art.h
 client/src/h89/screens.h
 docs/style/theme.tex
 

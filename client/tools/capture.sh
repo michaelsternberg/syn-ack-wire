@@ -8,11 +8,14 @@
 #   PLATFORM=apple2 tools/capture.sh     the Apple II: its display code on this PC (make pc-apple2), no emulator
 #   PLATFORM=msdos tools/capture.sh      MS-DOS: its display code on this PC (make pc-msdos), no emulator
 #   PLATFORM=coco tools/capture.sh       the CoCo 1/2: its display code on this PC (make pc-coco), no emulator
+#   PLATFORM=nes tools/capture.sh        the NES: the autoplay image in MAME (tools/run-nes.sh), its dumps from nes.lua
+#   PLATFORM=adam tools/capture.sh       the Adam: its display code on this PC (make pc-adam), no emulator
 #   PLATFORM=h89 tools/capture.sh        the Heathkit H89: its display code on this PC (make pc-h89), no emulator
 #   PORT=6599 INSTANCE=7 tools/capture.sh    the defaults: the server's port, run-test.sh's instance
 #   KEEP=1 tools/capture.sh tied-root    keep the dumps and logs (the script says where)
 #
-# The ports (PORT; for the Atari also NetSIO 9997+INSTANCE, web 8000+INSTANCE) must be free: the script stops
+# The ports (PORT; for the Atari also NetSIO 9997+INSTANCE, web 8000+INSTANCE; for the NES BoIP 9985+INSTANCE, web
+# 8020+INSTANCE) must be free: the script stops
 # otherwise. atari800 runs on a scratch copy of ~/.atari800.cfg, which it would otherwise rewrite on exit.
 set -e
 cd "$(dirname "$0")/.."
@@ -25,8 +28,9 @@ PLATFORM=${PLATFORM:-atari}
 DUMPS=$ROOT/docs/manual/$PLATFORM/screens/dumps
 case $PLATFORM in
     atari) ports="$PORT $((9997 + INSTANCE)) $((8000 + INSTANCE))" ;;
-    apple2 | msdos | coco | h89) ports=$PORT ;;
-    *) echo "PLATFORM: atari, apple2, msdos, coco or h89" >&2; exit 1 ;;
+    apple2 | msdos | coco | adam | h89) ports=$PORT ;;
+    nes) ports="$PORT $((9985 + INSTANCE)) $((8020 + INSTANCE))" ;;
+    *) echo "PLATFORM: atari, apple2, msdos, coco, nes, adam or h89" >&2; exit 1 ;;
 esac
 mkdir -p "$DUMPS"
 
@@ -44,7 +48,10 @@ printf '#!/bin/sh\nexec %s -config %s "$@"\n' "${ATARI800:-atari800}" "$WORK/ata
 chmod +x "$WORK/a8"
 
 echo "building the autoplay client for port $PORT"
-if [ "$PLATFORM" != atari ]; then
+if [ "$PLATFORM" = nes ]; then
+    make -s NES="$WORK/nes" NESAUTO=1 URL="N:TCP://localhost:$PORT/" LOBBY_KEY=0 "$WORK/nes/syn-ack-wire-nes.nes" \
+        > "$WORK/build.log" 2>&1 || { cat "$WORK/build.log" >&2; exit 1; }
+elif [ "$PLATFORM" != atari ]; then
     make -s pc-$PLATFORM > "$WORK/build.log" 2>&1 || { cat "$WORK/build.log" >&2; exit 1; }
 else
     make -s B="$WORK/b" URL="N:TCP://localhost:$PORT/" "$WORK/b/synack-auto.xex" > "$WORK/build.log" 2>&1 \
@@ -65,7 +72,7 @@ import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
 sys.path.insert(0, "tools/h89")
 from screen2txt import char
-import render_apple2, render_coco, render_msdos
+import render_adam, render_apple2, render_coco, render_msdos, render_nes
 import render as render_h89
 scenarios, name, dumps, out, platform = sys.argv[1:]
 all_ = tomllib.load(open(scenarios, "rb"))
@@ -82,6 +89,10 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         rows = [line.upper().strip() for line in render_msdos.text(d)[22:24]]
     elif platform == "coco":
         rows = [line.upper().strip() for line in render_coco.text(d)[22:24]]
+    elif platform == "nes":     # the info and question rows are 26 and 27 of its name table
+        rows = [line.upper().strip() for line in render_nes.text(d)[26:28]]
+    elif platform == "adam":
+        rows = [line.upper().strip() for line in render_adam.text(d)[22:24]]
     elif platform == "h89":
         rows = [line.upper().strip() for line in render_h89.text(d)[22:24]]
     else:
@@ -104,7 +115,10 @@ run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a
     (cd "$ROOT/server" && exec python3 stage.py "$1" --host 127.0.0.1 --port "$PORT") > "$WORK/$1.log" 2>&1 &
     server=$!
     sleep 1
-    if [ "$PLATFORM" != atari ]; then
+    if [ "$PLATFORM" = nes ]; then
+        DUMPDIR="$WORK/d" INSTANCE=$INSTANCE SECS=$SECONDS_EACH TMPDIR="$WORK" \
+            sh tools/run-nes.sh "$WORK/nes/syn-ack-wire-nes.nes" > "$WORK/$1.run" 2>&1 || true
+    elif [ "$PLATFORM" != atari ]; then
         DUMPDIR="$WORK/d" timeout "$SECONDS_EACH" build/pc/pc-$PLATFORM 127.0.0.1 "$PORT" > "$WORK/$1.run" 2>&1 || true
     else
         basic=; [ "$2" = 1 ] && basic=1
@@ -118,7 +132,7 @@ run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a
 
 # The title screen and joining a lobby aren't staged games: a plain server with two test clients waiting in its
 # lobby, ZER0COOL hosting (it waits for more players than will come) and MAMBA, then the client joins.
-# The Apple II, MS-DOS, CoCo and H89 only: the Atari manual's are captures from real play.
+# Every platform but the Atari: the Atari manual's are captures from real play.
 live() {
     rm -rf "$WORK/d"; mkdir "$WORK/d"
     (cd "$ROOT/server" && exec python3 serve.py --host 127.0.0.1 --port "$PORT") > "$WORK/live.log" 2>&1 &
@@ -130,20 +144,32 @@ live() {
         pids="$pids $!"
         sleep 1
     done
-    DUMPDIR="$WORK/d" timeout 15 build/pc/pc-$PLATFORM 127.0.0.1 "$PORT" > "$WORK/live.run" 2>&1 || true
+    if [ "$PLATFORM" = nes ]; then
+        DUMPDIR="$WORK/d" INSTANCE=$INSTANCE SECS=20 TMPDIR="$WORK" \
+            sh tools/run-nes.sh "$WORK/nes/syn-ack-wire-nes.nes" > "$WORK/live.run" 2>&1 || true
+    else
+        DUMPDIR="$WORK/d" timeout 15 build/pc/pc-$PLATFORM 127.0.0.1 "$PORT" > "$WORK/live.run" 2>&1 || true
+    fi
     kill $pids 2>/dev/null || true
     wait $pids 2>/dev/null || true
     python3 - "$WORK/d" "$DUMPS" "$PLATFORM" "$@" <<'PICK'
 import glob, os, shutil, sys
 sys.path.insert(0, "tools")
 sys.path.insert(0, "tools/h89")
-import render_apple2, render_coco, render_msdos
+import render_adam, render_apple2, render_coco, render_msdos, render_nes
 import render as render_h89
 dumps, out, platform, *names = sys.argv[1:]
-text = {"msdos": render_msdos.text, "coco": render_coco.text, "h89": render_h89.text}.get(platform, render_apple2.text)
+text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text,
+        "adam": render_adam.text, "h89": render_h89.text}.get(platform, render_apple2.text)
+if platform == "nes":       # its own layout: the foot on row 27, the seats on 14-19, the log on 20-25
+    ask, seats, log, hint = 27, slice(14, 20), slice(20, 26), "PICK A HANDLE"
+elif platform == "adam":    # the NES's in 24 rows: the seats on 12-17, the log on 18-21
+    ask, seats, log, hint = 23, slice(12, 18), slice(18, 22), "TYPE A HANDLE"
+else:
+    ask, seats, log, hint = 23, slice(13, 19), slice(19, 22), "TYPE A HANDLE"
 wants = {   # name: what its screen shows
-    "title": lambda t: t[23].strip().startswith("TYPE A HANDLE") and any("LOBBY OPEN" in l for l in t),
-    "lobby-join": lambda t: any(l.startswith(">") for l in t[13:19]) and any("S TO START" in l for l in t[19:22]),
+    "title": lambda t: t[ask].strip().startswith(hint) and any("LOBBY OPEN" in l for l in t),
+    "lobby-join": lambda t: any(l.strip().startswith(">") for l in t[seats]) and any("S TO START" in l for l in t[log]),
 }
 for name in names:
     for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
