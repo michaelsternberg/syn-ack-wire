@@ -5,7 +5,7 @@
 {R} {RATKING}  Rat King Cartel
   Underground data smugglers
 
-{D} {DAEMON}   Church of the
+{H} {DAEMON}   Church of the
   Holy Daemon: fanatical
   devotees of the init process
 
