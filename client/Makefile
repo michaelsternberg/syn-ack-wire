@@ -196,8 +196,8 @@ DOSGAME = src/common/main.c src/common/game.c src/msdos/display_text.c src/msdos
 
 src/msdos/title_art.h: $(TITLE) tools/title_art.py      # the Atari's logo, in code page 437's box characters
 	python3 tools/title_art.py d 0 $< > $@
-src/msdos/margins.h: src/msdos/margins.txt tools/margins_msdos.py     # the circuit-board panels either side
-	python3 tools/margins_msdos.py $< > $@
+src/msdos/margins.h: src/msdos/margins.txt $(TITLE) tools/margins_msdos.py tools/board80.py tools/title_art.py   # the circuit-board panels either side, and the 80-column title's
+	python3 tools/margins_msdos.py $< $(TITLE) > $@
 DOSHDRS = src/msdos/title_art.h src/msdos/margins.h
 
 $(DOSB):
@@ -450,7 +450,7 @@ endef
 
 H89GAME = src/common/main.c src/common/game.c src/h89/display_text.c src/h89/input.c src/h89/sound.c $(H89NET)
 
-src/h89/screens.h: $(TITLE) src/h89/margins.txt tools/h89/screens.py tools/title_art.py   # the board and the title
+src/h89/screens.h: $(TITLE) src/h89/margins.txt tools/h89/screens.py tools/board80.py tools/title_art.py   # the board and the title
 	python3 tools/h89/screens.py $(TITLE) src/h89/margins.txt > $@
 
 $(H89B):

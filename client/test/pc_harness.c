@@ -131,8 +131,7 @@ void pc_dump(void)
     snprintf(path, sizeof path, "%s/scr%03d.bin", dir, n++);
     if ((f = fopen(path, "wb")) != 0) {
 #ifdef PC_MSDOS
-        for (int r = 0; r < 24; ++r)    /* little-endian, as on the PC: character, then attribute */
-            fwrite(PC_SCREEN + r * 80 + 20, 2, 40, f);
+        fwrite(PC_SCREEN, 2, 24 * 40, f);   /* the 40-column screen's 24 rows, as on the PC: character, attribute */
 #elif defined(PC_NES)
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);  /* the cells, the attribute table, the sprites */
         fwrite(attr, 1, 64, f);

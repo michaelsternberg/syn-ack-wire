@@ -427,7 +427,9 @@ tools/run-dos.sh build/msdos/SYNACK.EXE     # play it in DOSBox-X; EMU=mame for 
   and reverse blinking for the last move (5 seconds, `DISPLAY_IDLE=1`). Code page 437 has a yen sign. The 20
   columns either side, in 80, hold circuit-board art (`src/msdos/margins.txt`, UTF-8, `tools/margins_msdos.py` makes the
   header): decoration only, normal grey (dark grey vanished on a grey LCD), green in colour. The title logo is the
-  Atari's art in box characters (`tools/title_art.py d`).
+  Atari's art in box characters (`tools/title_art.py d`); in 80 columns each column is doubled as it is drawn, to
+  keep the Atari's proportions on the narrow cells, over panels cleared round it as on the H89 (`tools/board80.py`,
+  through `margins_msdos.py`). The manual's captures are the 40-column screen.
 - **Keys:** **F1** or **?** the instructions, **F2** move hints, **F3** sound (switched where the keys are read),
   **F4** 40 or 80 columns (the title screen only; on a PCjr's keyboard, Fn and 4), **F5** colour, **Esc** on
   the title screen quits to DOS after a Y (`QUIT_TO_OS=1`: the sound silenced, the connection closed, the
@@ -735,7 +737,8 @@ make h89-disk H89SYS=cpm-2.2.04-64k.h8d     # build/h89/syn-ack-wire-h89.h8d; bo
   seconds (the H19 has no blink). Money shows as `Y3200`.
 - **Title:** the Atari's logo as an outline in the graphics characters, each column doubled to keep its
   proportions on the H19's narrow cells and centred, over the board, which is cleared a cell round it
-  (`tools/h89/screens.py`: a chip the clearing touches goes whole, cut traces end in pads).
+  (`tools/board80.py`, shared with MS-DOS's 80 columns: a chip the clearing touches goes whole, cut traces end in
+  pads).
 - **Keys:** the H19's f1-f3 and arrows send ESC and a letter; ESC alone, with nothing after it in about 50 ms, is
   the ESC key. **F1** or **?** the instructions, **F2** move hints, **F3** sound, **ESC** on the title quits to
   CP/M after a Y (`QUIT_TO_OS=1`), **BACK SPACE** or **DELETE** undoes a letter, **RETURN** confirms.
@@ -873,8 +876,8 @@ from TNFS, as M.U.L.E.'s Intellivision client is booted); `synack.bin` and `syna
 | `sound.s` | 85 | + 42 rodata (7 chords of up to 3 notes); `pause`, the delay loop the polling is paced by |
 | `main.c` | 1152 | the Atari's plus 3 for the `display_idle()` call |
 | **msdos** (2026-10-25, Open Watcom `-0 -ms -os`) | | |
-| `SYNACK.EXE` | 21466 | whole MZ file; code 18232 (below); plus 6.8 KB bss and a 2 KB stack once loaded |
-| `display_text.c` | 5546 | + 2205 rodata/data (screen words, title art, the circuit-board panels, the width menu, 7 hive colours), 6072 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page, 120 for the log while F5 redraws |
+| `SYNACK.EXE` | 22056 | whole MZ file; code 18495 (below); plus 6.8 KB bss and a 2 KB stack once loaded |
+| `display_text.c` | 5767 | + 2547 rodata/data (screen words, title art, the circuit-board panels and the 80-column title's, the width menu, 7 hive colours), 6072 bss: 4000 for the screen's copy while the instructions are up, 1920 for a page, 120 for the log while F5 redraws |
 | `game.c` | 2322 | + 382 rodata, 310 bss (the game state) |
 | `main.c` | 1220 | + 152 rodata; Esc and Y on the title quit to DOS (`QUIT_TO_OS`) |
 | `sound.c` | 1068 | + 175 rodata (7 speaker chords, 11 AdLib chords); the OPL2 test and set-up, the speaker's delay loop |
@@ -882,7 +885,7 @@ from TNFS, as M.U.L.E.'s Intellivision client is booted); `synack.bin` and `syna
 | `proto.c` | 196 | + 26-byte length table, 128-byte `msg[]` |
 | `input.c` | 203 | keys from INT 16h (F4 and F5 call the display's width and colour swaps), `ticks()` from the BIOS tick |
 | fujinet-lib | 1033 | open, status, read, write, close, AppKey read; the INT F5h bus layer is 255 |
-| Watcom C runtime | 6098 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset |
+| Watcom C runtime | 6140 | start-up, the BIOS calls, the help pages' `open`/`lseek`/`read` (which bring the near heap), memcpy/memset, strchr |
 | **coco** (2026-10-27, CMOC 0.1.100 `-O2`) | | |
 | `synack.bin` | 18624 | whole Disk BASIC file; loads at $2600, ends at $7728 with its variables, under the $7B00 limit |
 | `display_text.c` | 4517 | + 1078 rodata (screen words, title art), 48 bss/data |

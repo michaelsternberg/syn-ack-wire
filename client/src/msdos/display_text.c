@@ -22,7 +22,9 @@
  *
  * In 80 columns, the 20 either side of the game hold circuit-board art (margins.txt):
  * decoration only, drawn with every full redraw: normal, as dark grey doesn't
- * show on a monochrome adapter or a grey LCD panel; green in colour. */
+ * show on a monochrome adapter or a grey LCD panel; green in colour. There the
+ * title's logo has each column doubled, keeping the Atari's proportions on the
+ * narrow cells, over the panels cleared round it (title_margins). */
 #include <string.h>
 #include "../config.h"
 #include "../platform.h"
@@ -78,7 +80,11 @@ typedef unsigned short FAR cell;
 
 static cell *screen;                    /* row 0, column 0 of the screen */
 static cell *cur;
+#ifdef PC_SCREEN
+static unsigned char cols = 40, left = 0;   /* the manual's captures: the 40-column screen */
+#else
 static unsigned char cols = 80, left = 20;  /* the screen's width; where the game's 40 columns start */
+#endif
 static unsigned char mono;              /* a monochrome adapter: 80 columns only, no colour */
 static unsigned char colour;            /* green phosphor (F5), on a colour adapter */
 static unsigned char cr, cc;            /* the row and column put() writes next */
@@ -97,7 +103,7 @@ static unsigned char bottom = NORMAL;   /* rows 22-23: INV while this seat decid
 static void at(unsigned char r, unsigned char c);
 static void put(unsigned char ch);
 static void text(const char *s);
-static void clear_screen(void);
+static void clear_screen(unsigned char title);
 
 #ifndef PC_SCREEN
 #define BIOS_CGA_MODE (*(unsigned char __far *)0x00400065L)  /* the BIOS's copy of port 3D8 */
@@ -138,7 +144,7 @@ static void ask_width(void)
 {
     cols = 40;
     set_width();
-    clear_screen();
+    clear_screen(0);
     at(8, 20 - (sizeof TH_TITLE - 1) / 2);
     text(TH_TITLE);
     at(11, 5);
@@ -335,19 +341,30 @@ static void clear_row(unsigned char r)
     spaces(40);
 }
 
-static void clear_screen(void)
+/* The side panels' rows `k` to `end` - 1, from `m` (margins, or the title's). */
+static void panels(const unsigned char (*m)[2 * MARGIN_W], unsigned char k, unsigned char end)
+{
+    unsigned char a = colour ? C_ART : NORMAL;
+    for (; k < end; ++k)
+        for (j = 0; j < MARGIN_W; ++j) {
+            screen[k * 80 + j] = a << 8 | m[k][j];
+            screen[k * 80 + 80 - MARGIN_W + j] = a << 8 | m[k][MARGIN_W + j];
+        }
+}
+
+/* `title`: the title screen, whose panels in 80 columns are cleared round the logo from
+ * the start (drawing the others first flickers on a slow PC) */
+static void clear_screen(unsigned char title)
 {
     unsigned k;
-    unsigned char a = colour ? C_ART : NORMAL;
     mode = NORMAL;
     if (cols == 80) {
         for (k = 0; k < 25 * 80; ++k)
             screen[k] = (colour ? C_TEXT : NORMAL) << 8 | ' ';
-        for (k = 0; k < 25; ++k)        /* the side panels */
-            for (j = 0; j < MARGIN_W; ++j) {
-                screen[k * 80 + j] = a << 8 | margins[k][j];
-                screen[k * 80 + 80 - MARGIN_W + j] = a << 8 | margins[k][MARGIN_W + j];
-            }
+        k = title ? TITLE80_ROWS : 0;
+        if (k)
+            panels(title_margins, 0, k);
+        panels(margins, k, 25);
     }
     for (k = 0; k < 25; ++k) {          /* the game's 40 columns, cell by cell for the panels' colour */
         at(k, 0);
@@ -414,11 +431,24 @@ void display_title_screen(void)
     const unsigned char *p;
     setup();
     field = 0;
-    clear_screen();
-    for (p = title_art; *p != 0xFF; p += 3 + p[2]) {
-        at(p[0], p[1]);
-        textn(p + 3, p[2]);
-    }
+    clear_screen(1);
+    if (cols == 80) {
+        for (p = title_art; *p != 0xFF; p += 3 + p[2]) {
+            cur = screen + p[0] * 80 + 2 * p[1] + TITLE80_SHIFT;
+            for (n = 0; n < p[2]; ++n) {
+                v = p[3 + n];
+                put(v);
+                /* a piece with an arm to the right goes on with a line; the hyphen's half block, and the cell
+                 * before the hyphen, with a half block (the hyphen centred between the letters' lines) */
+                put(strchr("\xC4\xC3\xDA\xC0\xC2\xC1\xC5", v) ? 0xC4
+                    : v == 0xDF || (n + 1 < p[2] && p[4 + n] == 0xDF) ? 0xDF : ' ');
+            }
+        }
+    } else
+        for (p = title_art; *p != 0xFF; p += 3 + p[2]) {
+            at(p[0], p[1]);
+            textn(p + 3, p[2]);
+        }
     at(ROW_REGION, 4);
     text("REGION");                     /* from the server, once it answers */
     at(ROW_REGION + 1, 4);
@@ -812,7 +842,7 @@ void display_playfield(void)
 {
     setup();
     field = 1;
-    clear_screen();
+    clear_screen(0);
     mode = INV;
     clear_row(0);
     at(0, 39 - (sizeof TH_TITLE - 1));

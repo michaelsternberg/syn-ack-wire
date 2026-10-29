@@ -95,7 +95,9 @@ saw_generate(${CLIENT}/src/common/proto_tab.h ARGS ${ROOT}/tools/gen_proto.py h
 saw_generate(${CLIENT}/src/msdos/title_art.h ARGS ${CLIENT}/tools/title_art.py d 0 ${CLIENT}/src/atari/title4.atascii
   DEPENDS ${CLIENT}/src/atari/title4.atascii ${CLIENT}/tools/title_art.py)
 saw_generate(${CLIENT}/src/msdos/margins.h ARGS ${CLIENT}/tools/margins_msdos.py ${CLIENT}/src/msdos/margins.txt
-  DEPENDS ${CLIENT}/src/msdos/margins.txt ${CLIENT}/tools/margins_msdos.py)
+  ${CLIENT}/src/atari/title4.atascii   # as client/Makefile makes it: both write the one file
+  DEPENDS ${CLIENT}/src/msdos/margins.txt ${CLIENT}/src/atari/title4.atascii ${CLIENT}/tools/margins_msdos.py
+  ${CLIENT}/tools/board80.py ${CLIENT}/tools/title_art.py)
 saw_generate(${SAW_GEN}/regions_tab.h ARGS ${ROOT}/tools/gen_regions.py h
   DEPENDS ${ROOT}/server/servers.fly.toml ${ROOT}/fly.toml ${ROOT}/tools/gen_regions.py)
 add_custom_target(saw_headers DEPENDS
