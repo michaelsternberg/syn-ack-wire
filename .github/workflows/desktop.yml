@@ -27,8 +27,8 @@ jobs:
             cmake: ""
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5   # 3.11 or newer for tomllib (the generated headers)
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7   # 3.11 or newer for tomllib (the generated headers)
         with:
           python-version: "3.12"
       - name: Linux libraries for SDL3
@@ -56,7 +56,7 @@ jobs:
             macos)   ditto -c -k --keepParent syn-ack-wire ../syn-ack-wire-macos.zip ;;
             linux)   tar czf ../syn-ack-wire-linux.tar.gz syn-ack-wire ;;
           esac
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: syn-ack-wire-${{ matrix.name }}
           path: syn-ack-wire-${{ matrix.name }}.*
@@ -66,10 +66,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           merge-multiple: true
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         with:
           name: SYN-ACK WIRE desktop ${{ github.ref_name }}
           files: syn-ack-wire-*
