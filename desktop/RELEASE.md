@@ -25,7 +25,9 @@ Type a handle and press **Enter** to jack in. The first player at a table is the
 lists every key.
 
 - **Region**: the four servers, each with the seats free there (**Refresh Seats** counts again), and **Custom
-  Server...** for a server of your own, on your network or anywhere.
+  Server...** for a server of your own, on your network or anywhere. To run one, see
+  [server/README.md](https://github.com/michaelsternberg/syn-ack-wire/blob/main/server/README.md) (Python 3.11,
+  nothing else to install).
 - **Options**: colour themes, fonts, CRT effects, full screen (**F11**), an auto-hiding menu bar, move hints
   (**F2**) and sound (**F3**). Your choices and handle are remembered.
 
