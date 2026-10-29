@@ -56,7 +56,8 @@ FujiNet lobby counts them: `GET /SEATS` from the servers' web page, `src/seats.c
 again with Refresh Seats (which leaves the menu open); then up to four custom servers used before, then Custom
 Server... (a host name or LAN address and a port). Options: Colour Theme, Font, CRT Effects
 (Off, Low, Medium, High), Full Screen (F11), Auto-Hide Menu Bar (the bar shows over the screen while the mouse is at
-the window's top edge), Move Hints (F2), Sound (F3). Every option is remembered. Help: Instructions (F1), Keys, About.
+the window's top edge), Title Static (the logo's letters filled with TV static, as on the CoCo: `src/snow.cpp`),
+Move Hints (F2), Sound (F3). Every option is remembered. Help: Instructions (F1), Keys, About.
 
 **Keys** are the MS-DOS client's: F1 or ? the instructions (arrow keys turn pages), F2 move hints, F3 sound,
 Esc then Y logs off in a game or quits from the title; the game's own keys as in `client/README.md`. F11 is
