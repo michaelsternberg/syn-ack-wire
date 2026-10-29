@@ -9,6 +9,7 @@
 #   PLATFORM=msdos tools/capture.sh      MS-DOS: its display code on this PC (make pc-msdos), no emulator
 #   PLATFORM=coco tools/capture.sh       the CoCo 1/2: its display code on this PC (make pc-coco), no emulator
 #   PLATFORM=nes tools/capture.sh        the NES: the autoplay image in MAME (tools/run-nes.sh), its dumps from nes.lua
+#   PLATFORM=adam tools/capture.sh       the Adam: its display code on this PC (make pc-adam), no emulator
 #   PORT=6599 INSTANCE=7 tools/capture.sh    the defaults: the server's port, run-test.sh's instance
 #   KEEP=1 tools/capture.sh tied-root    keep the dumps and logs (the script says where)
 #
@@ -26,9 +27,9 @@ PLATFORM=${PLATFORM:-atari}
 DUMPS=$ROOT/docs/manual/$PLATFORM/screens/dumps
 case $PLATFORM in
     atari) ports="$PORT $((9997 + INSTANCE)) $((8000 + INSTANCE))" ;;
-    apple2 | msdos | coco) ports=$PORT ;;
+    apple2 | msdos | coco | adam) ports=$PORT ;;
     nes) ports="$PORT $((9985 + INSTANCE)) $((8020 + INSTANCE))" ;;
-    *) echo "PLATFORM: atari, apple2, msdos, coco or nes" >&2; exit 1 ;;
+    *) echo "PLATFORM: atari, apple2, msdos, coco, nes or adam" >&2; exit 1 ;;
 esac
 mkdir -p "$DUMPS"
 
@@ -69,7 +70,7 @@ cat > "$WORK/pick.py" <<'EOF'
 import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
 from screen2txt import char
-import render_apple2, render_coco, render_msdos, render_nes
+import render_adam, render_apple2, render_coco, render_msdos, render_nes
 scenarios, name, dumps, out, platform = sys.argv[1:]
 all_ = tomllib.load(open(scenarios, "rb"))
 sc = all_[name]
@@ -87,6 +88,8 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         rows = [line.upper().strip() for line in render_coco.text(d)[22:24]]
     elif platform == "nes":     # the info and question rows are 26 and 27 of its name table
         rows = [line.upper().strip() for line in render_nes.text(d)[26:28]]
+    elif platform == "adam":
+        rows = [line.upper().strip() for line in render_adam.text(d)[22:24]]
     else:
         rows = ["".join(char(b) for b in d[r * 40:r * 40 + 40]).upper().strip() for r in (22, 23)]
     if any(r.startswith(want) for r in rows):
@@ -124,7 +127,7 @@ run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a
 
 # The title screen and joining a lobby aren't staged games: a plain server with two test clients waiting in its
 # lobby, ZER0COOL hosting (it waits for more players than will come) and MAMBA, then the client joins.
-# The Apple II, MS-DOS, CoCo and NES only: the Atari manual's are captures from real play.
+# Every platform but the Atari: the Atari manual's are captures from real play.
 live() {
     rm -rf "$WORK/d"; mkdir "$WORK/d"
     (cd "$ROOT/server" && exec python3 serve.py --host 127.0.0.1 --port "$PORT") > "$WORK/live.log" 2>&1 &
@@ -147,11 +150,14 @@ live() {
     python3 - "$WORK/d" "$DUMPS" "$PLATFORM" "$@" <<'PICK'
 import glob, os, shutil, sys
 sys.path.insert(0, "tools")
-import render_apple2, render_coco, render_msdos, render_nes
+import render_adam, render_apple2, render_coco, render_msdos, render_nes
 dumps, out, platform, *names = sys.argv[1:]
-text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text}.get(platform, render_apple2.text)
+text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text,
+        "adam": render_adam.text}.get(platform, render_apple2.text)
 if platform == "nes":       # its own layout: the foot on row 27, the seats on 14-19, the log on 20-25
     ask, seats, log, hint = 27, slice(14, 20), slice(20, 26), "PICK A HANDLE"
+elif platform == "adam":    # the NES's in 24 rows: the seats on 12-17, the log on 18-21
+    ask, seats, log, hint = 23, slice(12, 18), slice(18, 22), "TYPE A HANDLE"
 else:
     ask, seats, log, hint = 23, slice(13, 19), slice(19, 22), "TYPE A HANDLE"
 wants = {   # name: what its screen shows

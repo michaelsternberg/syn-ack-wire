@@ -82,7 +82,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`; `PLATFORM=nes`: the autoplay image in MAME |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`, `adam`; `PLATFORM=nes`: the autoplay image in MAME |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
@@ -679,6 +679,9 @@ stack is below D390h and EOS above.
   into the program (5.9 KB). A page is painted over the screen without the sprites; the game goes on writing its
   own cells underneath, unpainted, and closing paints them again. The QR code (page 10, `ADAM_QR_URL`) is in the
   quarter-block glyphs, 2x2 modules a cell (zbarimg reads it from `render_adam.py --page`).
+- **Manual:** `docs/manual/adam/`, its captures from `PLATFORM=adam tools/capture.sh`: `pc-adam` against the staged
+  games, drawn by `render_adam.py`. Keys and Controller is its own chapter; the rules text has the keyboard's words.
+  Help page 10's QR code links to it by the fly.io short link (`ADAM_QR_URL`).
 - **Emulators** (`tools/run-adam.sh`): FujiNet-PC (an ADAM build) serves the image as disk 1 with CONFIG off, and
   the network; the emulator listens on BoIP and FujiNet-PC dials it. adamcore (FujiNet Go Adam's core,
   `adamcore-cli`) runs headless in real time, keys on a schedule (`KEYS`), a picture every `EVERY` frames;

@@ -1,0 +1,16 @@
+% The Adam's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // ADAM}
+\renewcommand{\PlatformShort}{Adam}                        % as in "on the Adam"
+\newcommand{\PlatformLong}{Coleco Adam}                    % the title page
+\newcommand{\PlatformMachines}{COLECO ADAM \quad // \quad FUJINET ADAM}   % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar turns magenta and reads \code{NO SIGNAL}}  % the link is quiet
+\renewcommand{\KeyReturn}{RETURN}                          % the Adam's names for the keys that confirm
+\renewcommand{\KeyEsc}{ESCAPE}                             % and back out
+\renewcommand{\HostAsk}{HOW MANY SEATS? \Rule{minplayers}-\Rule{maxplayers}}
+\renewcommand{\TooLate}{TOO LATE: LAST SEAT TAKEN}
+
+% Where the screen sits in a capture, in image pixels (see \capgeom): client/tools/render_adam.py at --scale 3
+% draws all of the TMS9918A's 32 x 24 cells, so a callout's (column, row) is the cell's.
+\makeatletter
+\newcommand{\rendered}{\capgeom{0}{0}{24}{24}{768}{576}}
+\makeatother
