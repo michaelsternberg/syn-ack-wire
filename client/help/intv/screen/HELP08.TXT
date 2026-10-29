@@ -1,0 +1,12 @@
+{BLACK ICE       8/17}
+{BLACK ICE}: a hive of
+11+ nodes. Safe: it
+can't be absorbed.
+Joining 2: patched.
+Nothing can run? The
+kit burns: 6 new.
+After your spike you
+may {NULL-ROUTE} if a
+hive has 41+ or all
+are Black ICE.
+{<PREV  BUTTON  NEXT>}

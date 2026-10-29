@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """The NES instruction pages, packed into a C header the game is built with (they go in its ROM);
-the Adam's too (--rows 24 --top 0: its screen has no overscan to keep out of).
+the Adam's too (--rows 24 --top 0: its screen has no overscan to keep out of), and the
+Intellivision's (--rows 12 --cols 20 --top 0 --left 0 --bas: 20 x 12 cards, as IntyBASIC DATA).
 
 Usage:
-    help_nes.py [--rows N --top R] [--qr URL] OUT.h HELP01.TXT HELP02.TXT ...   check them, then write OUT
-    help_nes.py [--rows N --top R] [--qr URL] --check HELP01.TXT ...            only check
+    help_nes.py [--rows N --cols N --top R --left C] [--bas] [--qr URL] OUT HELP01.TXT ...  check them, write OUT
+    help_nes.py [--rows N --cols N --top R --left C] [--qr URL] --check HELP01.TXT ...      only check
 
 A page is plain ASCII: at most 28 lines of at most 30 characters, the NES's
 screen inside a TV's overscan (src/nes/text.h: name table rows 1-28, columns
@@ -156,15 +157,42 @@ def header(pages, folder):
     return "\n".join(out) + "\n"
 
 
+def bas(pages, folder):
+    """IntyBASIC: help_page() each page's first byte, help_data the bytes two to a word (DATA PACKED, the
+    first in the high byte), as src/intv/help.bas reads them."""
+    out = ["' Made by tools/help_nes.py from %s/HELP*.TXT: edit those, not this." % folder,
+           "    CONST HELP_PAGES = %d" % len(pages)]
+    at, starts = 0, []
+    for p in pages:
+        starts.append(at)
+        at += len(p)
+    out.append("help_page:")
+    out.append("    DATA %s" % ", ".join(map(str, starts)))
+    out.append("help_data:")
+    data = b"".join(pages)
+    for i in range(0, len(data), 16):
+        out.append("    DATA PACKED %s" % ", ".join("$%02X" % b for b in data[i:i + 16]))
+    return "\n".join(out) + "\n"
+
+
 def main():
-    global ROWS, TOP
+    global ROWS, COLS, TOP, LEFT
     args = sys.argv[1:]
     url = None
-    while args[:1] in (["--rows"], ["--top"]):
+    out_bas = False
+    while args[:1] in (["--rows"], ["--cols"], ["--top"], ["--left"], ["--bas"]):
+        if args[0] == "--bas":
+            out_bas, args = True, args[1:]
+            continue
+        n = int(args[1])
         if args[0] == "--rows":
-            ROWS = int(args[1])
+            ROWS = n
+        elif args[0] == "--cols":
+            COLS = n
+        elif args[0] == "--top":
+            TOP = n
         else:
-            TOP = int(args[1])
+            LEFT = n
         args = args[2:]
     if args[:1] == ["--qr"]:
         url, args = args[1], args[2:]
@@ -174,7 +202,7 @@ def main():
     out, paths = args[0], args[1:]
     pages = check(paths, url)
     with open(out, "w") as f:
-        f.write(header(pages, os.path.dirname(os.path.relpath(paths[0])) if paths else "."))
+        f.write((bas if out_bas else header)(pages, os.path.dirname(os.path.relpath(paths[0])) if paths else "."))
     print("%s: %d help pages, %d bytes" % (out, len(pages), sum(map(len, pages))))
 
 

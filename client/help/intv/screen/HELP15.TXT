@@ -1,0 +1,12 @@
+{THE CONTROLLER 15/17}
+{1-6}  run an exploit
+{1-7}  a syndicate
+{0-9}  how many
+{CLEAR} undo
+{ENTER} confirm
+{1} {0}  yes, no
+{TOP}  this help
+{LOWER LEFT} options:
+hints,sound,log off
+
+{<PREV  BUTTON  NEXT>}

@@ -135,17 +135,17 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
    `make apple2_text-po URL=N:TCP://<app>.fly.dev:6502/ PRODOS=...` and
    `make msdos-img URL=N:TCP://<app>.fly.dev:6502/ WATCOM=...` and
    `make coco-dsk URL=N:TCP://<app>.fly.dev:6502/ DECB=...` and `make nes URL=N:TCP://<app>.fly.dev:6502/` and
-   `make adam URL=N:TCP://<app>.fly.dev:6502/` and `make h89-disk URL=N:TCP://<app>.fly.dev:6502/ H89SYS=...`
-   (the default URL is this project's own app, syn-ack-wire.fly.dev).
+   `make adam URL=N:TCP://<app>.fly.dev:6502/`, `make h89-disk URL=N:TCP://<app>.fly.dev:6502/ H89SYS=...` and
+   `make intv URL=N:TCP://<app>.fly.dev:6502/` (the default URL is this project's own app, syn-ack-wire.fly.dev).
    The image takes `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
    `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
-   `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp` and
-   `client/build/h89/syn-ack-wire-h89.h8d` as they are when you deploy, and serves them at
+   `client/build/nes/syn-ack-wire-nes.nes`, `client/build/adam/syn-ack-wire-adam.ddp`,
+   `client/build/h89/syn-ack-wire-h89.h8d` and `client/build/intv/syn-ack-wire-intv.rom` as they are when you deploy, and serves them at
    `TNFS://<app>.fly.dev/syn-ack-wire-atari.atr`, `.../syn-ack-wire-apple2.po`,
    `.../syn-ack-wire-msdos.img`, `.../syn-ack-wire-coco.dsk`, `.../syn-ack-wire-nes.nes`,
-   `.../syn-ack-wire-adam.ddp` and `.../syn-ack-wire-h89.h8d` (the NES lobby mounts a `.nes` and boots it:
+   `.../syn-ack-wire-adam.ddp`, `.../syn-ack-wire-h89.h8d` and `.../syn-ack-wire-intv.rom` (the NES lobby mounts a `.nes` and boots it:
    fujinet-lobby, branch `nes`; the Adam's mounts the `.ddp` in slot 0 and reboots: its shared client, branch
-   `client-qr-screen`); the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
+   `client-qr-screen`; the Intellivision's mounts the `.rom` and the cartridge boots it: fujinet-lobby's `intv/`); the first two under their old names too, `synack.atr` and `synack.po` (v0.2.0 and
    before), for links saved then, and the CoCo's as `synack.dsk`, the name the lobby boots: it runs
    `RUNM"<the disk's name>"`, which Disk BASIC takes only up to 8 letters. A disk booted directly dials that one
    server (6502 is a relaxed one here); the FujiNet lobby gives each server its own port.
@@ -159,7 +159,7 @@ machine (256 MB) and $2/month for the dedicated IPv4 address that raw TCP and UD
 
 To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: a test checks the two agree), then
 `deploy/deploy.sh`; to change a disk, `make atr`, `make apple2_text-po`, `make msdos-img`, `make coco-dsk`,
-`make nes`, `make adam` or `make h89-disk` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
+`make nes`, `make adam`, `make h89-disk` or `make intv` and `deploy/deploy.sh`. A deploy restarts the machine: games in progress end,
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s
@@ -205,15 +205,15 @@ the server with the proxy's PROXY protocol header turned on and `--proxy-protoco
 ## FujiNet game lobby
 With `--lobby ADDRESS --lobby-client URL` the server lists itself in the FujiNet game lobby
 (https://lobby.fujinet.online, from github.com/FujiNetWIFI/fujinet-lobby), so players can pick it from the lobby
-program on their Atari, Apple II, PC, CoCo, NES or Adam. The lobby boots the client disk for the player's platform from
+program on their Atari, Apple II, PC, CoCo, NES, Adam or Intellivision. The lobby boots the client disk for the player's platform from
 `--lobby-client` (a TNFS URL to `syn-ack-wire-atari.atr`; `apple2=` and a TNFS URL to `syn-ack-wire-apple2.po`
-for the Apple, `msdos=`, `coco=`, `nes=` and `adam=` likewise, the CoCo's disk named in 8 letters at most, `synack.dsk`; the
+for the Apple, `msdos=`, `coco=`, `nes=`, `adam=` and `intv=` likewise, the CoCo's disk named in 8 letters at most, `synack.dsk`; the
 option once for each platform; `clients` in a `--config` file's `[lobby]`) and saves `--lobby`
 (`TCP://host:port/`, the server's public address) in an AppKey; the client reads it and dials `N:` + it
 (client/README.md).
 - The entry: game `SYN-ACK WIRE` (theme title), server name = the `--region`, real-world region `--lobby-region`
-  (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`, `msdos`, `coco`, `nes`, `adam`), appkey `--lobby-key` (default
-  11; it must match the clients' `LOBBY_KEY`). Each server process is its own entry, so four regions are four
+  (1-2 letters, default `us`), a client disk for each platform (`atari`, `apple2`, `msdos`, `coco`, `nes`, `adam`, `intv`), appkey `--lobby-key` (default
+  11; it must match the clients' `LOBBY_KEY`; fujinet-intv-auto-racing registered 11 too, client/README.md says what that does). Each server process is its own entry, so four regions are four
   `serve.py` on four ports. One entry serves every platform: each platform's lobby program lists the entries with a
   disk for it, so players on every platform meet at the same tables.
 - PLAYERS shows table 0, the one clients join. In the lobby: humans here of 6. In a game: the seats humans hold

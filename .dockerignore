@@ -9,6 +9,7 @@
 !client/build/nes/syn-ack-wire-nes.nes
 !client/build/adam/syn-ack-wire-adam.ddp
 !client/build/h89/syn-ack-wire-h89.h8d
+!client/build/intv/syn-ack-wire-intv.rom
 !deploy/
 server/tests/
 **/__pycache__

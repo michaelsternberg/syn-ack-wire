@@ -1,0 +1,12 @@
+{THE SYNDICATES 12/17}
+{1} {G} GHOSTMDM  low
+{2} {R} RATKING   low
+{3} {D} DAEMON    mid
+{4} {I} IRONVEC   mid
+{5} {B} BRATVA    mid
+{6} {L} LOTUS-12  high
+{7} {O} OBSIDIAN  high
+Keypad 1-7 picks one
+in the grid panel's
+order.
+{<PREV  BUTTON  NEXT>}

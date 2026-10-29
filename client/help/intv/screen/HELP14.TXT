@@ -1,0 +1,12 @@
+{SEATS, CRYPTO  14/17}
+The disc or the
+lower right button
+turns the view:
+{GRID} {SEATS} {CRYPTO}
+SEATS: handles, \,
+the log. > you,
+* bot, ? away;
+green: whose turn.
+CRYPTO: who holds
+what, what's left.
+{<PREV  BUTTON  NEXT>}
