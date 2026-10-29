@@ -386,8 +386,8 @@ pc-nes: $(HDRS) src/nes/title_art.h src/nes/text.h
 	mkdir -p build/pc
 	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 \
 	    -DNARROW_SAYS=1 -DPC_SCREEN=txt_cells -DPC_NES -DAUTO_HANDLE='"NES"' -o build/pc/pc-nes \
-	    src/common/main.c src/common/game.c src/common/proto.c src/nes/display_text.c test/nes_text_pc.c \
-	    test/autoplay.c test/pc_harness.c
+	    src/common/main.c src/common/game.c src/common/proto.c src/nes/display_text.c src/nes/input.c \
+	    test/nes_text_pc.c test/autoplay.c test/pc_harness.c
 
 clean:
 	rm -rf build

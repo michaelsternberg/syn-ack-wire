@@ -15,7 +15,8 @@
  *  SELECT+A move hints, SELECT+B sound, SELECT+START Esc (log off, Y/N)
  *
  * The cursor is `pick` (the display draws it, display_pick); it goes to the
- * first answer that can be taken when a prompt opens. A count is typed for the
+ * first answer that can be taken when a prompt opens: display_prompt asks
+ * (pick_check), so a prompt's first picture has it in place. A count is typed for the
  * game as edit[] holds it: it is written there, as typing would. On the title
  * the d-pad is a dial: up and down step the letter it is on (A-Z, 0-9, then the
  * signs a handle can have), left and right move along the handle, B deletes
@@ -52,7 +53,10 @@ void display_pick(void);                /* display_text.c */
 unsigned char pick;                     /* the answer the cursor is on */
 unsigned char dial;                     /* the title: the handle's letter the dial is on */
 
-static unsigned char ev, rep, rep_t, kind, kstep, count, sold, k, lim;
+static unsigned char kind, kstep, count, k, lim;
+
+#ifndef PC_NES                          /* make pc-nes links the cursor only (test/nes_text_pc.c) */
+static unsigned char ev, rep, rep_t, sold;
 
 unsigned char ticks(void)
 {
@@ -146,6 +150,7 @@ static unsigned char title_key(void)
     display_title_update();
     return 0;
 }
+#endif
 
 /* ---------------------------------------------------------------- the game's prompts */
 
@@ -166,7 +171,7 @@ static unsigned char ok(unsigned char i)
 }
 
 /* The cursor to the next answer that can be taken, round the end. */
-static void move(unsigned char up)
+static void step_pick(unsigned char up)
 {
     lim = kind == 'P' ? RULE_KITSIZE : NSYN;
     for (k = 0; k < lim; ++k) {
@@ -177,6 +182,42 @@ static void move(unsigned char up)
         if (ok(pick))
             break;
     }
+}
+
+/* The display, as it draws the prompt: if one opened (or moved on a step),
+ * the cursor to its first answer, the count to 0 (shown as 0 while nothing is
+ * typed). It draws nothing itself. */
+void pick_check(void)
+{
+    if (pr_kind == kind && step == kstep)
+        return;
+    kind = pr_kind;
+    kstep = step;
+    switch (kind) {
+    case 'S':                           /* the humans waiting, at least the fewest seats */
+        for (pick = k = 0; k < SEATS; ++k)
+            pick += seat_kind[k] == SEAT_HUMAN || seat_kind[k] == SEAT_AWAY;
+        if (pick < RULE_MINPLAYERS)
+            pick = RULE_MINPLAYERS;
+        return;
+    case 'D':
+        count = 0;
+        return;
+    case 'P':                           /* the first exploit that can run, else the first there */
+        for (pick = 0; pick < RULE_KITSIZE; ++pick)
+            if (kit[pick] != NONE && !(kit[pick] & 0x80))
+                return;
+        /* fall through */
+    default:
+        pick = (kind == 'P' ? RULE_KITSIZE : NSYN) - 1;
+        step_pick(1);
+    }
+}
+
+#ifndef PC_NES
+static void move(unsigned char up)
+{
+    step_pick(up);
     display_pick();
 }
 
@@ -206,37 +247,6 @@ static unsigned char count_max(void)
     return lim & ~1;
 }
 
-/* A prompt opened (or moved on a step): the cursor to its first answer. */
-static void fresh(void)
-{
-    kind = pr_kind;
-    kstep = step;
-    switch (kind) {
-    case 'S':
-        for (pick = k = 0; k < SEATS; ++k)
-            pick += seat_kind[k] != SEAT_EMPTY;
-        if (pick < RULE_MINPLAYERS)
-            pick = RULE_MINPLAYERS;
-        display_prompt();
-        return;
-    case 'D':
-        count = 0;
-        set_count();
-        return;
-    case 'P':                           /* the first exploit that can run, else the first there */
-        for (pick = 0; pick < RULE_KITSIZE; ++pick)
-            if (kit[pick] != NONE && !(kit[pick] & 0x80))
-                break;
-        if (pick < RULE_KITSIZE) {
-            display_pick();
-            return;
-        }
-        /* fall through */
-    default:
-        pick = (kind == 'P' ? RULE_KITSIZE : NSYN) - 1;
-        move(1);
-    }
-}
 
 static unsigned char game_pad(void)
 {
@@ -302,8 +312,6 @@ static unsigned char game_pad(void)
 
 unsigned char in_key(void)
 {
-    if (field && (pr_kind != kind || step != kstep))
-        fresh();
     if (!next())
         return 0;
     if (ev == P_SEL)
@@ -326,3 +334,4 @@ unsigned char in_key(void)
         return title_key();
     return game_pad();
 }
+#endif

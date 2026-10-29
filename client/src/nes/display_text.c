@@ -84,6 +84,7 @@
 #endif
 
 extern unsigned char pick, dial;        /* input.c: the pad's cursor, the handle's letter it is on */
+void pick_check(void);                  /* input.c: the cursor to a new prompt's first answer */
 extern unsigned char help_up;           /* help.c: the instructions are up */
 
 static const char *const syn_short[NSYN] = SYN_SHORTS;
@@ -585,6 +586,7 @@ static void ask(const char *s)
 void display_prompt(void)
 {
     begin();
+    pick_check();
     v = pr_kind || turn == me || leaving;
     if (v != deciding) {
         deciding = v;
@@ -643,7 +645,10 @@ void display_prompt(void)
         number(pr[3], 1, 0);
         ask(step ? T_SWAP " 2 FOR 1? <" : T_CASHOUT " HOW MANY? <");
         if (!complaint) {
-            textn(edit, edit_len);
+            if (edit_len)
+                textn(edit, edit_len);
+            else
+                put('0');               /* nothing typed is 0 */
             put('>');
         }
         break;
