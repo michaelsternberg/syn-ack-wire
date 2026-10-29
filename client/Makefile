@@ -1,4 +1,4 @@
-# SYN-ACK WIRE client: Atari, Apple II, MS-DOS, CoCo, NES.
+# SYN-ACK WIRE client: Atari, Apple II, MS-DOS, CoCo, NES, Adam.
 #   make                      build/atari/synack.xex (the game), build/atari/wiremon.xex, wiremon-auto.xex
 #   make URL=N:TCP://192.168.1.20:6502/    point them at another server (default: the public one on fly.io)
 #   make FANCY=1              use the hand-made screens instead of the text ones
@@ -12,6 +12,7 @@
 #   make msdos-wiremon WATCOM=dir     build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for MS-DOS
 #   make coco                 build/coco/synack.bin: the CoCo 1/2 client (make coco-dsk: its disk)
 #   make nes                  build/nes/syn-ack-wire-nes.nes: the NES client (the FujiNet NES cartridge)
+#   make adam                 build/adam/syn-ack-wire-adam.ddp: the Coleco Adam client (z88dk, through defoogi)
 #   make clean
 CC65    ?=
 CC      = $(if $(CC65),$(CC65)/,)cc65
@@ -358,6 +359,68 @@ nestest:
 nes-auto:
 	$(MAKE) NES=$(NES)/auto NESAUTO=1 nes
 
+# --- Coleco Adam: FujiNet on AdamNet through fujinet-lib (a pinned copy in lib/, built with zsdcc by
+# tools/fnlib_adam.sh). z88dk, `zcc +coleco -subtype=adam` with zsdcc, from the defoogi container unless it is
+# installed here (tools/z88dk): the container sees only this repository. zcc hands -D values on through a shell,
+# so a string is quoted twice. The program runs from 0000h, its stack below D390h, EOS above; the image's
+# bootstrap loads it from block 1 and sits at C800h, so the program must end below that (tools/adam_end.py
+# checks; the variables are not in the image). Our own NMI (nmi.asm): CRT_ENABLE_NMI=2. Nothing prints, so the
+# CRT sets no screen mode and z88dk's console goes (its output redirected to a bare ret): 2.5 KB with its font.
+# syn-ack-wire-adam.ddp is a tape image, which the FujiNet mounts as a disk and the Adam boots.
+ADAM    = build/adam
+ADAMLIB = lib/fujinet-lib/adam-a29e57f
+ZCC     = tools/z88dk zcc +coleco -subtype=adam -compiler=sdcc
+ADAMFLAGS = -SO3 -I$(ADAMLIB)/include -I$(ADAM) -D__fastcall__= -DDISPLAY_IDLE=1 -DNARROW_SAYS=1 \
+          -DSAY_MAXBUY='"\"3 PER TURN: RETURN TO BUY\""'
+ADAMDEFS = -DURL='"\"$(URL)\""' $(if $(FANCY),-DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1,) $(if $(HINTS),-DHINTS=$(HINTS),) \
+          $(if $(LOBBY_KEY),-DLOBBY_KEY=$(LOBBY_KEY),)
+ADAMGAME = $(ADAM)/main.o $(ADAM)/game.o $(ADAM)/proto.o $(ADAM)/display_text.o $(ADAM)/text.o $(ADAM)/input.o \
+           $(ADAM)/net_fn.o $(ADAM)/help.o $(ADAM)/nmi.o $(ADAM)/vdp.o $(ADAM)/sound.o $(ADAM)/eoscall.o
+# the autoplay build (ADAMAUTO=1, by make adam-auto): plays by itself; the emulator takes the pictures
+ifneq ($(ADAMAUTO),)
+ADAMFLAGS += -DAUTOPLAY -DDUMP_TICKS=0 -DAUTO_HANDLE='"\"ADAM\""'
+ADAMGAME += $(ADAM)/autoplay.o
+endif
+ADAMHELP = $(sort $(wildcard help/adam/screen/HELP*.TXT))
+# what a help page's [QR] marker links to: the Adam manual, by the fly.io server's short link
+ADAM_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/ADAM
+ADAMHDRS = src/adam/text.h src/adam/vdp.h src/adam/title_art.h src/nes/font.h
+
+# the Atari's title art in the NES's box glyphs (the Adam has the NES's font), from row 0
+src/adam/title_art.h: $(TITLE) tools/title_art.py
+	python3 tools/title_art.py n 0 $< > $@
+$(ADAM)/help_pages.h: $(ADAMHELP) tools/help_nes.py tools/qr.py | $(ADAM)
+	python3 tools/help_nes.py --rows 24 --top 0 --qr "$(ADAM_QR_URL)" $@ $(ADAMHELP)
+$(ADAM)/help.o: $(ADAM)/help_pages.h
+
+$(ADAM):
+	mkdir -p $@
+$(ADAM)/%.o: src/common/%.c $(HDRS) | $(ADAM)
+	$(ZCC) $(ADAMFLAGS) $(ADAMDEFS) -c -o $@ $<
+$(ADAM)/%.o: src/adam/%.c $(HDRS) $(ADAMHDRS) | $(ADAM)
+	$(ZCC) $(ADAMFLAGS) $(ADAMDEFS) -c -o $@ $<
+$(ADAM)/%.o: test/%.c $(HDRS) | $(ADAM)
+	$(ZCC) $(ADAMFLAGS) $(ADAMDEFS) -c -o $@ $<
+$(ADAM)/%.o: src/adam/%.asm | $(ADAM)
+	$(ZCC) -c -o $@ $<
+
+ADAMDDP = $(ADAM)/syn-ack-wire-adam.ddp
+$(ADAMDDP): $(ADAMGAME) $(ADAMLIB)/fujinet-adam-a29e57f.lib tools/adam_end.py
+	cd $(ADAM) && $(abspath tools/z88dk) zcc +coleco -subtype=adam -compiler=sdcc -m \
+	    -pragma-define:CRT_ENABLE_NMI=2 -pragma-define:CRT_INITIALIZE_BSS=1 -pragma-define:CRT_ENABLE_STDIO=0 \
+	    -pragma-define:CLIB_DEFAULT_SCREEN_MODE=-1 -pragma-define:CLIB_EXIT_SCREEN_MODE=-1 \
+	    -pragma-redirect:fputc_cons=l_ret -create-app -o syn-ack-wire-adam \
+	    $(notdir $(ADAMGAME)) -L$(abspath $(ADAMLIB)) -lfujinet-adam-a29e57f
+	python3 tools/adam_end.py $(ADAM)/syn-ack-wire-adam.map
+	@echo "$@: $$(stat -c %s $@) bytes"
+adam: $(ADAMDDP)
+# its own build folder, so the local and public builds never share objects
+adamtest:
+	$(MAKE) ADAM=$(ADAM)/local URL=$(LOCAL_URL) adam
+# plays by itself: make adam-auto URL=N:TCP://host:port/ LOBBY_KEY=0, then tools/run-adam.sh
+adam-auto:
+	$(MAKE) ADAM=$(ADAM)/auto ADAMAUTO=1 adam
+
 # --- the Apple II display (src/apple2/display_text.c) on a PC, playing by itself and saving its screen at each
 # new prompt: the manual's captures (tools/capture.sh with PLATFORM=apple2). build/pc/pc-apple2 [host] [port]
 pc-apple2: $(HDRS) src/apple2/title_art.h
@@ -389,9 +452,17 @@ pc-nes: $(HDRS) src/nes/title_art.h src/nes/text.h
 	    src/common/main.c src/common/game.c src/common/proto.c src/nes/display_text.c src/nes/input.c \
 	    test/nes_text_pc.c test/autoplay.c test/pc_harness.c
 
+# --- the same for the Adam display (src/adam/display_text.c, over test/adam_text_pc.c): build/pc/pc-adam [host] [port]
+pc-adam: $(HDRS) src/adam/title_art.h src/adam/text.h
+	mkdir -p build/pc
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DAUTOPLAY -DDUMP_TICKS=240 -DDISPLAY_IDLE=1 \
+	    -DNARROW_SAYS=1 -DSAY_MAXBUY='"3 PER TURN: RETURN TO BUY"' -DPC_SCREEN=txt_cells -DPC_ADAM -DAUTO_HANDLE='"ADAM"' \
+	    -o build/pc/pc-adam src/common/main.c src/common/game.c src/common/proto.c src/adam/display_text.c \
+	    src/adam/input.c test/adam_text_pc.c test/autoplay.c test/pc_harness.c
+
 clean:
 	rm -rf build
 
-.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-nes apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto clean
-.PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o
+.PHONY: all atr atrtest test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto adam adamtest adam-auto clean
+.PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o $(ADAM)/%.o
 .DELETE_ON_ERROR:

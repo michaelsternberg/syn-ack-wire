@@ -40,6 +40,8 @@ cd client && make msdos-img WATCOM=<Open Watcom dir>         # build/msdos/syn-a
 cd client && make coco-dsk DECB=<toolshed decb>              # build/coco/syn-ack-wire-coco.dsk
 cd client && make nes                                        # build/nes/syn-ack-wire-nes.nes (FujiNet NES cartridge)
 cd client && tools/run-nes.sh build/nes/syn-ack-wire-nes.nes # MAME (-nes_slot fujinet) + FujiNet-PC on BoIP 9985+n
+cd client && make adam                                       # build/adam/syn-ack-wire-adam.ddp (z88dk, from defoogi)
+cd client && tools/run-adam.sh build/adam/syn-ack-wire-adam.ddp   # adamcore (EMU=adamem) + FujiNet-PC on BoIP 9990+n
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)

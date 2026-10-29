@@ -14,6 +14,7 @@ client/src/coco/title_art.h
 client/src/coco/title_snow.h
 client/src/nes/font.h
 client/src/nes/title_art.h
+client/src/adam/title_art.h
 docs/style/theme.tex
 
 # LaTeX leftovers if a build fails

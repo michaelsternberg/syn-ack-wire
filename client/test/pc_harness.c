@@ -13,7 +13,9 @@
  * With PC_COCO (make pc-coco), it is the CoCo's, src/coco/display_text.c, over
  * test/coco_text_pc.c, and each dump is its 960 cells (txt_cells). With PC_NES
  * (make pc-nes), the NES's, src/nes/display_text.c, over test/nes_text_pc.c:
- * its 960 cells, its attribute table and its sprites.
+ * its 960 cells, its attribute table and its sprites. With PC_ADAM (make
+ * pc-adam), the Adam's, src/adam/display_text.c, over test/adam_text_pc.c: its
+ * 768 cells, their 768 palettes and its sprites.
  */
 #include <stdio.h>
 #include <stdlib.h>
@@ -107,6 +109,8 @@ unsigned short PC_SCREEN[25 * 80];      /* character and attribute, as in DOS vi
 extern unsigned char PC_SCREEN[24 * 40];    /* test/coco_text_pc.c */
 #elif defined(PC_NES)
 extern unsigned char PC_SCREEN[30 * 32], attr[128], pc_oam[256];  /* test/nes_text_pc.c */
+#elif defined(PC_ADAM)
+extern unsigned char PC_SCREEN[24 * 32], txt_pal[24 * 32], sat[24];  /* test/adam_text_pc.c */
 #else
 unsigned char PC_SCREEN[1024], pc_switch;
 #endif
@@ -128,6 +132,10 @@ void pc_dump(void)
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);  /* the cells, the attribute table, the sprites */
         fwrite(attr, 1, 64, f);
         fwrite(pc_oam, 1, sizeof pc_oam, f);
+#elif defined(PC_ADAM)
+        fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);  /* the cells, their palettes, the sprites */
+        fwrite(txt_pal, 1, sizeof txt_pal, f);
+        fwrite(sat, 1, sizeof sat, f);
 #else
         fwrite(PC_SCREEN, 1, sizeof PC_SCREEN, f);
 #endif

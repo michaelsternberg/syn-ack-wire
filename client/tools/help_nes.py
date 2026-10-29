@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""The NES instruction pages, packed into a C header the game is built with (they go in its ROM).
+"""The NES instruction pages, packed into a C header the game is built with (they go in its ROM);
+the Adam's too (--rows 24 --top 0: its screen has no overscan to keep out of).
 
 Usage:
-    help_nes.py [--qr URL] OUT.h HELP01.TXT HELP02.TXT ...   check them, then write OUT
-    help_nes.py [--qr URL] --check HELP01.TXT ...            only check
+    help_nes.py [--rows N --top R] [--qr URL] OUT.h HELP01.TXT HELP02.TXT ...   check them, then write OUT
+    help_nes.py [--rows N --top R] [--qr URL] --check HELP01.TXT ...            only check
 
 A page is plain ASCII: at most 28 lines of at most 30 characters, the NES's
 screen inside a TV's overscan (src/nes/text.h: name table rows 1-28, columns
@@ -20,7 +21,8 @@ a 4-module white border, at the highest error correction level that fits in
 The header has help_data[], every page's 28 lines one after another, each
 ended by 0: a byte is a tile (a character, | $80 inverse, or a quarter
 block), or 1-15 for that many spaces; and help_page[], where each page starts.
-src/nes/help.c draws a page from them. page_cells() gives a page as the 30 x 32
+src/nes/help.c (src/adam/help.c) draws a page from them, its first line on
+screen row HELP_TOP, from column HELP_LEFT. page_cells() gives a page as the 30 x 32
 cells help.c draws, for render_nes.py."""
 import os
 import re
@@ -29,6 +31,7 @@ import sys
 import qr
 
 ROWS, COLS = 28, 30
+TOP, LEFT = 1, 1                # the first line's screen row and column (--top)
 QUIET = 4                       # the white border, in modules
 QR_LINES = 20
 QR_TILE = 0x10                  # quarter blocks: low nibble = top left, top right, bottom left, bottom right lit
@@ -45,7 +48,7 @@ def qr_code(url):
 
 
 def page_cells(path, url=None, quiet=False):
-    """The page as 30 rows of 32 cells (name table rows 1-28 at index 1-28), and its lines."""
+    """The page as 30 rows of 32 cells (name table rows 1-28 at index 1-28: TOP to TOP + ROWS - 1), and its lines."""
     lines = open(path).read().rstrip("\n").split("\n")
     if len(lines) > ROWS:
         sys.exit("%s: %d lines, at most %d" % (path, len(lines), ROWS))
@@ -73,7 +76,7 @@ def page_cells(path, url=None, quiet=False):
                 for k, (dy, dx) in enumerate(((0, 0), (0, 1), (1, 0), (1, 1))):
                     if light(2 * ty + dy, 2 * tx + dx):
                         bits |= 8 >> k
-                cells[1 + r0 + ty][c0 + tx] = QR_TILE | bits
+                cells[TOP + r0 + ty][c0 + tx] = QR_TILE | bits
         if not quiet:
             print("%s: QR code version %d-%s, %dx%d modules, %d tiles square with its border"
                   % (os.path.basename(path), version, level, n, n, size))
@@ -91,16 +94,16 @@ def page_cells(path, url=None, quiet=False):
                 sys.exit("%s:%d: %r is not printable ASCII" % (path, r + 1, ch))
             if c >= COLS:
                 sys.exit("%s:%d: over %d characters" % (path, r + 1, COLS))
-            cells[1 + r][1 + c] = ord(ch) | (INV if inv else 0)
+            cells[TOP + r][LEFT + c] = ord(ch) | (INV if inv else 0)
             c += 1
     return cells, lines
 
 
 def pack(cells):
-    """28 lines, each its tiles from column 1 with runs of spaces counted, ended by 0."""
+    """ROWS lines, each its tiles from column LEFT with runs of spaces counted, ended by 0."""
     out = bytearray()
-    for r in range(1, ROWS + 1):
-        row = cells[r][1:1 + COLS]
+    for r in range(TOP, TOP + ROWS):
+        row = cells[r][LEFT:LEFT + COLS]
         while row and row[-1] == 0x20:
             row = row[:-1]
         c = 0
@@ -134,10 +137,12 @@ def check(paths, url):
     return pages
 
 
-def header(pages):
-    out = ["/* Made by tools/help_nes.py from help/nes/screen/HELP*.TXT: edit those, not this. */",
+def header(pages, folder):
+    out = ["/* Made by tools/help_nes.py from %s/HELP*.TXT: edit those, not this. */" % folder,
            "#define HELP_PAGES %d" % len(pages),
-           "#define HELP_ROWS %d" % ROWS]
+           "#define HELP_ROWS %d" % ROWS,
+           "#define HELP_TOP %d" % TOP,
+           "#define HELP_LEFT %d" % LEFT]
     at, starts = 0, []
     for p in pages:
         starts.append(at)
@@ -152,8 +157,15 @@ def header(pages):
 
 
 def main():
+    global ROWS, TOP
     args = sys.argv[1:]
     url = None
+    while args[:1] in (["--rows"], ["--top"]):
+        if args[0] == "--rows":
+            ROWS = int(args[1])
+        else:
+            TOP = int(args[1])
+        args = args[2:]
     if args[:1] == ["--qr"]:
         url, args = args[1], args[2:]
     if args and args[0] == "--check":
@@ -162,7 +174,7 @@ def main():
     out, paths = args[0], args[1:]
     pages = check(paths, url)
     with open(out, "w") as f:
-        f.write(header(pages))
+        f.write(header(pages, os.path.dirname(os.path.relpath(paths[0])) if paths else "."))
     print("%s: %d help pages, %d bytes" % (out, len(pages), sum(map(len, pages))))
 
 

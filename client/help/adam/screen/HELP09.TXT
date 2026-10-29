@@ -1,0 +1,24 @@
+{ THE SCREEN AND KEYS     9/11 }
+ .    empty node
+ +    lone spike
+ {G}    hive (syndicate letter)
+ 1-6  an exploit can run here
+ The last move flashes.
+ > you    inverse: whose turn
+ * bot    ? away
+
+{1-6}       run an exploit
+{A-Z}       pick or buy one
+{BACKSPACE} undo a buy
+{RETURN}    confirm
+{Y} {N}       yes, no
+{ESCAPE}    leave the game
+{I} {II} {III}  help, hints, sound
+{STICK}     the cursor (arrows)
+{L FIRE}    pick it; YES
+{R FIRE}    undo; NO
+{#}         confirm
+{*}         this help
+{*+L} {*+R}   hints, sound
+{*+#}       leave the game
+{<- PREV   ESCAPE:BACK  NEXT ->}

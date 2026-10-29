@@ -53,6 +53,15 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/nes/help.c` | NES: the instruction pages, from the ROM onto the second name table |
 | `src/nes/sound.s`, `ring.s` | NES: the Atari's chords on the APU, from the NMI; `rx_ring` at $0300 |
 | `src/nes/title_art.h` | The Atari's title art in the box tiles, its letters the static's tiles, **generated** by `tools/title_art.py n` |
+| `src/adam/text.c`, `text.h` | Adam: the TMS9918A in Graphics II, each of the 768 cells its own pattern and colours, painted where they changed; the title's static on shared tiles |
+| `src/adam/vdp.h`, `vdp.asm` | Adam: the VDP's ports and the NMI's lock; writes paced for the VDP while the screen is drawn |
+| `src/adam/display_text.c` | Adam text screens: the NES's in 32×24 cells, colour bands, the controller's cursor as sprites |
+| `src/adam/input.c` | Adam: the keyboard (through EOS) and controller 1 turned into keys, with the NES's cursor and dial; `ticks()` |
+| `src/adam/nmi.asm` | Adam: the NMI: the frame count, the sound, controller 1 into an event ring, the title's static |
+| `src/adam/net_fn.c` | Network calls for the Adam: AdamNet's network device, its DCB driven without waiting; open, close and AppKeys through fujinet-lib |
+| `src/adam/help.c` | Adam: the instruction pages, from the program over the screen |
+| `src/adam/sound.asm`, `eoscall.asm` | Adam: the Atari's chords on the SN76489, from the NMI; the keyboard through EOS's jump table |
+| `src/adam/title_art.h` | The Atari's title art in the NES's box glyphs, **generated** by `tools/title_art.py n 0` |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
@@ -63,6 +72,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `test/coco/` | The CoCo screen test (`screentest.c`): the font, both colour sets, the title's static and the drawing speed, on a PMODE 4 screen |
 | `test/nes_text_pc.c` | What `src/nes/display_text.c` needs on a PC (`make pc-nes`): the cells, attributes and sprites, which the dumps save |
 | `test/nes_dump.c` | The NES autoplay build's dump hook: it counts dumps for `tools/nes.lua`, which saves the screen |
+| `test/adam_text_pc.c` | What `src/adam/display_text.c` needs on a PC (`make pc-adam`): the cells, palettes and sprites, which the dumps save |
 | `test/dos_glitch.c` | A flaky serial line for testing MS-DOS builds: with `-Dnetwork_status=glitch_status`, the status call fails 1 second in 20 |
 | `tools/run-test.sh` | Runs an `.xex` on atari800 with FujiNet-PC (NetSIO) |
 | `tools/run-dos.sh` | Plays the MS-DOS client in a DOSBox-X window, booting your PC-DOS disk with `FUJINET.SYS`, FujiNet-PC (RS-232) on COM1 |
@@ -80,6 +90,9 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/run-nes.sh`, `nes.lua` | Runs the NES image in MAME (`-nes_slot fujinet`) with FujiNet-PC: the pad on a schedule or a pad bot, the screen as text, snapshots, the autoplay build's dumps |
 | `tools/help_nes.py` | Checks the NES instruction pages and packs them for the ROM (`help_pages.h`), the QR code in quarter-block tiles |
 | `tools/render_nes.py` | Draws an NES dump (`pc-nes`'s or the autoplay build's) or an instruction page as the screen looks, or as text |
+| `tools/run-adam.sh` | Runs the Adam image in adamcore (FujiNet Go Adam's core) or ADAMEm, booted from FujiNet-PC on BoIP: keys and the controller on a schedule, pictures |
+| `tools/render_adam.py` | Draws a `pc-adam` dump or an Adam instruction page as the screen looks, or as text |
+| `tools/z88dk`, `fnlib_adam.sh`, `adam_end.py` | z88dk from the defoogi container; fujinet-lib built with zsdcc; where the program ends, against the bootstrap |
 
 ## Build
 ```sh
@@ -100,8 +113,11 @@ make msdos-wiremon WATCOM=dir            # build/msdos/WIREMON.EXE, WMAUTO.EXE: 
 make pc-msdos                            # build/pc/pc-msdos: the common code with the MS-DOS display, for captures
 make nes                                 # build/nes/syn-ack-wire-nes.nes: the NES client (the FujiNet NES cartridge)
 make pc-nes                              # build/pc/pc-nes: the common code with the NES display, for captures
+make adam                                # build/adam/syn-ack-wire-adam.ddp: the Coleco Adam client
+make pc-adam                             # build/pc/pc-adam: the common code with the Adam display, for captures
 ```
-Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. MS-DOS: Open
+Toolchain: cc65 master, `V2.19 - Git 8d86ca7` (2026-10-18). Size numbers below are from that build. Adam: z88dk
+`v25230-82c677065d` with zsdcc, in the `fozztexx/defoogi:1.4.7` container (`tools/z88dk` runs it). MS-DOS: Open
 Watcom v2 (`2.0 beta Sep 22 2025`), as the FujiNet team builds its DOS programs; `WATCOM` is its folder (default
 `~/openwatcom`). The game needs `FUJINET.SYS` (fujinet-rs232) loaded in CONFIG.SYS, from the same firmware version as
 the FujiNet.
@@ -598,6 +614,86 @@ value first, a spurious event).
   (`server/stage.py`): the prompts, a tie, a refusal, log off, NO SIGNAL, a taken handle, the 11 instruction
   pages. Not yet: a real cartridge (none exists yet), the lobby boot, MesenCE (FujiNet Go NES).
 
+## Coleco Adam (adam)
+The same common code with an Adam platform layer (`src/adam/`), the NES's display and controls ported: its screens
+on the TMS9918A's 32×24 cells, its cursor on controller 1, and the keyboard typing as on the other computers.
+Built with z88dk (`zcc +coleco -subtype=adam`, zsdcc) from the defoogi container (`tools/z88dk`); FujiNet on
+AdamNet through fujinet-lib, built for zsdcc and pinned (`lib/fujinet-lib/adam-a29e57f`).
+```sh
+make adam                                    # build/adam/syn-ack-wire-adam.ddp
+make adamtest                                # build/adam/local/...: dialing LOCAL_URL
+make adam-auto URL=N:TCP://host:port/ LOBBY_KEY=0   # build/adam/auto/...: plays by itself
+make pc-adam && build/pc/pc-adam host port   # the display on this PC against a server, saving its screen
+tools/run-adam.sh build/adam/syn-ack-wire-adam.ddp   # boot it in adamcore (or EMU=adamem) from FujiNet-PC
+```
+The image is `syn-ack-wire-adam.ddp`, a tape image: z88dk's bootstrap in block 0 loads the program from block 1
+to 0000h and runs it. The FujiNet mounts it as the first disk and the Adam boots it. The game lobby's code mounts a
+platform's image in slot 0 and reboots (`fujinet-lobby`, `clients/src/main.c`), having written the server's
+address to the AppKey, so the client's AppKey dial is the other platforms' (the keys tested; the lobby boot not
+yet). The program must end below
+C800h, where the bootstrap sits (`tools/adam_end.py` fails the build otherwise); its variables follow it, the
+stack is below D390h and EOS above.
+
+- **Screen:** Graphics II with the name table 0-255 in each third of the screen, so each of the 768 cells has a
+  pattern and colours of its own: any glyph in any colours anywhere, where the NES's palettes go by 2×2 blocks. The
+  display writes `txt_cells` and `txt_pal` and marks rows; the outermost call paints them (`text.c`), cell by cell
+  against a copy of what the VDP holds, so only what changed is written: 8 pattern bytes for a new glyph, 8 colour
+  bytes for new colours. A whole screen is about a fifth of a second. Writes are paced 36 cycles apart
+  (`vdp.asm`), past the 29 the VDP may need while it draws the screen.
+- **Layout:** the NES's in 32 columns and the 24 rows the TMS9918A has, all of them on the screen: the title bar
+  (0), the Grid with the hives panel and LAST beside it (1-10), the seats (11-17: handle, cash in 6 columns, 7
+  holdings of 2), a log of 4 rows where the NES has 6 (18-21), the info row and the question with the clock
+  (22-23: a question is at most 28 columns). game.c's refusals are the NES's narrow ones, but `SAY_MAXBUY` names
+  RETURN.
+- **Colour:** the NES's palettes in TMS9918A colours: light green on black; white on dark green for the Grid and
+  the seats, light yellow there for cash and every other syndicate's crypto; white on magenta for the bottom rows
+  while this seat decides, and the title bar while the link is down (NO SIGNAL). Inverse swaps a cell's colours.
+- **Title:** the Atari's logo in the NES's box glyphs (`tools/title_art.py n 0`, rows 0-13). Its strokes are 4
+  codes; in each third of the screen the first cell with each code keeps its own tile and the others are pointed
+  at it in the name table (`txt_title`), so the NMI makes static of the whole logo by writing 8 tiles a frame.
+  Under it the region, the status, the handle and the keys, the keyboard's and the controller's side by side.
+- **NMI** (`nmi.asm`): the VDP's frame interrupt, which can't be masked. Reading the VDP's status in it would break
+  an address being set, so while the program is at the VDP (`VDP_LOCK`, a row at a time) the NMI only notes it and
+  `VDP_UNLOCK` catches up, as fujinet-multiplayer-mule does. Each frame it counts `frames` (`ticks()`, 60 a
+  second), fades the chords, reads controller 1 and writes the static.
+- **Keys:** the keyboard through EOS (`eoscall.asm`): letters, digits, RETURN, BACKSPACE (Delete), ESCAPE (Esc);
+  SmartKey I the instructions, II move hints, III sound; the arrows move the cursor as the stick does, and turn the
+  instruction pages. A typed letter goes on the end of the handle, where the cursor starts.
+- **Controller 1:** read from its port by the NMI ($C0/$80/$FC: EOS's poller doesn't run under our NMI) into an
+  8-event ring in the NES pad's own buttons, so `input.c` is the NES's cursor and dial: left fire is A (the
+  cursor's answer, YES), right fire B (Delete, NO), keypad # START (Return), * SELECT (on its own the
+  instructions; with left fire hints, with right fire sound, with # log off); the stick moves the cursor, or on
+  the title dials the handle's letters. The keypad's digits type. A count changed by the stick or typed is the
+  same `edit[]`.
+- **Network** (`net_fn.c`): fujinet-lib's calls set a DCB going and spin until it finishes, retrying a timeout 20
+  times, and an AdamNet exchange can take a frame or more (FujiNet Go Adam's core answers about once a frame). So
+  only the open, the close and the AppKeys are fujinet-lib's; the stream drives the network device's DCB itself and
+  never waits, as fujinet-multiplayer-mule's `nstrans.c` does: each `net_poll` takes what finished and starts the
+  next call, a queued WRITE first, else an AdamNet STATUS (every frame while bytes come, about 10 a second while
+  none do), whose device status byte says whether bytes wait and the socket is up, and a READ only when bytes
+  wait. A READ brings a whole packet whatever it asks for, up to 1024 bytes, so it reads into a buffer that size
+  and hands the bytes on as the frame assembler makes room. The link is down after 3 statuses in a row say the
+  socket is shut.
+- **Sound** (`sound.asm`): the Atari's chords on the SN76489's three tone channels, faded together by the NMI.
+- **Instructions:** `help/adam/screen/HELP*.TXT`, 24 lines of 30 (`tools/help_nes.py --rows 24 --top 0`), packed
+  into the program (5.9 KB). A page is painted over the screen without the sprites; the game goes on writing its
+  own cells underneath, unpainted, and closing paints them again. The QR code (page 10, `ADAM_QR_URL`) is in the
+  quarter-block glyphs, 2x2 modules a cell (zbarimg reads it from `render_adam.py --page`).
+- **Emulators** (`tools/run-adam.sh`): FujiNet-PC (an ADAM build) serves the image as disk 1 with CONFIG off, and
+  the network; the emulator listens on BoIP and FujiNet-PC dials it. adamcore (FujiNet Go Adam's core,
+  `adamcore-cli`) runs headless in real time, keys on a schedule (`KEYS`), a picture every `EVERY` frames;
+  ADAMEm (`EMU=adamem`) in its window. The controller in `KEYS` needs an adamcore-cli that takes the controller's
+  word on stdin as well (`FE hi lo`); the released one takes only keys.
+- **Tested** (2026-10-29, FujiNet-PC built for the ADAM, `fujinet-pc-adam` cd010f7be, on BoIP): in adamcore
+  (`adamcore-cli`), `make adam-auto` played four minutes of a game in progress (27 exploits, 26 buys, 2 hivejack
+  answers, an infiltration, a tie; the server rejected none, no resyncs), and in ADAMEm (SDL 2.1g) hosted one (the
+  seat count, then exploits and buys). The controller alone dialled a handle, jacked in, set the seats, ran exploits, brokered, bought, opened
+  and paged the instructions and turned hints off; the keyboard did the same with its keys. Also: the lobby's
+  AppKeys (the name, and an address overriding the built-in URL) from the SD card; a taken handle; NO SIGNAL, the
+  server stopped for 36 s and the seat taken back on the redial; log off; the chords, in adamcore's sound. The
+  NES, Atari and Apple images build byte for byte as before. `pc-adam` played a whole game to GAME OVER and the
+  rematch. Not yet: a real Adam, the VDP's timing on one, FujiNet Go Adam itself, the lobby's boot.
+
 ## Sizes (bytes)
 | Piece | Code | Notes |
 |---|---|---|
@@ -663,6 +759,21 @@ value first, a spurious event).
 | `crt0.s` | 210 | start-up, the TV check, the NMI; 256 bss (the sprites) |
 | `proto.c` | 180 | + 26-byte length table, 128-byte `msg[]` |
 | `pad.s` | 103 | the pad and its event ring |
+| **adam** (2026-10-29, z88dk v25230-82c677065d, zsdcc `-SO3`) | | |
+| `syn-ack-wire-adam.ddp` | 262144 | the whole tape image; the program in it is 25102 bytes from 0000h, its variables on to 7BF3h, 26 KB under the bootstrap at C800h |
+| `display_text.c` | 4920 | + 1051 rodata (screen words, title art), 24 bss/data |
+| `game.c` | 2974 | + 341 rodata, 319 bss/data (the game state) |
+| `input.c` | 2078 | the keyboard, the controller's cursor on each prompt (the NES's), the title's dial, `ticks()` |
+| `text.c` | 1561 | + 892 rodata (the font, 95 glyphs and 11 box glyphs one bit a pixel; palettes; sprite patterns), 3904 bss: the cells, their palettes, an instruction page's cells, the copy of what the VDP holds |
+| fujinet-lib | 1369 | open, status, close, AppKey read, the AdamNet bus layer; + 16 rodata, 526 bss |
+| `main.c` | 1273 | + 152 rodata |
+| `net_fn.c` | 1013 | + 1377 bss: the 1K read buffer, the 256-byte `rx_ring` |
+| `nmi.asm` | 325 | the frame, controller 1 and its event ring, the static; 302 bss (264 random bytes) |
+| `sound.asm` | 297 | the chords and their envelope, from the NMI |
+| `help.c` | 234 | + 5896 rodata: the 11 instruction pages |
+| `proto.c` | 225 | + 26-byte length table, 128-byte `msg[]` |
+| `vdp.asm`, `eoscall.asm` | 94 | paced VRAM writes; the keyboard through EOS |
+| z88dk runtime | 348 | start-up (the restart vectors and the NMI's jump), memcpy/memset/memmove, multiply, divide; its console left out (2.5 KB) |
 | Bake-off (2026-10-18), network added on top of the same test program | | |
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |
