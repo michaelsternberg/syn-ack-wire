@@ -159,14 +159,14 @@ drawn as **letters**, and color is a bonus layered on top where the hardware all
 |---|---|
 | Empty node | `.` |
 | Unaffiliated spike | `+` |
-| Syndicate hive | the syndicate's **letter** (`G R D I B L O`) |
+| Syndicate hive | the syndicate's **letter** (`G R H I B L O`) |
 
 - Letters must be unique. `tools/gen_theme.py check` enforces it, and also stops a letter from clashing with the
   empty/spike glyphs.
 - Where possible, color the letter or fill the cell behind it with the syndicate's color. Which one depends on the platform
   (e.g. Atari: character-mode color sets or inverse video; Apple II: probably letters only, maybe inverse; CoCo: SG/semigraphics
   color blocks). That choice lives in each platform's own code, not here.
-- Watch for confusion with the column labels `A`–`L`: `B D G I L` appear in both. Keep the labels visually distinct
+- Watch for confusion with the column labels `A`–`L`: `B G H I L` appear in both. Keep the labels visually distinct
   (dim, inverse or outside the board frame).
 
 Screen budget per syndicate: **short name ≤ 8 chars**, **coin 3–4 chars**, **1 board letter**.
@@ -191,7 +191,7 @@ and appears only on info screens.
 ### Mid tier (Acquire: Festival, Imperial, American)
 
 #### Church of the Holy Daemon
-- **Short:** `DAEMON` · **Coin:** `SOUL` · **Letter:** `D` · **Color:** (TBD)
+- **Short:** `DAEMON` · **Coin:** `SOUL` · **Letter:** `H` (not `D`, which looks like `O` on a CoCo's NTSC picture) · **Color:** (TBD)
 - **Alias:** none — analysts decline to attribute it
 - **Flavor:** A cult that believes a background process achieved godhood in '99 and has been running ever since.
   They pray in `cron`. Tithes are mandatory and recurring.

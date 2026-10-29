@@ -90,12 +90,12 @@ capture_adam = "NULL-ROUTE NOW? Y/N"
 [nullroute.hives]          # a late board: two Black ICE hives and one about to be
 L = ["A0", "B0", "C0", "D0", "E0", "A1", "B1", "C1", "D1", "E1", "A2", "B2", "C2", "D2", "E2"]
 G = ["A6", "B6", "C6", "D6", "A7", "B7", "C7", "D7", "A8", "B8", "C8", "D8"]
-D = ["H0", "I0", "J0", "K0", "L0", "H1", "I1", "J1", "K1", "L1"]
+H = ["H0", "I0", "J0", "K0", "L0", "H1", "I1", "J1", "K1", "L1"]
 
 [nullroute.coins]
-ZER0COOL = { L = 8, G = 5, D = 6 }
-MAMBA = { L = 6, G = 9, D = 2 }
-RAZORGRL = { L = 3, G = 2, D = 9 }
+ZER0COOL = { L = 8, G = 5, H = 6 }
+MAMBA = { L = 6, G = 9, H = 2 }
+RAZORGRL = { L = 3, G = 2, H = 9 }
 
 [game-over]
 about = "Ending the Game, the final cash out: as nullroute, and ZER0COOL calls it."
