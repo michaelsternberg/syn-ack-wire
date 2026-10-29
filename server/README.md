@@ -157,10 +157,12 @@ To change the servers, edit `servers.fly.toml` (and `fly.toml` if ports change: 
 and the servers leave the lobby and rejoin it.
 
 The game disks' help pages carry a QR code for `https://<app>.fly.dev/ATARI` (the client's `QR_URL`). `fly.toml`'s
-HTTPS service (TLS by fly.io, port 80 sent to 443) passes it to `servers.fly.toml`'s `[web]` section, which
+HTTPS service (TLS by fly.io; port 80 plain HTTP) passes it to `servers.fly.toml`'s `[web]` section, which
 redirects `/<PLATFORM>` to that platform's manual on GitHub (`docs/manual/<platform>/`, so a new platform needs
 nothing here) and `/` to the project. Only redirects: a manual changes with a push, not a deploy. The links lead
-to GitHub, so they work once the repository is public.
+to GitHub, so they work once the repository is public. The same section answers `GET /SEATS` with a line for
+each server, `REGION TAKEN SEATS` (the lobby's PLAYERS column), for the desktop client's Region menu; it reads
+it over plain HTTP on port 80, which is why that port isn't sent to 443.
 
 fly.io delivers UDP only to a program listening on the machine's `fly-global-services` address, which stock `tnfsd`
 can't do (it listens on all addresses), so the image builds it from upstream with `deploy/tnfsd-bind-address.patch`,

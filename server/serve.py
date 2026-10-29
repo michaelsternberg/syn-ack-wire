@@ -654,7 +654,7 @@ async def main():
     logging.getLogger("asyncio").setLevel(logging.WARNING)
     servers, srvs = await start(specs, a.host)
     if web:
-        srvs.append(await Web(web["manual"], web.get("home")).serve(a.host, web["port"]))
+        srvs.append(await Web(web["manual"], web.get("home"), lambda: seats(servers)).serve(a.host, web["port"]))
     if lob:
         list_all(servers, specs, lob)
     asyncio.get_running_loop().add_signal_handler(signal.SIGTERM, asyncio.current_task().cancel)
@@ -684,6 +684,11 @@ async def stop(servers, srvs):
         for w in list(server.writers):
             w.close()
     log.info("stopped")
+
+
+def seats(servers):
+    """[(region, taken, seats)] of the table each server's clients join, for the web page /SEATS."""
+    return [(server.theme.game["region"], *server.table(LOBBY_TABLE).players()) for server in servers]
 
 
 def list_all(servers, specs, lob):

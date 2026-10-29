@@ -48,6 +48,8 @@
 #ifndef QUIT_TO_OS
 #define QUIT_TO_OS 0
 #endif
+#ifndef QUIT_ASK
 #define QUIT_ASK "QUIT TO DOS? Y/N"
+#endif
 
 #endif

@@ -13,6 +13,7 @@ it points rather than repeats, so keep it short and fix it when it goes stale.
 | Wire protocol | `server/acquire/proto.py`, described in `docs/protocol.md` | `client/src/common/proto_tab.h` (`tools/gen_proto.py`) |
 | Tables: lobby, host clock, joining, dropping, rejoining, autopilot, jack-in, log off, abandon | `server/acquire/table.py`, summarised in `server/README.md` ("Seats and tables") | `server/tests/test_server.py` (test names read as use cases) |
 | Client behaviour, keys, screen layout, sizes | `client/src/`, summarised in `client/README.md` | |
+| The desktop client: window, menus, themes | `desktop/src/`, summarised in `desktop/README.md` | Region menu from `server/servers.fly.toml` (`tools/gen_regions.py`) |
 | Rules text for players | `docs/rules/*.tex` (shared) | the rulebook (`docs/rulebook/`) and each platform manual (`docs/manual/<platform>/`) |
 | Manual captures | `docs/scenarios.toml` (staged games, the same for every platform) | `server/stage.py`, `client/tools/capture.sh` (`PLATFORM=apple2`: `make pc-apple2`), `docs/manual/<platform>/screens/` |
 
@@ -36,6 +37,7 @@ cd client && make && make atr                                # build/atari/syn-a
 cd client && make atrtest                                    # build/atari/local/..., dialing localhost:6502
 cd client && make apple2_text-po PRODOS=<ProDOS disk>        # build/apple2_text/syn-ack-wire-apple2.po
 cd client && make msdos-img WATCOM=<Open Watcom dir>         # build/msdos/syn-ack-wire-msdos.img (360 KB floppy)
+cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)
 ```

@@ -77,6 +77,18 @@ The client code is split so other platforms can share it: the game logic and pro
 portable C, and each platform supplies its network calls, keyboard and display behind `src/platform.h` and
 `src/display.h`. An Apple II version is the next one being considered.
 
+## The desktop client
+
+For players without a vintage machine: the same client for Windows, macOS and Linux (SDL3), at the same tables
+as the 8-bit machines. It builds the common client code unchanged and draws the MS-DOS client's screen, with a
+menu bar for the region (or a server of your own), colour themes, fonts and a CRT effect.
+
+```sh
+cmake -S desktop -B desktop/build && cmake --build desktop/build && desktop/build/syn-ack-wire
+```
+
+Details in [`desktop/README.md`](desktop/README.md).
+
 ## Documentation
 
 | | |
@@ -88,11 +100,13 @@ portable C, and each platform supplies its network calls, keyboard and display b
 | [`docs/theme.md`](docs/theme.md) | The setting and the reasoning behind its names |
 | [`server/README.md`](server/README.md) | Server options, the rules engine, tables and the lobby |
 | [`client/README.md`](client/README.md) | Building, keys, screen layout, the help pages, sizes and testing |
+| [`desktop/README.md`](desktop/README.md) | The desktop client: building, menus, themes, testing |
 
 ## Repository layout
 
 ```
 client/     the 8-bit client: src/common (portable), src/atari, help pages, tools
+desktop/    the desktop client (SDL3): the common code with its own platform and display
 server/     the Python server, bots, tests and simulator
 docs/       rulebook, platform manuals, their shared rules text and style, protocol, theme notes
 theme/      theme.toml: every name and rule number

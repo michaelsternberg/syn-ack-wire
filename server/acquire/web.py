@@ -1,6 +1,10 @@
 """Short links for the QR codes on the game disks: GET /ATARI redirects to the Atari manual, /APPLE2 to an Apple II
 one, and so on, by the platform's folder name (docs/manual/<platform>/); / redirects to the project's home page.
 
+GET /SEATS answers, in plain text, a line for each server in this process: its region, the seats taken and the
+seats in all, as the FujiNet lobby's PLAYERS column has them (Server.players): "CHIBA-GRID-7 2 6". The desktop
+client's Region menu shows them.
+
 The links are short so the QR codes stay small, and upper case, which QR codes store more compactly; the case is
 ignored. Nothing is served from here but redirects, so a manual changes where it lives (a push to GitHub), not on a
 redeploy. On fly.io the proxy's http handler terminates TLS and passes plain HTTP/1.1, one request a connection
@@ -15,13 +19,15 @@ log = logging.getLogger("synack")
 TIMEOUT = 10.0          # seconds a request has to arrive
 LIMIT = 4096            # bytes its head may take
 PLATFORM = re.compile(r"/([A-Za-z0-9]{1,16})/?")
-REASONS = {302: "Found", 400: "Bad Request", 404: "Not Found", 405: "Method Not Allowed"}
+SEATS = "/SEATS"
+REASONS = {200: "OK", 302: "Found", 400: "Bad Request", 404: "Not Found", 405: "Method Not Allowed"}
 
 
 class Web:
-    def __init__(self, manual, home=None):
+    def __init__(self, manual, home=None, seats=None):
         self.manual = manual    # a URL with {platform} in it
         self.home = home
+        self.seats = seats      # () -> [(region, taken, seats)], for GET /SEATS; None: no such page
 
     async def serve(self, host, port):
         srv = await asyncio.start_server(self._handle, host, port, limit=LIMIT)
@@ -38,6 +44,8 @@ class Web:
             return 405, None
         if target == "/":
             return (302, self.home) if self.home else (404, None)
+        if target.upper() == SEATS:
+            return (200, None) if self.seats else (404, None)
         m = PLATFORM.fullmatch(target)
         if m:
             return 302, self.manual.format(platform=m.group(1).lower())
@@ -52,7 +60,10 @@ class Web:
                        writer.get_extra_info("peername", ("?",))[0])
             if status == 302:
                 log.info("link: %s %s -> %s", who, lines[0].split(" ")[1], location)
-            body = b"" if status == 302 else f"{status} {REASONS[status]}\n".encode()
+            if status == 200:
+                body = "".join(f"{region} {taken} {seats}\n" for region, taken, seats in self.seats()).encode()
+            else:
+                body = b"" if status == 302 else f"{status} {REASONS[status]}\n".encode()
             writer.write((f"HTTP/1.1 {status} {REASONS[status]}\r\n"
                           + (f"Location: {location}\r\n" if location else "")
                           + "Content-Type: text/plain\r\n"
