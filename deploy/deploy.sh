@@ -8,7 +8,8 @@
 # Checks, from the repository root's fly.toml and server/servers.fly.toml:
 #   1. the client disks the image serves exist: client/build/atari/syn-ack-wire-atari.atr,
 #      client/build/apple2_text/syn-ack-wire-apple2.po, client/build/msdos/syn-ack-wire-msdos.img,
-#      client/build/coco/syn-ack-wire-coco.dsk and client/build/nes/syn-ack-wire-nes.nes
+#      client/build/coco/syn-ack-wire-coco.dsk, client/build/nes/syn-ack-wire-nes.nes and
+#      client/build/adam/syn-ack-wire-adam.ddp
 #   2. the FujiNet lobby (LOBBY, default the public one) shows no players on any of this app's servers: humans in
 #      a server's lobby, or seats humans hold in a game, dropped players included; if it can't be read, stop
 #   3. fly logs show no game activity in the last QUIET minutes (default 10): someone may be at a title screen
@@ -29,7 +30,7 @@ app=$(sed -n 's/^app *= *"\([^"]*\)".*/\1/p' fly.toml)
 if [ "$mode" != force ]; then
     for f in client/build/atari/syn-ack-wire-atari.atr client/build/apple2_text/syn-ack-wire-apple2.po \
              client/build/msdos/syn-ack-wire-msdos.img client/build/coco/syn-ack-wire-coco.dsk \
-             client/build/nes/syn-ack-wire-nes.nes; do
+             client/build/nes/syn-ack-wire-nes.nes client/build/adam/syn-ack-wire-adam.ddp; do
         [ -f "$f" ] || { echo "$f is missing: build it first (server/README.md, Deploying to fly.io)" >&2; exit 1; }
     done
 

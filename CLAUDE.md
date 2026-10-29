@@ -61,8 +61,8 @@ client/tools/capture.sh                                      # redo the staged c
 - `fly deploy` restarts the server machine and ends the games in progress: deploy only when asked, and with
   `deploy/deploy.sh`, which first checks no one is playing. The disks it serves are
   `client/build/atari/syn-ack-wire-atari.atr`, `client/build/apple2_text/syn-ack-wire-apple2.po`,
-  `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk` and
-  `client/build/nes/syn-ack-wire-nes.nes` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
+  `client/build/msdos/syn-ack-wire-msdos.img`, `client/build/coco/syn-ack-wire-coco.dsk`,
+  `client/build/nes/syn-ack-wire-nes.nes` and `client/build/adam/syn-ack-wire-adam.ddp` as they are at deploy time (`server/README.md`, "Deploying to fly.io").
 - AltirraOS problems under NetSIO are not to be worked around.
 - Screen dumps: atari800's monitor silently drops a dump whose path is long, so dump into a short, fresh,
   empty directory. With the BASIC ROM in (as on an 800 with the cartridge), screen memory is at `$9C40`, else

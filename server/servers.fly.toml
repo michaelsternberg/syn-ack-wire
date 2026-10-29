@@ -19,6 +19,7 @@ apple2 = "TNFS://syn-ack-wire.fly.dev/syn-ack-wire-apple2.po"
 msdos = "TNFS://syn-ack-wire.fly.dev/syn-ack-wire-msdos.img"
 coco = "TNFS://syn-ack-wire.fly.dev/synack.dsk"              # RUNM"SYNACK": the lobby runs the disk's name
 nes = "TNFS://syn-ack-wire.fly.dev/syn-ack-wire-nes.nes"
+adam = "TNFS://syn-ack-wire.fly.dev/syn-ack-wire-adam.ddp"
 
 # The short links in the game disks' QR codes (fly.toml's https service): https://syn-ack-wire.fly.dev/ATARI
 # redirects to the Atari manual, any platform the same way by its docs/manual/ folder; / to the project.

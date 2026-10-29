@@ -7,6 +7,7 @@
 !client/build/msdos/syn-ack-wire-msdos.img
 !client/build/coco/syn-ack-wire-coco.dsk
 !client/build/nes/syn-ack-wire-nes.nes
+!client/build/adam/syn-ack-wire-adam.ddp
 !deploy/
 server/tests/
 **/__pycache__
