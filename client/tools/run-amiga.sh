@@ -3,7 +3,7 @@
 # Workbench 1.3, against a FujiNet NIO process, all on spare local ports.
 #
 #   tools/run-amiga.sh PROGRAM      start the rig and the program, return; its output is $RUN/share/log
-#   tools/run-amiga.sh DISK.adf     the same with that floppy in DF1, running its Start script (make-amiga-adf.sh's)
+#   tools/run-amiga.sh DISK.adf     the same with that floppy in DF1, running its Start script (make-amiga-nio-adf.sh's)
 #   tools/run-amiga.sh --stop       stop exactly the processes the rig started (the PIDs in $RUN/pids)
 #
 # The program is copied to the guest as SYNACK:game; SYNACK: is $RUN/share. The guest boots a copy of the
