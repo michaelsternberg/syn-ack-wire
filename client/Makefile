@@ -712,9 +712,122 @@ pc-h89: $(HDRS) src/h89/screens.h
 	    -o build/pc/pc-h89 \
 	    src/common/main.c src/common/game.c src/common/proto.c src/h89/display_text.c test/autoplay.c test/pc_harness.c
 
+# --- Amiga (stock A500, Kickstart/Workbench 1.3): the common code with src/amiga/, and fujinet-nio-lib (a prebuilt
+# build/fujinet-nio-amiga.a in the fujinet-nio workspace, read only: make -C $(FUJINET_NIO_LIB) amiga). nix13, not
+# clib2: clib2's start-up opens utility.library, which Kickstart 1.3 doesn't have. tools/run-amiga.sh runs a program
+# on an emulated A500 against a FujiNet NIO process, all on spare ports.
+AMIGA_B         = build/amiga
+AMIGA_BIN      ?= /opt/amiga/bin
+FUJINET_NIO_WS ?= $(HOME)/dev/fujinet-nio-workspace
+FUJINET_NIO_LIB ?= $(FUJINET_NIO_WS)/repos/fujinet-nio-lib
+AMIGA_CC        = $(AMIGA_BIN)/m68k-amigaos-gcc
+AMIGA_FLAGS     = -Os -Wall -mcpu=68000 -msoft-float -mcrt=nix13 -funsigned-char -D__fastcall__= -D__KICK13__ \
+                  -I$(FUJINET_NIO_LIB)/include -I$(FUJINET_NIO_WS)/repos/fujinet-nio-driver/amiga/include \
+                  -I$(AMIGA_B)
+AMIGA_NIOLIB    = $(FUJINET_NIO_LIB)/build/fujinet-nio-amiga.a
+
+$(AMIGA_NIOLIB):
+	@echo "$@ is missing: build it with  make -C $(FUJINET_NIO_LIB) amiga  (or set FUJINET_NIO_LIB)" >&2; false
+
+$(AMIGA_B):
+	mkdir -p $@
+
+$(AMIGA_B)/dial: test/amiga/dial.c $(AMIGA_NIOLIB) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) test/amiga/dial.c $(AMIGA_NIOLIB) -o $@
+
+# the drawing primitives on the rig: tools/run-amiga.sh build/amiga/gfxdemo, then amiga_guest.py shot
+$(AMIGA_B)/gfxdemo: test/amiga/gfxdemo.c src/amiga/gfx.c src/amiga/layout.c $(wildcard src/amiga/*.h) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) test/amiga/gfxdemo.c src/amiga/gfx.c src/amiga/layout.c -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+
+# the game: the common code and src/amiga/, which draws it on the A500's screen (display_gfx.c)
+AMIGASRC = src/common/main.c src/common/game.c src/common/proto.c \
+           $(addprefix src/amiga/,net_fn.c input.c keys.c layout.c ui.c gfx.c pointer.c dialog.c display_gfx.c help.c menudef.c menus.c start.c sound.c sndlogic.c prefs.c prefs_io.c palcycle.c title_art.c)
+AMIGADEFS = -DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1 -DDISPLAY_IDLE=1 -DTITLE_IDLE=1 -DQUIT_TO_OS=1 -DQUIT_ASK='"QUIT? Y/N"' -Wno-main $(AMIGA_XDEFS)   # AMIGA_XDEFS: extras for one build, e.g. -DDRAWLOG
+$(AMIGA_B)/syn-ack-wire-amiga: $(AMIGASRC) $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) $(AMIGASRC) $(AMIGA_NIOLIB) -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+amiga: $(AMIGA_B)/syn-ack-wire-amiga
+# the autoplay build: plays by itself (make amiga-test URL=N:TCP://127.0.0.1:6599/), no screen dumps
+$(AMIGA_B)/synack-amiga-auto: $(AMIGASRC) test/autoplay.c test/amiga_dump.c $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) -DAUTOPLAY -DDUMP_TICKS=0 -DKEY_TICKS=6 -DAUTO_HANDLE='"AMIGA"' \
+	    $(AMIGASRC) test/autoplay.c test/amiga_dump.c $(AMIGA_NIOLIB) -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+amiga-test: $(AMIGA_B)/synack-amiga-auto
+# the same, answering by mouse: every key the autoplayer would press for a prompt is a click on its widget
+$(AMIGA_B)/synack-amiga-mouse: $(AMIGASRC) test/autoplay.c test/amiga_autoclick.c test/amiga_dump.c $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) -DAUTOPLAY -DAUTOCLICK -DDUMP_TICKS=0 -DKEY_TICKS=6 -DAUTO_HANDLE='"AMIGA"' \
+	    $(AMIGASRC) test/autoplay.c test/amiga_autoclick.c test/amiga_dump.c $(AMIGA_NIOLIB) -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+amiga-test-mouse: $(AMIGA_B)/synack-amiga-mouse
+
+# the Amiga client's look: the mockup generator is the source of the palette (src/amiga/palette.h), and draws the PNGs
+src/amiga/palette.h: tools/amiga_mock.py ../theme/theme.toml
+	python3 tools/amiga_mock.py --header > $@
+# the instruction pages (help/amiga/screen), compiled in from build/amiga/help_tab.h (generated, not committed); the QR code links to the Amiga manual by the fly.io short link
+AMIGAHELP = $(sort $(wildcard help/amiga/screen/HELP*.TXT))
+AMIGA_QR_URL ?= HTTPS://SYN-ACK-WIRE.FLY.DEV/AMIGA
+$(AMIGA_B)/help_tab.h: $(AMIGAHELP) tools/help_amiga.py tools/help_msdos.py tools/qr.py | $(AMIGA_B)
+	python3 tools/help_amiga.py --qr "$(AMIGA_QR_URL)" $@ $(AMIGAHELP)
+test-amiga-help:
+	python3 tools/test_help_amiga.py
+amiga-mock: | $(AMIGA_B)
+	mkdir -p $(AMIGA_B)/mock && python3 tools/amiga_mock.py src/nes/font.txt $(AMIGA_B)/mock
+test-amiga-mock:
+	python3 -m unittest tools/test_amiga_mock.py
+
+test-amiga-net: test/amiga_net_test.c src/amiga/net_fn.c src/platform.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -Itest/amiga_fake -o build/test/amiga_net_test \
+	    test/amiga_net_test.c src/amiga/net_fn.c
+	build/test/amiga_net_test
+
+test-amiga-layout: test/amiga_layout_test.c src/amiga/layout.c src/amiga/layout.h src/common/theme_tab.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/amiga_layout_test \
+	    test/amiga_layout_test.c src/amiga/layout.c
+	build/test/amiga_layout_test
+
+test-amiga-ui: test/amiga_ui_test.c src/amiga/ui.c src/amiga/ui.h src/amiga/layout.c src/amiga/layout.h src/amiga/keys.h src/common/game.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/amiga_ui_test \
+	    test/amiga_ui_test.c src/amiga/ui.c src/amiga/layout.c
+	build/test/amiga_ui_test
+
+test-amiga-keys: test/amiga_keys_test.c src/amiga/keys.c src/amiga/keys.h src/platform.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/amiga_keys_test \
+	    test/amiga_keys_test.c src/amiga/keys.c
+	build/test/amiga_keys_test
+
+test-amiga-sound: test/amiga_sound_test.c src/amiga/sndlogic.c src/amiga/sndlogic.h src/platform.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/amiga_sound_test \
+	    test/amiga_sound_test.c src/amiga/sndlogic.c
+	build/test/amiga_sound_test
+
+# the Region menu's servers, from the same file as the desktop client's: generated, not committed
+$(AMIGA_B)/regions_tab.h: ../server/servers.fly.toml ../fly.toml ../tools/gen_regions.py | $(AMIGA_B)
+	python3 ../tools/gen_regions.py h > $@
+test-amiga-menus: test/amiga_menus_test.c src/amiga/menudef.c src/amiga/menudef.h src/amiga/keys.h $(AMIGA_B)/regions_tab.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -I$(AMIGA_B) -o build/test/amiga_menus_test \
+	    test/amiga_menus_test.c src/amiga/menudef.c
+	build/test/amiga_menus_test
+test-amiga-palcycle: test/amiga_palcycle_test.c src/amiga/palcycle.c src/amiga/palcycle.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -o build/test/amiga_palcycle_test \
+	    test/amiga_palcycle_test.c src/amiga/palcycle.c
+	build/test/amiga_palcycle_test
+test-amiga-prefs: test/amiga_prefs_test.c src/amiga/prefs.c src/amiga/prefs.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -o build/test/amiga_prefs_test \
+	    test/amiga_prefs_test.c src/amiga/prefs.c
+	build/test/amiga_prefs_test
+
 clean:
 	rm -rf build
 
-.PHONY: FORCE all atr atrtest atari-nio test-atari-nio test-atari-nio-6502 test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto h89 h89-disk h89-wiremon adam adamtest adam-auto intv intvtest intv-auto geos geos-atr clean
+.PHONY: FORCE all atr atrtest atari-nio test-atari-nio test-atari-nio-6502 test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto h89 h89-disk h89-wiremon adam adamtest adam-auto intv intvtest intv-auto geos geos-atr test-amiga-net test-amiga-keys test-amiga-sound test-amiga-prefs amiga amiga-test test-amiga-mock amiga-mock test-amiga-layout test-amiga-ui amiga-test-mouse test-amiga-help test-amiga-menus test-amiga-palcycle clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o $(ADAM)/%.o
 .DELETE_ON_ERROR:

@@ -1,0 +1,24 @@
+{ THE SCREEN AND KEYS               9/11 }
+
+ .     empty node
+ +     lone spike
+ {G}     hive (syndicate letter)
+ 1-6   where that exploit can run
+
+> = you   * = bot   ? = away
+amber bar = whose turn
+
+MOUSE, left button, clicks:
+ a node or kit slot: run an exploit
+ a lit syndicate: pick it
+ BUY, UNDO, YES, NO, OK, + and -
+ Right button held: the menus
+
+KEYS:
+ 1-6 exploit   A-Z syndicate
+ BACKSPACE undo   ENTER confirm   Y/N
+ F1 or ? help   F2 hints   F3 sound
+ F4 seats as cards or table
+ ESC log off
+
+{<- PREV         ESC:EXIT         NEXT ->}

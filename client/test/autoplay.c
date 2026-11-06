@@ -85,9 +85,46 @@ static unsigned char rnd(void)
     return seed;
 }
 
+#ifdef AUTOCLICK
+unsigned char amiga_autoclick(unsigned char key);   /* test/amiga_autoclick.c: click the widget that gives `key`; 0 if none */
+#endif
+
+/* the key a player might press for the open prompt */
+static unsigned char pick(unsigned char r)
+{
+    switch (pr_kind) {
+    case 'S':
+        return '3';
+    case 'P':
+        return '1' + (r & 7);                       /* 7 and 8 are ignored */
+    case 'F':
+    case 'K':
+        return syn_letter[r % NSYN];
+    case 'D':
+#ifdef __AMIGA__
+        if (complaint)                              /* refused: clear the count, or wait out the server's minute */
+            return K_DELETE;
+#endif
+        return (r & 3) ? '0' + (r & 3) : K_RETURN;
+    case 'B':
+        if (r < 40)
+            return K_DELETE;
+        if (r < 100)
+            return K_RETURN;
+        if (r < 120)
+            return 'N';
+        return syn_letter[r % NSYN];
+    }
+    return 0;
+}
+
 unsigned char auto_key(void)
 {
-    unsigned char t = ticks(), r;
+    unsigned char t = ticks(), k;
+#ifdef AUTOCLICK
+    if ((k = in_key()) != 0)                        /* the keys a click queued come out one at a time */
+        return k;
+#endif
     elapsed += (unsigned char)(t - prev);
     prev = t;
     if (!status_len && !status_code && shown == 0xFF)
@@ -104,7 +141,9 @@ unsigned char auto_key(void)
     if (key_queue)
         return in_key();                            /* a menu's keys (Quit's) go to the game */
 #endif
+#ifndef AUTOCLICK
     in_key();
+#endif
     if ((unsigned char)(t - last) < KEY_TICKS)
         return 0;
     last = t;
@@ -130,10 +169,10 @@ unsigned char auto_key(void)
         return midhelp[helped++];
     }
     if (dumps > 8 && clicked < sizeof clicks / sizeof clicks[0] && (!SCROLL_NOW || !midhelp[helped])) {
-        r = gui_poll(0, clicks[clicked][0], clicks[clicked][1], clicks[clicked][2]);
+        k = gui_poll(0, clicks[clicked][0], clicks[clicked][1], clicks[clicked][2]);
         if (clicks[clicked++][3])
             DUMP();
-        return r;
+        return k;
     }
 #endif
 #if REGION_PICK
@@ -146,29 +185,27 @@ unsigned char auto_key(void)
     if (paging[paged]) {                            /* a dump before each key shows each page */
         if (DUMP_TICKS)
             DUMP();
+#ifdef AUTOCLICK
+        if (paging[paged] == K_HELP && amiga_autoclick(K_HELP)) {      /* the HELP button */
+            ++paged;
+            return 0;
+        }
+#endif
         return paging[paged++];
     }
-    if (name[typed])                                /* title: the handle, then Return */
+    if (name[typed]) {                              /* title: the handle, then Return */
+#ifdef AUTOCLICK
+        if (name[typed] == '\r' && amiga_autoclick('\r')) {   /* Return is the JACK-IN button */
+            ++typed;
+            return 0;
+        }
+#endif
         return name[typed++];
-    r = rnd();
-    switch (pr_kind) {
-    case 'S':
-        return '3';
-    case 'P':
-        return '1' + (r & 7);                       /* 7 and 8 are ignored */
-    case 'F':
-    case 'K':
-        return syn_letter[r % NSYN];
-    case 'D':
-        return (r & 3) ? '0' + (r & 3) : K_RETURN;
-    case 'B':
-        if (r < 40)
-            return K_DELETE;
-        if (r < 100)
-            return K_RETURN;
-        if (r < 120)
-            return 'N';
-        return syn_letter[r % NSYN];
     }
-    return 0;
+    k = pick(rnd());
+#ifdef AUTOCLICK
+    if (k && amiga_autoclick(k))
+        return 0;                                   /* the click queued it (or them) */
+#endif
+    return k;
 }

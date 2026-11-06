@@ -50,6 +50,9 @@ cd client && tools/run-intv.sh build/intv/syn-ack-wire-intv.rom SCEN   # jzIntv 
 cd client && make geos-atr GEOS_ATARI=<geos-atari dir>      # build/geos/: GEOS boot disk (D1:) and GEOS disk (D2:)
 cd client && tools/run-geos-disks.sh                         # play: atari800 boots those two disks from FujiNet-PC
 cd client && tools/run-geos.sh build/geos/synack.cvt         # test: geos-atari on atari800 + FujiNet-PC on NetSIO 9997+n
+cd client && make amiga                                     # build/amiga/syn-ack-wire-amiga (A500, Kickstart 1.3; fujinet-nio-lib prebuilt)
+cd client && make amiga-test URL=N:TCP://127.0.0.1:6599/ && test/amiga_accept.sh   # autoplay a whole game on the emulated A500 (NTSC=1, CUT=1)
+cd client && make build/amiga/dial && tools/run-amiga.sh build/amiga/dial   # stock A500 (Kickstart 1.3) in Amiberry + FujiNet NIO on 65501/23499; --stop ends it
 cmake -S desktop -B desktop/build && cmake --build desktop/build   # desktop/build/syn-ack-wire (SDL3)
 make -C docs                                                 # rulebook and manuals (pdflatex)
 client/tools/capture.sh                                      # redo the staged captures (atari800 + FujiNet-PC)

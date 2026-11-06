@@ -63,7 +63,18 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/adam/help.c` | Adam: the instruction pages, from the program over the screen |
 | `src/adam/sound.asm`, `eoscall.asm` | Adam: the Atari's chords on the SN76489, from the NMI; the keyboard through EOS's jump table |
 | `src/adam/title_art.h` | The Atari's title art in the NES's box glyphs, **generated** by `tools/title_art.py n 0` |
+| `src/amiga/net_fn.c` | Network calls for the Amiga: FujiNet NIO through fujinet-nio-lib (a prebuilt archive, `FUJINET_NIO_LIB`), `fujinet-nio.device` loaded by the user's startup |
+| `src/amiga/input.c`, `keys.c` | Amiga: keys from the window's raw key events (`console.device` makes the letters; `keys.c` is the map, tested on the host) and `ticks()` from a vertical-blank server, 50 or 60 a second |
+| `src/amiga/gfx.c`, `display_gfx.c`, `dialog.c`, `pointer.c` | Amiga: the 5-plane 320×256 (PAL) or ×200 (NTSC) screen and its drawing primitives; the circuit-board display (each `display_*` marks what it paints, `display_idle` paints once per pass); the buy, question, hive and seat windows; the pointer |
+| `src/amiga/layout.c`, `ui.c` | Amiga: where every widget is (PAL and NTSC) and what a click on it types (the keys the keyboard would), tested on the host |
+| `src/amiga/start.c` | Amiga: opens the libraries, the screen and the keys before `main()`, and closes whatever opened after it |
+| `src/amiga/sound.c`, `sndlogic.c` | Amiga: chords through `audio.device`, a note per queued write; `sndlogic.c` is which chord wins and the notes' periods (tested on the host) |
+| `src/amiga/prefs.c`, `prefs_io.c` | Amiga: the handle kept in `S:SynAckWire.prefs`, and `net_appkey` reading it |
 | `lib/fujinet-lib/` | fujinet-lib, a pinned copy (version and checksum in its README) |
+| `test/amiga_*_test.c`, `amiga_fake/` | Host tests for the Amiga layers (`make test-amiga-net test-amiga-keys test-amiga-sound test-amiga-prefs test-amiga-layout test-amiga-ui test-amiga-help test-amiga-menus test-amiga-palcycle`), the network one against a scripted fake of fujinet-nio-lib |
+| `test/amiga_accept.sh`, `amiga_accept_mouse.sh`, `amiga_server.py` | A whole autoplay game on the emulated A500 by keys, or by clicks on the widgets (`NTSC=1`, `CUT=1`); the scratch server says GAME OVER in its log |
+| `tools/amiga_mock.py`, `tools/test_amiga_mock.py` | The Amiga look drawn as PNGs at the real size (PAL and NTSC; `make amiga-mock`) and its 32-colour palette: `--header` writes `src/amiga/palette.h` (**generated**) |
+| `test/amiga/dial.c`, `test/amiga_rig_selfcheck.sh`, `tools/run-amiga.sh`, `amiga_guest.py` | The run rig: a stock A500 (Kickstart 1.3) in Amiberry against FujiNet NIO, and the check that it works |
 | `test/wiremon.c` | Protocol monitor; proves the network layer before any game screens exist |
 | `test/autoplay.c` | Test build that presses keys itself and BRKs for screen dumps |
 | `test/pc_harness.c` | The common code on a PC with gcc: sockets, printed display, autoplay keys |
@@ -447,6 +458,7 @@ ProDOS games boot. (Through cc65's `loader.system` it hung on a real //c booting
   can't run, a syndicate letter) shows normal. A refusal at the foot of the title screen is inverse. There is
   no yen glyph: money shows as `Y3200`. Only the 40 bytes of each row are ever written, never the screen holes
   (the peripheral cards' scratch memory, the FujiNet's included).
+- **Menus:** hold the right mouse button: PROJECT (Instructions, Workbench, Quit), GAME (Move hints, Sound, Seats as table, each ticked when on) and REGION (the four servers, generated from `server/servers.fly.toml` by `tools/gen_regions.py` into `build/amiga/regions_tab.h` at build time; usable on the title only, the next dial goes to the one chosen and `SERVER=` in the prefs file keeps it). Workbench sends the game's screen behind Workbench and the other screens (`ScreenToBack`), so the machine can be used meanwhile with the game running on; Amiga-M or the depth gadget of the screen in front brings it back. Every item has an Amiga-key letter (I, W, Q, M, S, T and 1-4). While one of the game's own windows or the instructions is up the strip is off and the right button cancels, as it did.
 - **Keys:** as the Atari's, except **Open-Apple** (alone) for move hints and **Closed-Apple** for sound, where
   the Atari has OPTION and SELECT. Those two aren't latched like the other keys: they count only while held when
   the loop looks, once a pass, so a press counts on the first look that sees it (a 64-pass settle time, then a
@@ -1212,6 +1224,9 @@ make geos-atr GEOS_ATARI=../../geos-atari                  # the two disks below
 | raw SIO | 228 | |
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |
 | `wiremon.xex` | 2982 | whole file, including cc65's Atari startup code |
+| **amiga** (2026-11-01, m68k gcc 15, `-Os`, nix13) | | |
+| `syn-ack-wire-amiga` | 94812 | whole file; the title picture is 24,098 B of it (step 3: menus, help pages, settings, title picture with colour cycling; 55432 in step 2, graphics and mouse; 37032 in step 1 with the text display); about 280 KB of chip RAM stay free with the screen open |
+| the screen | 20480 | chip RAM: 320×256, two bitplanes (PAL; 16000 on NTSC's 200 lines), opened by `start.c` |
 
 ## Tested (atari800 7.2.1 + FujiNet-PC 1.6 + server, NetSIO)
 - **Game client:** the autoplay build played for four minutes as host with two bots. It sent 75 answers covering
@@ -1225,3 +1240,45 @@ make geos-atr GEOS_ATARI=../../geos-atari                  # the two disks below
   made about 840 status calls.
 - **Reconnect:** a relay cut the TCP connection mid-game. Wiremon reconnected 2.7 s later with its token, got its
   seat back (the server only allows that mid-game for a valid token), and followed the game to the end.
+
+## Amiga (amiga)
+
+The title screen is a painted 320 x 256 picture, made by `tools/amiga_title_art.py` into `src/amiga/title_art.c` (packed planes and
+palette; the output is committed, since it depends on the machine's Pillow). The logo is the title art every platform shares
+(`src/atari/title4.atascii`: boxed outlines, the letters their enclosed strokes) drawn large, the strokes in chrome with TV snow, over
+digital rain, circuit board and a wireframe globe on a grid floor. `gfx_art` unpacks it into the screen and loads its palette; the seven
+pens of the logo's rim and snow turn (colour cycling), so a light runs round the letters and the snow twinkles. The buttons and panels
+use pens the picture leaves alone; the game's palette comes back when play starts.
+
+A stock A500 with Kickstart and Workbench 1.3 or later, 512 KB, the FujiNet on the serial port. The game plays on the
+circuit-board graphics, by mouse or keyboard, with menus, the Region list, palette effects and the instruction pages.
+The screen's title bar is hidden (`ShowTitle`), or row 0 would lie under it on NTSC.
+
+- **Build:** `make amiga` gives `build/amiga/syn-ack-wire-amiga`. Needs `m68k-amigaos-gcc` (`AMIGA_BIN`, default
+  `/opt/amiga/bin`) and the prebuilt fujinet-nio-lib (`make -C $FUJINET_NIO_LIB amiga`; the library is read, never changed).
+  The C runtime is libnix's `nix13`, not clib2, whose start-up opens `utility.library`, which Kickstart 1.3 lacks.
+- **What runs:** the common code and `src/amiga/`. `display_gfx.c` paints the 12×9 grid, hives, seats, three log lines
+  and prompt strip on a 32-colour, 5-plane 320-wide screen (256 lines PAL, 200 NTSC, from
+  `GfxBase->NormalDisplayRows`); there is no frame buffer, each `display_*` paints its piece, coalesced once per pass.
+  Dialogs save the area under them to chip RAM and put it back. On NTSC the seat area shows you and the seat to move,
+  and the others as a scrolling list. The last move blinks for a few seconds.
+- **Network:** `fujinet-nio.device` must already be loaded (`fujinet-load-resident`, from the user's startup). Replies
+  are read in pieces of at most 128 bytes, polled about ten times a second while quiet; a dead line is reported after a
+  3 second grace, and the common code redials with the seat token.
+- **Keys:** F1 or Help or `?` the instructions (eleven pages, with a QR code to the manual), F2 move hints, F3 sound, F4 seats as cards or as a table (a click on the seats does the same; PAL shows every netrunner with a header of syndicate letters, NTSC three rows: you, the seat to move, and the others one at a time under the arrows; not kept between runs), Return, Backspace,
+  Delete, Esc; cursor left and right page. Amiga-key chords are left to the menus. The mouse: the left button presses a widget (a kit node plays it, a hive node or a syndicate chooses, Buy/Undo/Yes/No/OK and the steppers in the windows; on the title JACK-IN and the buttons); the right button is Cancel. A press is debounced so a double click never queues a flood of keys.
+- **A floppy to try it on real hardware:** `tools/make-amiga-adf.sh` writes `build/amiga/syn-ack-wire-amiga.adf` (OFS, not bootable): the game with its icon and `nio/` (the FujiNet NIO device and its loader; `FUJINET_NIO_ADF_WB` picks the Workbench's files, default `wb204`); there is no `Start` script, so load the device yourself first. Boot your Workbench and open the disk. `tools/make_icon.py` draws the icons.
+- **Server:** the public one is built in (`make amiga URL=N:TCP://host:port/` builds for another). A player can point the client elsewhere without rebuilding: a line `SERVER=TCP://host:port/` in `S:SynAckWire.prefs` (an `N:` in front is accepted; an address that is not `TCP://` or is over 60 characters is ignored) is dialled instead, and kept when the handle is saved. Run your own server with `cd server && python3 -u serve.py --host 127.0.0.1 --port 6599 --trace`. On the rig, `AMIGA_PREFS_SERVER=TCP://127.0.0.1:6599/` writes that line first; the acceptance scripts take `USE_PREFS=1 URLPORT=6598` to build for a port nothing listens on and find the scratch server only through the prefs file.
+- **Handle:** kept in `S:SynAckWire.prefs` (`HANDLE=NAME`), read for the title and written when the hello goes out with it, only if it changed. AmigaDOS requesters are off while it is touched, so a write-protected floppy loses the memory and nothing else.
+- **Sound:** chords as short notes through `audio.device`, the same pitches as the PC speaker's, on one channel (a write wants a single one); silence if the device is
+  busy. The rules (which chord cuts which) are tested on the host; **the sound has not been heard**, only run.
+- **Testing:** the host tests (`make test-amiga-net test-amiga-keys test-amiga-sound
+  test-amiga-prefs test-amiga-layout test-amiga-ui test-amiga-help test-amiga-menus test-amiga-palcycle`); `test/amiga_accept.sh` plays a whole autoplay game against bots on an emulated A500 on spare
+  ports (PAL about 160 s, `NTSC=1` about 160 s, `CUT=1` stalls the serial bridge for 30 s, the server sees AMIGA leave
+  and rejoin its seat, and the game ends); `test/amiga_accept_mouse.sh` does the same by clicks (about 120 s). `tools/run-amiga.sh` is the rig (`AMIGA_NTSC=true` for NTSC).
+  Amiberry's serial port is a TCP pipe: real baud-rate overruns on a cable are **not** tested; that is on the hardware checklist.
+- **Quit:** Esc on the title, then Y (`platform_quit` is `exit(0)`; the destructors close everything). Not yet run in the emulator.
+- **Remembered settings:** `S:SynAckWire.prefs` also holds `VIEW=TABLE|CARDS`, `HINTS=ON|OFF` and `SOUND=ON|OFF`, read at the start (a line the file lacks keeps the build's choice) and written when one changed, at the hello or on the way out.
+- **Feedback fixes:** the buy window is the full width and short (PAL 120 px high, NTSC 90) so that the table of every netrunner stays in view under it, bright, whatever view the seats are in (NTSC grows the table upward, to six rows plus a header, where the grid's lower rows were; the log is never covered): the hive rows run down the left, the tally and the BUY, UNDO and NULL-ROUTE buttons stack at the right, and a click looks only among its own dialog's buttons since the column shares screen with the small windows'; the buy window shows what the netrunner already holds in each hive (HELD); Return answers Yes on a Y/N question (the lit button); when a game ends the next game's seat window waits for a key or a click, so the scores stay in view (a client that is not asked to start the next one waits two seconds); the table view's header uses the same hive letters as the grid, and the table repaints whole so a shorter amount cannot leave part of a longer one.
+- **Title and waiting:** the logo's colours turn on the title (palette entries, put back on jack-in), with a burst of static every few seconds; the pointer is an hourglass while the link opens or closes.
+- **Known gaps:** `void main` returns no exit code; the loop never waits, so it uses all the CPU a stock A500 has (deferred: `WaitTOF()` in `in_key`).
