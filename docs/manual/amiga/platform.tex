@@ -1,0 +1,12 @@
+% The Amiga's names for things, for the shared style and text (../../style/synack.sty, ../../rules/).
+\renewcommand{\DocKind}{USER MANUAL // AMIGA}
+\renewcommand{\PlatformShort}{Amiga}                       % as in "on the Amiga"
+\newcommand{\PlatformLong}{Commodore Amiga}                % the title page
+\newcommand{\PlatformMachines}{AMIGA 500 AND LATER \quad // \quad FUJINET-NIO}   % the title page, the screen chapter
+\newcommand{\SignalLost}{the title bar's link turns red and reads \code{NO SIGNAL}}  % the link is quiet
+
+% Where the screen sits in a capture, in image pixels (see \capgeom): client/tools/render_amiga.py draws each of the
+% 320 x 256 (PAL) Amiga pixels 2 x 2, so a callout's (column, row) is a cell of 8 x 8 Amiga pixels: 40 x 32 of them.
+\makeatletter
+\newcommand{\rendered}{\capgeom{0}{0}{16}{16}{640}{512}}
+\makeatother

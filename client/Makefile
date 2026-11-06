@@ -761,6 +761,12 @@ $(AMIGA_B)/synack-amiga-mouse: $(AMIGASRC) test/autoplay.c test/amiga_autoclick.
 	    $(AMIGASRC) test/autoplay.c test/amiga_autoclick.c test/amiga_dump.c $(AMIGA_NIOLIB) -o $@
 	@echo "$@: $$(stat -c %s $@) bytes"
 amiga-test-mouse: $(AMIGA_B)/synack-amiga-mouse
+# the manual's captures (tools/capture.sh, PLATFORM=amiga): the autoplay build, dumping its screen into the rig's
+# shared folder (SYNACK:d/) at each new prompt and every DUMP_TICKS (test/amiga_dump.c); URL= its scratch server
+$(AMIGA_B)/synack-amiga-capture: $(AMIGASRC) test/autoplay.c test/amiga_dump.c $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
+	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) -DAUTOPLAY -DDUMP_TICKS=240 -DKEY_TICKS=6 -DAUTO_HANDLE='"AMIGA"' \
+	    $(AMIGASRC) test/autoplay.c test/amiga_dump.c $(AMIGA_NIOLIB) -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
 
 # the Amiga client's look: the mockup generator is the source of the palette (src/amiga/palette.h), and draws the PNGs
 src/amiga/palette.h: tools/amiga_mock.py ../theme/theme.toml

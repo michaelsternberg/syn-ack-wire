@@ -700,9 +700,18 @@ void display_log(void)
 }
 
 /* the strip: one line of `width` chars from x = 6 */
+#ifdef AUTOPLAY
+char amiga_strip_text[WIDE_CH + 1];     /* what the strip says: the autoplay build's dumps carry it (test/amiga_dump.c) */
+#endif
 static void strip(const char *a, unsigned char n, unsigned char width, unsigned char pen)
 {
     say(6, LY.prompt.y + 1, a, n, width, pen, PEN_BG2);
+#ifdef AUTOPLAY
+    if (n > WIDE_CH)
+        n = WIDE_CH;
+    memcpy(amiga_strip_text, a, n);
+    amiga_strip_text[n] = 0;
+#endif
 }
 
 static char sb[WIDE_CH + 2];

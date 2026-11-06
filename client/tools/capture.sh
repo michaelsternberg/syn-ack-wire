@@ -13,11 +13,14 @@
 #   PLATFORM=h89 tools/capture.sh        the Heathkit H89: its display code on this PC (make pc-h89), no emulator
 #   PLATFORM=intv tools/capture.sh       the Intellivision: the autoplay ROM in jzIntv (tools/run-intv.sh), its dumps
 #                                        from intvsim.py at each new prompt
+#   PLATFORM=amiga tools/capture.sh      the Amiga: the capture build on the rig (tools/run-amiga.sh), its dumps from
+#                                        test/amiga_dump.c in the rig's shared folder (AMIGA_SECONDS each, default 150)
 #   PORT=6599 INSTANCE=7 tools/capture.sh    the defaults: the server's port, run-test.sh's instance
 #   KEEP=1 tools/capture.sh tied-root    keep the dumps and logs (the script says where)
 #
 # The ports (PORT; for the Atari also NetSIO 9997+INSTANCE, web 8000+INSTANCE; for the NES BoIP 9985+INSTANCE, web
-# 8020+INSTANCE; for the Intellivision BoIP 9980+INSTANCE, web 8040+INSTANCE) must be free: the script stops
+# 8020+INSTANCE; for the Intellivision BoIP 9980+INSTANCE, web 8040+INSTANCE; for the Amiga the rig's 65501 and
+# 23499) must be free: the script stops
 # otherwise. atari800 runs on a scratch copy of ~/.atari800.cfg, which it would otherwise rewrite on exit.
 set -e
 cd "$(dirname "$0")/.."
@@ -33,7 +36,8 @@ case $PLATFORM in
     apple2 | msdos | coco | adam | h89) ports=$PORT ;;
     nes) ports="$PORT $((9985 + INSTANCE)) $((8020 + INSTANCE))" ;;
     intv) ports="$PORT $((9980 + INSTANCE)) $((8040 + INSTANCE))" ;;
-    *) echo "PLATFORM: atari, apple2, msdos, coco, nes, adam, h89 or intv" >&2; exit 1 ;;
+    amiga) ports="$PORT 65501 23499" ;;
+    *) echo "PLATFORM: atari, apple2, msdos, coco, nes, adam, h89, intv or amiga" >&2; exit 1 ;;
 esac
 mkdir -p "$DUMPS"
 
@@ -57,6 +61,9 @@ if [ "$PLATFORM" = nes ]; then
 elif [ "$PLATFORM" = intv ]; then
     make -s INTV="$WORK/intv" INTVAUTO=1 URL="N:TCP://127.0.0.1:$PORT/" LOBBY_KEY=0 "$WORK/intv/syn-ack-wire-intv.rom" \
         > "$WORK/build.log" 2>&1 || { cat "$WORK/build.log" >&2; exit 1; }
+elif [ "$PLATFORM" = amiga ]; then
+    make -s AMIGA_B="$WORK/am" URL="N:TCP://127.0.0.1:$PORT/" LOBBY_KEY=0 "$WORK/am/synack-amiga-capture" \
+        > "$WORK/build.log" 2>&1 || { cat "$WORK/build.log" >&2; exit 1; }
 elif [ "$PLATFORM" != atari ]; then
     make -s pc-$PLATFORM > "$WORK/build.log" 2>&1 || { cat "$WORK/build.log" >&2; exit 1; }
 else
@@ -78,7 +85,7 @@ import glob, os, shutil, sys, tomllib
 sys.path.insert(0, "tools")
 sys.path.insert(0, "tools/h89")
 from screen2txt import char
-import render_adam, render_apple2, render_coco, render_intv, render_msdos, render_nes
+import render_adam, render_amiga, render_apple2, render_coco, render_intv, render_msdos, render_nes
 import render as render_h89
 scenarios, name, dumps, out, platform = sys.argv[1:]
 all_ = tomllib.load(open(scenarios, "rb"))
@@ -103,6 +110,8 @@ for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         rows = [line.upper().strip() for line in render_h89.text(d)[22:24]]
     elif platform == "intv":    # the info and question rows are 10 and 11 of its 12
         rows = [line.upper().strip() for line in render_intv.text(d)[10:12]]
+    elif platform == "amiga":   # the dump carries the prompt strip's text
+        rows = [line.upper().strip() for line in render_amiga.text(d)[:1]]
     else:
         rows = ["".join(char(b) for b in d[r * 40:r * 40 + 40]).upper().strip() for r in (22, 23)]
     if any(r.startswith(want) for r in rows):
@@ -118,6 +127,13 @@ EOF
 # worked. The Apple II, MS-DOS, CoCo and H89 builds on this PC have one screen: one try.
 order="1 0"
 [ "$PLATFORM" != atari ] && order=0
+amiga_rig() {   # amiga_rig <log>: the capture build on the rig for AMIGA_SECONDS, its dumps moved to $WORK/d
+    rm -rf "$WORK/rig"; mkdir -p "$WORK/rig/share/d"
+    AMIGA_RUN_DIR="$WORK/rig" bash tools/run-amiga.sh "$WORK/am/synack-amiga-capture" > "$1" 2>&1 || true
+    sleep "${AMIGA_SECONDS:-150}"
+    AMIGA_RUN_DIR="$WORK/rig" bash tools/run-amiga.sh --stop >> "$1" 2>&1 || true
+    mv "$WORK/rig/share/d"/scr*.bin "$WORK/d"/ 2>/dev/null || true
+}
 run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a dump matched
     rm -rf "$WORK/d"; mkdir "$WORK/d"           # the dumps: $WORK/d/scrNNN.bin, kept short
     (cd "$ROOT/server" && exec python3 stage.py "$1" --host 127.0.0.1 --port "$PORT") > "$WORK/$1.log" 2>&1 &
@@ -129,6 +145,8 @@ run() {     # run <scenario> <basic: 1 or 0>: stage it, capture, pick; true if a
     elif [ "$PLATFORM" = intv ]; then
         echo "dumps d 999 $((SECONDS_EACH * 60))" | DUMPDIR="$WORK/d" INSTANCE=$INSTANCE SHOTDIR="$WORK/shots" \
             TMPDIR="$WORK" sh tools/run-intv.sh "$WORK/intv/syn-ack-wire-intv.rom" - > "$WORK/$1.run" 2>&1 || true
+    elif [ "$PLATFORM" = amiga ]; then
+        amiga_rig "$WORK/$1.run"
     elif [ "$PLATFORM" != atari ]; then
         DUMPDIR="$WORK/d" timeout "$SECONDS_EACH" build/pc/pc-$PLATFORM 127.0.0.1 "$PORT" > "$WORK/$1.run" 2>&1 || true
     else
@@ -161,6 +179,8 @@ live() {
     elif [ "$PLATFORM" = intv ]; then
         echo "dumps d 999 1500" | DUMPDIR="$WORK/d" INSTANCE=$INSTANCE SHOTDIR="$WORK/shots" TMPDIR="$WORK" \
             sh tools/run-intv.sh "$WORK/intv/syn-ack-wire-intv.rom" - > "$WORK/live.run" 2>&1 || true
+    elif [ "$PLATFORM" = amiga ]; then
+        amiga_rig "$WORK/live.run"
     else
         DUMPDIR="$WORK/d" timeout 15 build/pc/pc-$PLATFORM 127.0.0.1 "$PORT" > "$WORK/live.run" 2>&1 || true
     fi
@@ -170,12 +190,14 @@ live() {
 import glob, os, shutil, sys
 sys.path.insert(0, "tools")
 sys.path.insert(0, "tools/h89")
-import render_adam, render_apple2, render_coco, render_intv, render_msdos, render_nes
+import render_adam, render_amiga, render_apple2, render_coco, render_intv, render_msdos, render_nes
 import render as render_h89
 dumps, out, platform, *names = sys.argv[1:]
-text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text,
+text = {"msdos": render_msdos.text, "coco": render_coco.text, "nes": render_nes.text, "amiga": render_amiga.text,
         "adam": render_adam.text, "h89": render_h89.text, "intv": render_intv.text}.get(platform, render_apple2.text)
-if platform == "nes":       # its own layout: the foot on row 27, the seats on 14-19, the log on 20-25
+if platform == "amiga":     # a dump has the strip's text and the status, no rows
+    ask, seats, log, hint = 0, slice(0), slice(0), "TYPE A HANDLE"
+elif platform == "nes":       # its own layout: the foot on row 27, the seats on 14-19, the log on 20-25
     ask, seats, log, hint = 27, slice(14, 20), slice(20, 26), "PICK A HANDLE"
 elif platform == "adam":    # the NES's in 24 rows: the seats on 12-17, the log on 18-21
     ask, seats, log, hint = 23, slice(12, 18), slice(18, 22), "TYPE A HANDLE"
@@ -187,6 +209,8 @@ wants = {   # name: what its screen shows
     "title": lambda t: t[ask].strip().startswith(hint) and any("LOBBY OPEN" in l for l in t),
     "lobby-join": lambda t: any(l.strip().startswith(">") for l in t[seats]) and any("S TO START" in l for l in t[log]),
 }
+if platform == "amiga":     # joined: the strip is empty while the lobby waits ("WAITING FOR" once a game is on)
+    wants["lobby-join"] = lambda t: t[0] == ""
 for name in names:
     for f in sorted(glob.glob(os.path.join(dumps, "scr*.bin"))):
         if wants[name]([l.upper() for l in text(open(f, "rb").read())]):

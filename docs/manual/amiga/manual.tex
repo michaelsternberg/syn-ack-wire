@@ -1,0 +1,370 @@
+% SYN-ACK WIRE -- user manual for the Amiga (FujiNet-NIO)
+% Build: make   (or make in docs/: the rulebook and every manual)
+%
+% The style, the theme macros and the furniture the shared rules text needs are in ../../style/synack.sty;
+% the rules text is ../../rules/*.tex; the Amiga's names for things are in platform.tex.
+% Screens are in screens/: dumps of the emulated A500's screen from the capture build, drawn by
+% client/tools/render_amiga.py (client/tools/capture.sh with PLATFORM=amiga makes them).
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage{synack}
+\input{platform.tex}
+\graphicspath{{screens/}}
+
+\makeatletter
+% The rules' captures are staged games (server/stage.py, scenarios.toml) on the board of the drawing
+% under "1. Spike a node", so the drawing, the text and the screen tell one story.
+\expandafter\def\csname shot@spike\endcsname{\screen{spike.png}{CAPTURE \quad \MakeUppercase{\V{spike}} A \MakeUppercase{\V{node}}}%
+  {The drawing above, as ZER0COOL sees it. The move hints \code{1}--\code{4} sit on its four targets: they are the
+  \Vp{exploit} in your \V{kit} that run there, as the \MakeUppercase{\V{exploit}} KIT panel lists them. Press the one
+  to run, or click it.}}
+\expandafter\def\csname shot@broker\endcsname{\screen{infiltration.png}{CAPTURE \quad \MakeUppercase{\V{infiltration}}}%
+  {Target 2: ZER0COOL ran \node{C6}, next to the lone \V{spike} on \node{B6}. The panel on the right asks for a free
+  syndicate, and the bright rows of the \MakeUppercase{\Vp{hive}} panel are the ones with no \V{hive} on the
+  \V{grid}: press one of those letters, or click its row, to \V{broker} the new \V{hive}.}}
+\expandafter\def\csname shot@hivejack\endcsname{\screen{tied-root.png}{CAPTURE \quad \MakeUppercase{\V{hivejack}}: A TIED \MakeUppercase{\V{root}}}%
+  {The example below, as ZER0COOL sees it. The spike on \node{G3} joined \Syn{5}{name} (4 \Vp{node}) and \Syn{3}{name}
+  (3), and a window says how many of the \V{absorbed} \Vp{coin} you hold. Set how many to \V{cashout} with
+  \code{-} and \code{+}, or type the number, and press \code{OK} or \key{Return}; then the same for how many to
+  \V{swap}.}}
+\expandafter\def\csname shot@buy\endcsname{\screen{spread-buy.png}{CAPTURE \quad BUY \MakeUppercase{\V{coin}}}%
+  {Target 3: \node{E1} spread \Syn{5}{name}. The buy window lists each \V{hive}'s price, how many the \V{bank} has
+  left and how many you hold, with the total and your cash at the right. Type up to \Rule{maxbuy} letters, in any mix,
+  or click the rows; \code{UNDO} or \key{Backspace} takes one back, \code{BUY} or \key{Return} buys. Below it,
+  every \V{player}'s account and \Vp{coin} stay in view.}}
+\expandafter\def\csname shot@nullroute\endcsname{\screen{nullroute.png}{CAPTURE \quad \MakeUppercase{\V{lockdown}}: THE QUESTION}%
+  {ZER0COOL's \V{spike} on \node{H2} spread \Syn{2}{name} to \Rule{safesize} \Vp{node}: \V{safe}, and with
+  \Syn{5}{name} and \Syn{0}{name} already \V{safe}, every \V{hive} is. With too little \Game{currency} for any
+  \V{coin}, a window asks the question alone: \code{YES}, \key{Y} or \key{Return} calls the \V{nullroute};
+  \code{NO} or \key{N} plays on.}}
+\expandafter\def\csname shot@lobby\endcsname{\screen{lobby-join.png}{CAPTURE \quad JOINING A LOBBY}%
+  {ZER0COOL hosts and MAMBA is waiting; the Amiga has just joined. The host clock started when MAMBA arrived, and every
+  newcomer is told how long the host has left.}}
+\expandafter\def\csname shot@final\endcsname{\screen{game-over.png}{CAPTURE \quad THE END OF A GAME}%
+  {ZER0COOL called it. \VC{root} and \V{sudo} were paid for every \V{hive}, all \V{coin} was sold, and the log ends
+  with the final \Game{currency} and the top \V{player}. The scores stay in view until you press a key or click: then
+  the next game's seat window opens.}}
+\makeatother
+
+
+\begin{document}
+
+% ================================================================== title
+\begin{titlepage}
+\machine
+\vspace*{1.6in}
+{\color{amber}\rule{\linewidth}{2pt}}\par\vspace{14pt}
+{\fontsize{44}{48}\selectfont \game\par}\vspace{10pt}
+{\fontsize{12}{16}\selectfont\color{steel} SEVEN SYNDICATES. ONE REGION. EVERY \MakeUppercase{\V{node}} FOR SALE.\par}
+\vspace{14pt}{\color{amber}\rule{\linewidth}{2pt}}\par
+\vspace{0.35in}
+{\fontsize{24}{30}\selectfont USER MANUAL\par}\vspace{4pt}
+{\fontsize{14}{18}\selectfont\color{amber} FOR THE \MakeUppercase{\PlatformLong}\par}
+\vspace{0.4in}
+{\fontsize{12}{16}\selectfont \PlatformMachines \quad // \quad FUJINET\par
+\Rule{minplayers}-\Rule{maxplayers} \MakeUppercase{\Vp{player}} \quad // \quad BOTS FILL EMPTY SEATS\par}
+\vfill
+{\fontsize{8.5}{11}\selectfont\color{steel}
+AN UNOFFICIAL CYBERPUNK RE-SKIN OF ACQUIRE BY SID SACKSON.\par
+ACQUIRE IS A TRADEMARK OF HASBRO, INC. NOT AFFILIATED WITH OR ENDORSED BY HASBRO.\par}
+\end{titlepage}
+
+% ================================================================== 01
+\renewcommand{\secstatus}{THE SETTING \quad // \quad THE OBJECT \quad // \quad THE END}
+\chapter{The Network Grid}
+\begin{multicols}{2}
+\rules{opening}
+\end{multicols}
+
+% ================================================================== 02
+\renewcommand{\secstatus}{THE DISK \quad // \quad THE DRIVER \quad // \quad HANDLE}
+\chapter{\VC{jackin}}
+\begin{sloppypar}
+\game\ runs on any Amiga from a stock A500 on: Kickstart and Workbench 1.3 or later, 512 KB, and a FujiNet on the
+serial port running the FujiNet-NIO firmware. Its disk is an 880 KB floppy, volume \code{SynAckWire}, holding the
+game, the FujiNet NIO driver and a \code{Start} script. The server has it as
+\end{sloppypar}
+\begin{center}\code{TNFS://syn-ack-wire.fly.dev/}\\\code{syn-ack-wire-amiga-nio.adf}\end{center}
+\begin{enumerate}[nosep]
+  \item Get the disk: write the ADF to a floppy, or put it in a FujiNet slot and mount it with the FujiNet NIO
+    tools' \code{FMOUNT}.
+  \item Boot your own Workbench and open a Shell or CLI.
+  \item Type \code{Execute SynAckWire:Start}. It loads the FujiNet NIO driver (no harm if it is already loaded) and
+    starts the game.
+\end{enumerate}
+The disk doesn't boot by itself: on Kickstart 1.3 the driver needs \code{serial.device}, which is on your Workbench
+disk.
+
+\begin{sloppypar}
+The title screen dials the server as soon as it appears. Type a handle, up to 8 characters, and press
+\key{Return}, or click \code{JACK-IN}. Hold the right mouse button for the menus: \code{REGION} picks one of the
+four servers before you jack in.
+\end{sloppypar}
+
+\begin{capture}{title.png}{CAPTURE 01 \quad TITLE SCREEN \quad LOBBY OPEN}
+  \callout{1}{L}{2}{12}
+  \callout{2}{L}{2}{14}
+  \callout{3}{L}{2}{18}
+  \callout{4}{L}{3}{22}
+  \callout{5}{R}{36}{22}
+  \callout{6}{L}{1}{31}
+\end{capture}
+
+\begin{legend}
+\li{1}{\textbf{Region.} The server's \V{grid}: one game at a time, up to six seats.}
+\li{2}{\textbf{Status.} Whether you can join, and how: \code{LOBBY OPEN}, \code{IN PROGRESS}, \code{TABLE FULL}.
+It stays up to date while you type.}
+\li{3}{\textbf{Handle.} Your name at the table. The game remembers it for next time.}
+\li{4}{\code{JACK-IN} joins, as \key{Return} does.}
+\li{5}{\code{HINTS} and \code{SOUND} turn the move hints and the sound on or off, \code{HELP} opens the
+instructions and \code{QUIT} goes back to Workbench. A lit button is on.}
+\li{6}{\textbf{The prompt strip.} What the screen expects from you next; a refusal, such as a handle already
+taken, shows here.}
+\end{legend}
+
+% ================================================================== 03
+\renewcommand{\secstatus}{320 PIXELS \quad // \quad 32 COLOURS \quad // \quad PAL OR NTSC}
+\chapter{The Screen}
+\begin{sloppypar}
+Everything you need is on one screen of 32 colours, each syndicate in its own. On a PAL Amiga it shows every
+seat; on NTSC, with fewer lines, it shows you and the seat to move, and the others in turn. This is early in a game,
+and it's your turn: pick an \V{exploit} to run.
+\end{sloppypar}
+
+\begin{capture}{spike-early.png}{CAPTURE 02 \quad \MakeUppercase{\V{spike}} PROMPT \quad 3 SEATS \quad EARLY GAME}
+  \callout{1}{L}{1}{0}
+  \callout{2}{L}{2}{5}
+  \callout{3}{R}{38}{2}
+  \callout{4}{R}{38}{15}
+  \callout{5}{L}{1}{21}
+  \callout{6}{L}{1}{29}
+  \callout{7}{L}{1}{31}
+  \callout{8}{R}{36}{31}
+\end{capture}
+
+\begin{legend}
+\li{1}{\textbf{Title bar.} The region and the link: \code{CONNECTED}, or \code{NO SIGNAL} in red when the server
+goes quiet.}
+\li{2}{\textbf{The \V{grid}.} Coloured letters are \Vp{hive}; a white square is a lone \V{spike}. A numbered
+\V{node} is one an \V{exploit} in your \V{kit} can run on. The last move is framed in amber, and blinks for a few
+seconds.}
+\li{3}{\textbf{\VCp{hive}.} Each syndicate's letter and name, and its \V{hive}'s size.}
+\li{4}{\textbf{Your \V{kit}.} Your \Rule{kitsize} \Vp{exploit} and the \Vp{node} they run on.}
+\li{5}{\textbf{\VCp{player}.} \code{>} marks you, and an amber frame the seat whose turn it is. Account, then the
+\V{coin} held of each syndicate. \key{F4}, or a click here, shows them as a table instead.}
+\li{6}{\textbf{The log.} The last three things that happened at the table.}
+\li{7}{\textbf{The prompt strip.} What you're asked. It is white when the decision is yours. Here: press
+\key{1}--\key{6}.}
+\li{8}{\textbf{The shot clock.} Seconds left to answer; the bar turns red near the end.}
+\end{legend}
+
+% ================================================================== 04
+\renewcommand{\secstatus}{THE KEYBOARD \quad // \quad THE MOUSE \quad // \quad THE MENUS}
+\chapter{Keys, Mouse and Menus}
+\game\ is played with the keyboard, the mouse, or both. Each question on the prompt strip names the keys it takes;
+the windows have buttons for the same answers. The left mouse button presses what is under it; the right one is
+Cancel, or, held, the menus. The game checks an answer before sending it and says on the prompt strip what's wrong,
+such as \code{NOT ENOUGH NEW YEN}.
+
+\subsection{Any time}
+\begin{keytable}
+\kr{\key{F1}\ \ \key{Help}\ \ \key{?}}{Open the instructions, on the title screen or in the middle of a game.}
+\kr{\key{F2}}{Move hints on or off: the numbers on the \V{grid} that show where each \V{exploit} in your \V{kit} can run.}
+\kr{\key{F3}}{Sound on or off.}
+\kr{\key{F4}}{The \Vp{player} as cards or as a table. A click on them does the same.}
+\end{keytable}
+
+\subsection{The title screen}
+\begin{keytable}
+\kr{\key{A}--\key{Z}\ \ \key{0}--\key{9}}{Type your handle, up to 8 characters.}
+\kr{\key{Backspace}}{Rub out the last character.}
+\kr{\key{Return}}{\VC{jackin}, as the \code{JACK-IN} button does.}
+\kr{\key{Esc}}{Quit to Workbench, as \code{QUIT} does: \key{Y} or \key{Return} to confirm, any other key to stay.}
+\end{keytable}
+
+\subsection{The instructions}
+\begin{keytable}
+\kr{\key{\fontsize{12}{9}\selectfont$\rightarrow$}\ \ \key{>}}{Next page.}
+\kr{\key{\fontsize{12}{9}\selectfont$\leftarrow$}\ \ \key{<}}{Previous page.}
+\kr{\key{Esc}}{Back to where you were.}
+\end{keytable}
+
+\subsection{Hosting}
+\begin{keytable}
+\kr{\key{2}--\key{6}}{Start the game with that many seats, or set them in the window and click \code{OK}. Bots take the
+seats nobody has joined.}
+\end{keytable}
+
+\subsection{Your turn}
+\begin{keytable}
+\kr{\key{1}--\key{6}}{\VC{spike}: run that \V{exploit} from your \V{kit}, or click it.}
+\kr{\key{A}--\key{Z}}{\VC{infiltration}: the letter of the syndicate to \V{broker} the new \V{hive} to, or click its row.}
+\kr{\key{A}--\key{Z}}{A tied \V{hivejack}: the letter of the \V{hive} that survives, or is \V{absorbed} next.}
+\kr{\key{A}--\key{Z}}{Buy \V{coin}: type the syndicate letters, up to \Rule{maxbuy}, in any mix, or click the rows of the buy window.}
+\kr{\key{Backspace}\ \ \key{Del}}{Take back the last \V{coin} in a buy, as \code{UNDO} does.}
+\kr{\key{Return}}{Confirm the buy, as \code{BUY} does. \key{Return} alone buys nothing.}
+\kr{\key{Y}\ \ \key{N}}{When the game may end: \V{nullroute} the region now, or play on. \key{Return} is \key{Y}.}
+\end{keytable}
+
+\subsection{When your \V{hive} is \V{absorbed}}
+\begin{keytable}
+\kr{\key{0}--\key{9}\ \ \key{Return}}{First, how many \Vp{coin} to \V{cashout}; then how many to \V{swap}, an even number.
+The rest you \V{hodl}. The window's \code{-} and \code{+} set the number too, and \code{OK} confirms.}
+\end{keytable}
+
+\subsection{Leaving}
+\begin{keytable}
+\kr{\key{Esc}\ \ \key{Y}}{\VC{logoff} for good. A bot takes over your seat at once, and you're back on the title screen,
+where \key{Esc} again quits to Workbench. Any key but \key{Y} or \key{Return} stays.}
+\end{keytable}
+
+\subsection{The menus}
+Hold the right mouse button. Each item has a letter to press with the right \key{Amiga} key.
+\begin{keytable}
+\kr{\code{PROJECT}}{Instructions (\key{Amiga}\,\key{I}); Workbench (\key{Amiga}\,\key{W}), which sends the game's
+screen behind the others while it plays on; Quit (\key{Amiga}\,\key{Q}), which asks first, as \key{Esc} does.}
+\kr{\code{GAME}}{Move hints (\key{Amiga}\,\key{M}), Sound (\key{Amiga}\,\key{S}), Seats as table (\key{Amiga}\,\key{T}),
+each ticked when on.}
+\kr{\code{REGION}}{The four servers (\key{Amiga}\,\key{1}--\key{4}): on the title screen only, the next dial goes to
+the one chosen.}
+\end{keytable}
+
+% ================================================================== 05
+\renewcommand{\secstatus}{THE \MakeUppercase{\V{grid}} \quad // \quad THE SYNDICATES \quad // \quad SETUP}
+\chapter{What's in the Game}
+\begin{multicols}{2}
+\rules{contents}
+\end{multicols}
+\subsection{The Seven Syndicates}
+\syntable
+
+\subsection{Setup}
+\begin{multicols}{2}
+\rules{setup}
+\end{multicols}
+
+% ================================================================== 06
+\renewcommand{\secstatus}{\MakeUppercase{\V{spike}} \quad // \quad BUY \quad // \quad DRAW}
+\chapter{Playing a Turn}
+\begin{multicols}{2}
+\rules{turn}
+\end{multicols}
+
+% ================================================================== 07
+\renewcommand{\secstatus}{\MakeUppercase{\V{totalcompromise}} \quad // \quad \MakeUppercase{\V{lockdown}} \quad // \quad \MakeUppercase{\V{cashout}}}
+\chapter{Ending the Game}
+\begin{multicols}{2}
+\rules{ending}
+\end{multicols}
+
+% ================================================================== 08
+\renewcommand{\secstatus}{THE LOBBY \quad // \quad THE HOST \quad // \quad SEATS AND BOTS}
+\chapter{Hosting, Joining and Leaving}
+\begin{multicols}{2}
+\rules{hosting}
+\end{multicols}
+
+% ================================================================== 09
+\renewcommand{\secstatus}{\MakeUppercase{\V{finderscut}} \quad // \quad \MakeUppercase{\V{root}} AND \MakeUppercase{\V{sudo}} \quad // \quad CASH}
+\chapter{Where the Money Comes From}
+\begin{multicols}{2}
+\rules{money}
+\end{multicols}
+
+% ================================================================== 10
+\renewcommand{\secstatus}{EARLY \quad // \quad MIDDLE \quad // \quad LATE}
+\vspace{24pt}\section{Tips}                  % follows on: the money chapter ends early on its page
+\begin{multicols}{2}
+\rules{tips}
+\end{multicols}
+
+% ================================================================== 11
+\renewcommand{\secstatus}{THE RULES \quad // \quad THE AMIGA}
+\chapter{Frequently Asked Questions}
+\begin{multicols}{2}
+\rules{faq}
+
+\subsection{On the Amiga}
+\begin{description}[leftmargin=0pt,labelsep=0.5em]
+  \item[Which Amigas?] Any from a stock A500 on: a 68000, 512 KB and Kickstart and Workbench 1.3 or later, with a
+    FujiNet on the serial port running the FujiNet-NIO firmware.
+  \item[Why doesn't the disk boot?] On Kickstart 1.3 the FujiNet NIO driver needs \code{serial.device}, which is on
+    your Workbench disk. Boot Workbench, then \code{Execute SynAckWire:Start}.
+  \item[Can I start it from its icon?] Once the driver is loaded: run \code{Start} once, or load the driver from your
+    own \code{S:Startup-Sequence}, and the icon works too.
+  \item[What does the game remember?] Your handle, the move hints, the sound, how the seats show and the server, in
+    \code{S:SynAckWire.prefs}. A write-protected disk keeps nothing and plays the same.
+  \item[Can I play on another server?] The \code{REGION} menu picks one of the four on the title screen. A line
+    \code{SERVER=TCP://host:port/} in \code{S:SynAckWire.prefs} dials your own instead.
+  \item[Can I play alone?] Yes. Host a game and start it with \Rule{minplayers} seats: one bot plays you. Any seat
+    nobody takes goes to a bot.
+  \item[What do I hear?] Short chords through \code{audio.device}; \key{F3} turns them off. Nothing plays if another
+    program holds the sound.
+  \item[Can I use the Amiga while it plays?] Yes: \code{PROJECT}, \code{Workbench} sends the game's screen behind
+    Workbench and the game plays on. The left \key{Amiga} key with \key{M}, or the front screen's depth gadget,
+    brings it back.
+  \item[Can I play against an Atari or a PC?] Yes. The servers are the same for every machine: every player meets
+    at the same tables.
+  \item[Why was my handle refused?] Someone at the table has it, a bot included. If it's your own seat after a
+    reboot, the server may not have noticed the drop yet: try again in a minute.
+\end{description}
+\end{multicols}
+
+% ================================================================== 12
+\renewcommand{\secstatus}{EVERY TERM, FROM THE THEME}
+\chapter{Glossary}
+\rules{glossary}
+
+% ================================================================== REF
+\renewcommand{\secstatus}{FIND THE \MakeUppercase{\V{hive}}'S SIZE IN ITS TIER, THEN READ ACROSS}
+\clearpage\renewcommand{\secnum}{REF}% after the page break: the running head uses it
+\section{\V{coin} Prices and Payouts}
+\vspace{6pt}
+\begin{center}
+\def\textcolor#1#2{\inv{#2}}% the tier's syndicate letters inverse, as on the screen
+\newcommand{\hot}[1]{\leavevmode{\color{alarm}#1}}
+\machine\fontsize{12}{14}\selectfont
+\renewcommand{\arraystretch}{1.3}
+\newcolumntype{C}{>{\centering\arraybackslash}p{0.85in}}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}p{0.95in}}
+\begin{tabular}{CCC@{\hspace{14pt}}R@{\hspace{14pt}}RR}
+LOW & MID & HIGH & \leavevmode\color{steel}PRICE & \leavevmode\color{signal}\MakeUppercase{\V{root}} & \leavevmode\color{signal}\MakeUppercase{\V{sudo}} \\
+\TierCoins{low} & \TierCoins{mid} & \TierCoins{high} & & & \\[2pt]
+\hline
+2      & -      & -      & \Y{200}   & \Y{2,000}  & \Y{1,000} \\
+3      & 2      & -      & \Y{300}   & \Y{3,000}  & \Y{1,500} \\
+4      & 3      & 2      & \Y{400}   & \Y{4,000}  & \Y{2,000} \\
+5      & 4      & 3      & \Y{500}   & \Y{5,000}  & \Y{2,500} \\
+6-10   & 5      & 4      & \Y{600}   & \Y{6,000}  & \Y{3,000} \\
+\hot{11-20}  & 6-10   & 5      & \Y{700}   & \Y{7,000}  & \Y{3,500} \\
+21-30  & \hot{11-20}  & 6-10   & \Y{800}   & \Y{8,000}  & \Y{4,000} \\
+31-40  & 21-30  & \hot{11-20}  & \Y{900}   & \Y{9,000}  & \Y{4,500} \\
+41+    & 31-40  & 21-30  & \Y{1,000} & \Y{10,000} & \Y{5,000} \\
+-      & 41+    & 31-40  & \Y{1,100} & \Y{11,000} & \Y{5,500} \\
+-      & -      & 41+    & \Y{1,200} & \Y{12,000} & \Y{6,000} \\
+\hline
+\end{tabular}
+\end{center}
+\vspace{10pt}
+\begin{center}\machine\fontsize{10}{16}\selectfont
+\begin{tabular}{@{}ll@{}}
+\textcolor{alarm}{RED} & FIRST \MakeUppercase{\V{safe}} SIZE: THE \MakeUppercase{\V{hive}} CAN'T BE \MakeUppercase{\V{absorbed}}\\
+\textcolor{signal}{\MakeUppercase{\V{root}}} & 10 x \MakeUppercase{\V{coin}} PRICE\\
+\textcolor{signal}{\MakeUppercase{\V{sudo}}} & 5 x \MakeUppercase{\V{coin}} PRICE\\
+\Rule{endsize}+ & \MakeUppercase{\V{totalcompromise}}: THE \MakeUppercase{\V{nullroute}} MAY BE CALLED
+\end{tabular}\end{center}
+
+\vspace{6pt}
+\begin{center}
+{\machine\fontsize{9}{11}\selectfont\color{steel} THE LETTERS: EACH SYNDICATE ON THE \MakeUppercase{\V{grid}}, AND ITS TIER}\par\vspace{6pt}
+\renewcommand{\arraystretch}{1.3}
+\newcommand{\synrow}[1]{\inv{\Syn{#1}{letter}} & \Syn{#1}{name} & {\machine\color{steel}\MakeUppercase{\Syn{#1}{tier}}}}
+\begin{tabular}{@{}cl@{\hspace{8pt}}l@{\hspace{36pt}}cl@{\hspace{8pt}}l@{}}
+\synrow{0} & \synrow{4} \\
+\synrow{1} & \synrow{5} \\
+\synrow{2} & \synrow{6} \\
+\synrow{3} & & & \\
+\end{tabular}
+\end{center}
+
+\end{document}

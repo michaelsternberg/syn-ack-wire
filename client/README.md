@@ -94,7 +94,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/help_apple2.py` | Checks the Apple instruction pages and writes them as text-page images (`SYNACK.HLP`) |
 | `tools/prodos_boot.py`, `title_text.py` | The Apple disk's ProDOS boot block; the Apple title logo as a header |
 | `tools/apple2_preview.py` | Draws a screen dump as Apple II hi-res would show it on a colour monitor, three ways |
-| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`, `adam`; `PLATFORM=nes`: the autoplay image in MAME; `PLATFORM=intv`: the autoplay ROM in jzIntv |
+| `tools/capture.sh` | Captures the manual's staged screens (`docs/scenarios.toml`, `server/stage.py`) on atari800; `PLATFORM=apple2`: with `pc-apple2`, and likewise `msdos`, `coco`, `adam`; `PLATFORM=nes`: the autoplay image in MAME; `PLATFORM=intv`: the autoplay ROM in jzIntv; `PLATFORM=amiga`: the capture build on the rig |
 | `tools/render_apple2.py` | Draws an Apple II screen dump in the IIe/IIc character set, or shows it as text (`--text`) |
 | `tools/help_coco.py` | Checks the CoCo instruction pages and writes them as PMODE 4 screen images (`SYNACK.HLP`), the QR code in pixels |
 | `tools/xroar_dump.py` | Saves the CoCo autoplay build's screens from xroar through its GDB port |
@@ -105,6 +105,7 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `tools/render_nes.py` | Draws an NES dump (`pc-nes`'s or the autoplay build's) or an instruction page as the screen looks, or as text |
 | `tools/run-adam.sh` | Runs the Adam image in adamcore (FujiNet Go Adam's core) or ADAMEm, booted from FujiNet-PC on BoIP: keys and the controller on a schedule, pictures |
 | `tools/render_adam.py` | Draws a `pc-adam` dump or an Adam instruction page as the screen looks, or as text |
+| `tools/render_amiga.py` | Draws an Amiga screen dump (`test/amiga_dump.c`, the capture build's) as a PNG, or gives its prompt text |
 | `tools/z88dk`, `fnlib_adam.sh`, `adam_end.py` | z88dk from the defoogi container; fujinet-lib built with zsdcc; where the program ends, against the bootstrap |
 | `src/intv/` | The Intellivision client: the common code again in IntyBASIC (`main.bas`, `game.bas`, `proto.bas`), its display (`display.bas`, `prompt.bas`, `title.bas`, `help.bas`), the FujiNet cartridge (`fujinet.bas`, `net.bas`), the controller and the ECS keyboard (`input.bas`, `ecskbd.bas`, `ecskbd.asm`), `sound.bas`, `isr.bas`, `memory.bas` (the cartridge RAM's map) |
 | `tools/bas_pp.py` | Fills the theme's and the protocol's `{NAME}`s into the IntyBASIC sources from `theme_tab.h` and `proto_tab.h`, keeps or drops `'#if` lines, and fails a filled-in string too long for its place (`'fit N`) |
@@ -1272,6 +1273,7 @@ The screen's title bar is hidden (`ShowTitle`), or row 0 would lie under it on N
 - **Handle:** kept in `S:SynAckWire.prefs` (`HANDLE=NAME`), read for the title and written when the hello goes out with it, only if it changed. AmigaDOS requesters are off while it is touched, so a write-protected floppy loses the memory and nothing else.
 - **Sound:** chords as short notes through `audio.device`, the same pitches as the PC speaker's, on one channel (a write wants a single one); silence if the device is
   busy. The rules (which chord cuts which) are tested on the host; **the sound has not been heard**, only run.
+- **Manual:** `docs/manual/amiga/`, its captures from `PLATFORM=amiga tools/capture.sh`: the capture build (`make build/amiga/synack-amiga-capture`, the autoplay build with `DUMP_TICKS`) on the rig, which writes its screen (planes, palette, the prompt strip's text) to `SYNACK:d/` at each new prompt (`test/amiga_dump.c`); `tools/render_amiga.py` draws them. About 150 s a scenario (`AMIGA_SECONDS`).
 - **Testing:** the host tests (`make test-amiga-net test-amiga-keys test-amiga-sound
   test-amiga-prefs test-amiga-layout test-amiga-ui test-amiga-help test-amiga-menus test-amiga-palcycle`); `test/amiga_accept.sh` plays a whole autoplay game against bots on an emulated A500 on spare
   ports (PAL about 160 s, `NTSC=1` about 160 s, `CUT=1` stalls the serial bridge for 30 s, the server sees AMIGA leave

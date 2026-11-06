@@ -36,6 +36,13 @@ static unsigned char aside_planes;
 
 static struct TextAttr topaz = { (STRPTR)"topaz.font", FONT_H, 0, FPF_ROMFONT };
 
+#ifdef AUTOPLAY
+struct Screen *gfx_screen(void)
+{
+    return scr;
+}
+#endif
+
 unsigned char gfx_open(unsigned short *width, unsigned short *height)
 {
     struct NewScreen ns;
