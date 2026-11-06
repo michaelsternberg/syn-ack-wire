@@ -133,7 +133,7 @@ make FANCY=1                             # hand-made screens instead of text (on
 make HINTS=0                             # move hints start off (the player can still turn them on)
 make test                                # build/atari/synack-auto.xex: plays by itself, for the emulator
 make atr                                 # build/atari/syn-ack-wire-atari.atr: the game disk (PicoBoot, game, help pages)
-make atari-nio                           # build/atari-nio/syn-ack-wire-atari.atr: FujiNet-NIO disk
+make atari-nio                           # build/atari-nio/syn-ack-wire-atari-nio.atr: FujiNet-NIO disk
 make test-atari-nio                      # host tests for the NIO adapter
 make test-atari-nio-6502                 # soft65c02 tests for its lobby-key routine
 make pc                                  # build/pc/pc-client: the common code on this PC
@@ -1225,7 +1225,7 @@ make geos-atr GEOS_ATARI=../../geos-atari                  # the two disks below
 | fujinet-lib 5.0.0 | 1712 | open/status/read_nb/write/close plus the cc65 runtime and memcpy/memmove it pulls in; the test and the library have since been removed from the repo |
 | `wiremon.xex` | 2982 | whole file, including cc65's Atari startup code |
 | **amiga** (2026-11-01, m68k gcc 15, `-Os`, nix13) | | |
-| `syn-ack-wire-amiga` | 94812 | whole file; the title picture is 24,098 B of it (step 3: menus, help pages, settings, title picture with colour cycling; 55432 in step 2, graphics and mouse; 37032 in step 1 with the text display); about 280 KB of chip RAM stay free with the screen open |
+| `syn-ack-wire-amiga-nio` | 94812 | whole file; the title picture is 24,098 B of it (step 3: menus, help pages, settings, title picture with colour cycling; 55432 in step 2, graphics and mouse; 37032 in step 1 with the text display); about 280 KB of chip RAM stay free with the screen open |
 | the screen | 20480 | chip RAM: 320×256, two bitplanes (PAL; 16000 on NTSC's 200 lines), opened by `start.c` |
 
 ## Tested (atari800 7.2.1 + FujiNet-PC 1.6 + server, NetSIO)
@@ -1254,7 +1254,7 @@ A stock A500 with Kickstart and Workbench 1.3 or later, 512 KB, the FujiNet on t
 circuit-board graphics, by mouse or keyboard, with menus, the Region list, palette effects and the instruction pages.
 The screen's title bar is hidden (`ShowTitle`), or row 0 would lie under it on NTSC.
 
-- **Build:** `make amiga` gives `build/amiga/syn-ack-wire-amiga`. Needs `m68k-amigaos-gcc` (`AMIGA_BIN`, default
+- **Build:** `make amiga` gives `build/amiga/syn-ack-wire-amiga-nio` (`-nio`: it runs only on the FujiNet-NIO firmware). Needs `m68k-amigaos-gcc` (`AMIGA_BIN`, default
   `/opt/amiga/bin`) and the prebuilt fujinet-nio-lib (`make -C $FUJINET_NIO_LIB amiga`; the library is read, never changed).
   The C runtime is libnix's `nix13`, not clib2, whose start-up opens `utility.library`, which Kickstart 1.3 lacks.
 - **What runs:** the common code and `src/amiga/`. `display_gfx.c` paints the 12×9 grid, hives, seats, three log lines
@@ -1267,7 +1267,7 @@ The screen's title bar is hidden (`ShowTitle`), or row 0 would lie under it on N
   3 second grace, and the common code redials with the seat token.
 - **Keys:** F1 or Help or `?` the instructions (eleven pages, with a QR code to the manual), F2 move hints, F3 sound, F4 seats as cards or as a table (a click on the seats does the same; PAL shows every netrunner with a header of syndicate letters, NTSC three rows: you, the seat to move, and the others one at a time under the arrows; not kept between runs), Return, Backspace,
   Delete, Esc; cursor left and right page. Amiga-key chords are left to the menus. The mouse: the left button presses a widget (a kit node plays it, a hive node or a syndicate chooses, Buy/Undo/Yes/No/OK and the steppers in the windows; on the title JACK-IN and the buttons); the right button is Cancel. A press is debounced so a double click never queues a flood of keys.
-- **A floppy to try it on real hardware:** `tools/make-amiga-adf.sh` writes `build/amiga/syn-ack-wire-amiga.adf` (OFS, not bootable): the game with its icon and `nio/` (the FujiNet NIO device and its loader; `FUJINET_NIO_ADF_WB` picks the Workbench's files, default `wb204`); there is no `Start` script, so load the device yourself first. Boot your Workbench and open the disk. `tools/make_icon.py` draws the icons.
+- **The floppy:** `tools/make-amiga-adf.sh` writes `build/amiga/syn-ack-wire-amiga-nio.adf` (OFS, volume `SynAckWire`): the game with its icon, `nio/` (the FujiNet NIO device and its loader; `FUJINET_NIO_ADF_WB` picks the Workbench's build, default `wb13`) and a `Start` script that loads the device and runs the game. Boot your own Workbench 1.3 or later, then `Execute SynAckWire:Start` from a Shell or CLI. It doesn't boot by itself: on Kickstart 1.3 the device opens `serial.device`, which is on the Workbench disk, and the switch to the driver's own `fujinet-serial.device` (`fujinet-nio-serial`) is built for Workbench 2 and later only. On the rig, `tools/run-amiga.sh build/amiga/syn-ack-wire-amiga-nio.adf` puts it in DF1 and runs its `Start`. `tools/make_icon.py` draws the icons.
 - **Server:** the public one is built in (`make amiga URL=N:TCP://host:port/` builds for another). A player can point the client elsewhere without rebuilding: a line `SERVER=TCP://host:port/` in `S:SynAckWire.prefs` (an `N:` in front is accepted; an address that is not `TCP://` or is over 60 characters is ignored) is dialled instead, and kept when the handle is saved. Run your own server with `cd server && python3 -u serve.py --host 127.0.0.1 --port 6599 --trace`. On the rig, `AMIGA_PREFS_SERVER=TCP://127.0.0.1:6599/` writes that line first; the acceptance scripts take `USE_PREFS=1 URLPORT=6598` to build for a port nothing listens on and find the scratch server only through the prefs file.
 - **Handle:** kept in `S:SynAckWire.prefs` (`HANDLE=NAME`), read for the title and written when the hello goes out with it, only if it changed. AmigaDOS requesters are off while it is touched, so a write-protected floppy loses the memory and nothing else.
 - **Sound:** chords as short notes through `audio.device`, the same pitches as the PC speaker's, on one channel (a write wants a single one); silence if the device is

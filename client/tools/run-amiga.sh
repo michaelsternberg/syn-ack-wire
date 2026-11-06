@@ -3,6 +3,7 @@
 # Workbench 1.3, against a FujiNet NIO process, all on spare local ports.
 #
 #   tools/run-amiga.sh PROGRAM      start the rig and the program, return; its output is $RUN/share/log
+#   tools/run-amiga.sh DISK.adf     the same with that floppy in DF1, running its Start script (make-amiga-adf.sh's)
 #   tools/run-amiga.sh --stop       stop exactly the processes the rig started (the PIDs in $RUN/pids)
 #
 # The program is copied to the guest as SYNACK:game; SYNACK: is $RUN/share. The guest boots a copy of the
@@ -37,6 +38,8 @@ stop() {
 [ "${1:-}" = "--stop" ] && { stop; exit 0; }
 [ $# -eq 1 ] && [ -f "$1" ] || die "usage: run-amiga.sh PROGRAM | --stop"
 PROG=$1
+DF1=
+case $PROG in *.adf) DF1=$(cd "$(dirname "$PROG")" && pwd)/$(basename "$PROG") ;; esac
 
 [ -f "$ENVF" ] || die "no $ENVF (licensed Kickstart and Workbench 1.3 paths: AMIGA_WB13_KICKSTART, AMIGA_WB13_ROM_KEY, AMIGA_WB13_ADF_WORKBENCH)"
 . "$ENVF"
@@ -57,7 +60,7 @@ done
 mkdir -p "$RUN/share/nio" "$RUN/rom" "$RUN/nio/fujinet-data" || exit 1
 RUN=$(cd "$RUN" && pwd)
 rm -f "$RUN/share/log" "$RUN"/*.log
-cp "$PROG" "$RUN/share/game"
+[ -n "$DF1" ] || cp "$PROG" "$RUN/share/game"
 cp "$PKG/fujinet-nio.device" "$PKG/fujinet-load-resident" "$RUN/share/nio/"
 cp "$AMIGA_WB13_KICKSTART" "$RUN/rom/kickstart.rom"
 [ -f "${AMIGA_WB13_ROM_KEY:-}" ] && cp "$AMIGA_WB13_ROM_KEY" "$RUN/rom/rom.key"
@@ -69,7 +72,11 @@ cat > "$RUN/share/run.script" <<'GS'
 ; Kickstart 1.3 leaves a redirect in the program's arguments: the strict loader gets none, the game ignores it
 SYNACK:nio/fujinet-load-resident SYNACK:nio/fujinet-nio.device fujinet-nio.device
 GS
-echo "SYNACK:game >SYNACK:log" >> "$RUN/share/run.script"
+if [ -n "$DF1" ]; then   # the floppy loads the device itself: only its Start script runs
+    printf '; the floppy in DF1 loads the device and runs the game\nExecute SynAckWire:Start\n' > "$RUN/share/run.script"
+else
+    echo "SYNACK:game >SYNACK:log" >> "$RUN/share/run.script"
+fi
 cp "$AMIGA_WB13_ADF_WORKBENCH" "$RUN/wb13.adf" && chmod u+w "$RUN/wb13.adf"
 xdftool "$RUN/wb13.adf" read s/Startup-Sequence "$RUN/startup.orig" >/dev/null || die "xdftool could not read the floppy"
 python3 - "$RUN" <<'PY' || exit 1
@@ -133,7 +140,7 @@ record nio $! fujinet-nio
 for i in $(seq 1 20); do ss -ltn | grep -q ":$NIO_PORT\b" && break; sleep 0.5; done
 ss -ltn | grep -q ":$NIO_PORT\b" || { stop; die "fujinet-nio did not listen on $NIO_PORT (see $RUN/nio.log)"; }
 
-( exec amiberry --log --config "$WS/configs/amiga/base-68000.uae" -G -r "$RUN/rom/kickstart.rom" -0 "$RUN/wb13.adf" \
+( exec amiberry --log --config "$WS/configs/amiga/base-68000.uae" -G -r "$RUN/rom/kickstart.rom" -0 "$RUN/wb13.adf" ${DF1:+-1 "$DF1" -s nr_floppies=2} \
     -s chipset=ocs -s ntsc=${AMIGA_NTSC:-false} -s chipmem_size=1 -s fastmem_size=0 -s bogomem_size=0 \
     -s serial_port=tcp://127.0.0.1:$SER_PORT -s serial_direct=true -s serial_hardware_ctsrts=false \
     -s "filesystem2=rw,DH1:SYNACK:$RUN/share,0" ) > "$RUN/amiberry.log" 2>&1 &

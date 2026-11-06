@@ -5,7 +5,7 @@
 #   make atr                  build/atari/syn-ack-wire-atari.atr: boots the game with PicoBoot, plus the help pages
 #   make atrtest              build/atari/local/syn-ack-wire-atari.atr: the same disk dialing this machine (LOCAL_URL)
 #   make atr BOOT=Dos25       the same disk booting DOS 2.5 (the game as AUTORUN.SYS); make clean first
-#   make atari-nio            build/atari-nio/syn-ack-wire-atari.atr for FujiNet-NIO (separate from the normal build)
+#   make atari-nio            build/atari-nio/syn-ack-wire-atari-nio.atr for FujiNet-NIO (separate from the normal build)
 #   make B=build/atari-nio-local NIO=1 URL=N:TCP://127.0.0.1:6502/ LOBBY_KEY=0 atr   NIO disk for a local server
 #   make test-atari-nio       host tests for the NIO adapter; make test-atari-nio-6502 runs its soft65c02 test
 #   NIO_LIB=/path             override the pinned package with a fujinet-nio-lib checkout or package
@@ -151,8 +151,9 @@ test-atari-nio-6502: $(NIO_ARCHIVE)
 $(B)/dos.sys: | $(B)
 	@test -n "$(DOS25)" || { echo "BOOT=Dos25 needs DOS25=path/to/your/DOS-2.5-disk.atr" >&2; exit 1; }
 	atr "$(DOS25)" get dos.sys $@
-# The disk is named for the game and the platform, as the manuals are, so platforms sharing an extension can't clash.
-ATR     = $(B)/syn-ack-wire-atari.atr
+# The disk is named for the game and the platform, as the manuals are, so platforms sharing an extension can't clash;
+# -nio marks a disk for the FujiNet-NIO firmware, which the ordinary FujiNet can't run.
+ATR     = $(B)/syn-ack-wire-atari$(if $(filter 1,$(NIO)),-nio).atr
 $(ATR): $(B)/synack.xex $(HELP) tools/help_disk.py tools/qr.py $(if $(filter Dos25,$(BOOT)),$(B)/dos.sys)
 	python3 tools/help_disk.py --qr "$(QR_URL)" --check $(HELP)
 	rm -rf $(B)/disk && mkdir $(B)/disk
@@ -744,10 +745,10 @@ $(AMIGA_B)/gfxdemo: test/amiga/gfxdemo.c src/amiga/gfx.c src/amiga/layout.c $(wi
 AMIGASRC = src/common/main.c src/common/game.c src/common/proto.c \
            $(addprefix src/amiga/,net_fn.c input.c keys.c layout.c ui.c gfx.c pointer.c dialog.c display_gfx.c help.c menudef.c menus.c start.c sound.c sndlogic.c prefs.c prefs_io.c palcycle.c title_art.c)
 AMIGADEFS = -DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1 -DDISPLAY_IDLE=1 -DTITLE_IDLE=1 -DQUIT_TO_OS=1 -DQUIT_ASK='"QUIT? Y/N"' -Wno-main $(AMIGA_XDEFS)   # AMIGA_XDEFS: extras for one build, e.g. -DDRAWLOG
-$(AMIGA_B)/syn-ack-wire-amiga: $(AMIGASRC) $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
+$(AMIGA_B)/syn-ack-wire-amiga-nio: $(AMIGASRC) $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
 	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) $(AMIGASRC) $(AMIGA_NIOLIB) -o $@
 	@echo "$@: $$(stat -c %s $@) bytes"
-amiga: $(AMIGA_B)/syn-ack-wire-amiga
+amiga: $(AMIGA_B)/syn-ack-wire-amiga-nio
 # the autoplay build: plays by itself (make amiga-test URL=N:TCP://127.0.0.1:6599/), no screen dumps
 $(AMIGA_B)/synack-amiga-auto: $(AMIGASRC) test/autoplay.c test/amiga_dump.c $(HDRS) $(wildcard src/amiga/*.h) $(AMIGA_B)/help_tab.h $(AMIGA_B)/regions_tab.h $(AMIGA_NIOLIB) | $(AMIGA_B)
 	$(AMIGA_CC) $(AMIGA_FLAGS) $(DEFS) $(AMIGADEFS) -DAUTOPLAY -DDUMP_TICKS=0 -DKEY_TICKS=6 -DAUTO_HANDLE='"AMIGA"' \
