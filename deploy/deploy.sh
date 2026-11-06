@@ -9,8 +9,9 @@
 #   1. the client disks the image serves exist: client/build/atari/syn-ack-wire-atari.atr,
 #      client/build/apple2_text/syn-ack-wire-apple2.po, client/build/msdos/syn-ack-wire-msdos.img,
 #      client/build/coco/syn-ack-wire-coco.dsk, client/build/nes/syn-ack-wire-nes.nes,
-#      client/build/adam/syn-ack-wire-adam.ddp, client/build/h89/syn-ack-wire-h89.h8d and
-#      client/build/intv/syn-ack-wire-intv.rom
+#      client/build/adam/syn-ack-wire-adam.ddp, client/build/h89/syn-ack-wire-h89.h8d,
+#      client/build/intv/syn-ack-wire-intv.rom, and for FujiNet-NIO client/build/atari-nio/syn-ack-wire-atari-nio.atr
+#      and client/build/amiga/syn-ack-wire-amiga-nio.adf
 #   2. the FujiNet lobby (LOBBY, default the public one) shows no players on any of this app's servers: humans in
 #      a server's lobby, or seats humans hold in a game, dropped players included; if it can't be read, stop
 #   3. fly logs show no game activity in the last QUIET minutes (default 10): someone may be at a title screen
@@ -33,7 +34,8 @@ if [ "$mode" != force ]; then
              client/build/msdos/syn-ack-wire-msdos.img client/build/coco/syn-ack-wire-coco.dsk \
              client/build/nes/syn-ack-wire-nes.nes client/build/adam/syn-ack-wire-adam.ddp \
              client/build/h89/syn-ack-wire-h89.h8d \
-             client/build/intv/syn-ack-wire-intv.rom; do
+             client/build/intv/syn-ack-wire-intv.rom \
+             client/build/atari-nio/syn-ack-wire-atari-nio.atr client/build/amiga/syn-ack-wire-amiga-nio.adf; do
         [ -f "$f" ] || { echo "$f is missing: build it first (server/README.md, Deploying to fly.io)" >&2; exit 1; }
     done
 

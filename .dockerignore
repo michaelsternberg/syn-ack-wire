@@ -10,6 +10,8 @@
 !client/build/adam/syn-ack-wire-adam.ddp
 !client/build/h89/syn-ack-wire-h89.h8d
 !client/build/intv/syn-ack-wire-intv.rom
+!client/build/atari-nio/syn-ack-wire-atari-nio.atr
+!client/build/amiga/syn-ack-wire-amiga-nio.adf
 !deploy/
 server/tests/
 **/__pycache__

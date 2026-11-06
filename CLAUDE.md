@@ -63,7 +63,9 @@ client/tools/capture.sh                                      # redo the staged c
 1. Build every disk the image serves, with the default URL (the public server, not a test one), in
    `client/build/`: `atari/syn-ack-wire-atari.atr`, `apple2_text/syn-ack-wire-apple2.po`,
    `msdos/syn-ack-wire-msdos.img`, `coco/syn-ack-wire-coco.dsk`, `nes/syn-ack-wire-nes.nes`,
-   `adam/syn-ack-wire-adam.ddp`, `intv/syn-ack-wire-intv.rom` and `h89/syn-ack-wire-h89.h8d` (the builds above).
+   `adam/syn-ack-wire-adam.ddp`, `intv/syn-ack-wire-intv.rom`, `h89/syn-ack-wire-h89.h8d`, and for the FujiNet-NIO
+   firmware `atari-nio/syn-ack-wire-atari-nio.atr` (`make atari-nio`) and `amiga/syn-ack-wire-amiga-nio.adf`
+   (`tools/make-amiga-nio-adf.sh`) (the builds above).
    The image takes them as they are at deploy time.
 2. `fly auth login` once, if flyctl isn't logged in.
 3. From the repository root, `deploy/deploy.sh`: it stops unless every disk is there, the FujiNet lobby shows no
