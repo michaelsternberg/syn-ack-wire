@@ -601,7 +601,7 @@ GEOSNAME = $(shell sed -n 's/^\#define TH_TITLE "\(.*\)"/\1/p' src/common/theme_
 # The instruction pages, as a GEOS file on the GEOS disk (tools/help_geos.py): the Atari's pages, its QR code's
 # URL. The game finds the file by its class (at most 12 characters), so the name (16) is only what the DeskTop shows.
 GEOSHELP ?= $(HELP)
-GEOSHELPNAME ?= $(GEOSNAME) ?
+GEOSHELPNAME ?= $(word 1,$(GEOSNAME)) Help
 GEOSHELPCLASS = $(word 1,$(GEOSNAME)) HELP
 
 $(GEOS):
@@ -627,11 +627,14 @@ $(GEOS)/%.o: src/geos/%.s | $(GEOS)
 	$(AS) -t geos-cbm -o $@ $<
 $(GEOS)/%.o: $(GEOS)/%.s
 	$(AS) -t geos-cbm -o $@ $<
+# its icon: a bit of a circuit board (src/geos/icon.txt)
+$(GEOS)/icon.raw: src/geos/icon.txt tools/geos_icon.py | $(GEOS)
+	python3 tools/geos_icon.py $< $@
 $(GEOS)/header.grc: src/common/theme_tab.h Makefile | $(GEOS)
 	printf '%s\n' 'HEADER APPLICATION "$(GEOSNAME)" "$(GEOSNAME)" "V1.0" {' 'dostype USR' 'mode 40only' \
 	    'author "Michael Sternberg"' 'info "Online, through a FujiNet. OPTION: hints, SELECT: sound, Esc: quit."' \
-	    '}' > $@
-$(GEOS)/header.s: $(GEOS)/header.grc
+	    'icon "$(GEOS)/icon.raw"' '}' > $@
+$(GEOS)/header.s: $(GEOS)/header.grc $(GEOS)/icon.raw
 	grc65 -s $@ $<
 $(GEOS)/synack.cvt: $(GEOSOBJ)
 	$(LD) -t geos-cbm -S 0x0500 -D __STACKSIZE__=0x200 $(GEOSLD) -m $(GEOS)/synack.map -Ln $(GEOS)/synack.lbl -o $@ $(GEOSOBJ) geos-cbm.lib

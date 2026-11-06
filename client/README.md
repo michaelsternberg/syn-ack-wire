@@ -980,7 +980,7 @@ make geos-atr GEOS_ATARI=../../geos-atari                  # the two disks below
   QUIT TO GEOS? Y/N, DIALING...). The menu works here too; Log off is idle and Quit asks nothing more. No static or colour.
 - **The instructions,** on the title or mid-game: **?** or HELP (geos-atari's keyboard gives HELP as GEOS's pound
   sign). They are the Atari's pages (`help/atari/screen/`, `GEOSHELP` in the Makefile), as one GEOS file on the GEOS
-  disk, `SYN-ACK WIRE ?` (`GEOSHELPNAME`; GEOS names are at most 16 characters and there are no folders):
+  disk, `SYN-ACK Help` (`GEOSHELPNAME`; GEOS names are at most 16 characters and there are no folders):
   `tools/help_geos.py` makes it, a VLIR file of type APPL_DATA, a page a record (960 screen codes), with its own
   icon, the class `SYN-ACK HELP` and the game as its parent. `help.c` finds it by its class (`FindFTypes`), so a
   renamed file still works, and reads a page with `ReadRecord`; `screen.s` draws it in the Atari's ROM font, a cell
