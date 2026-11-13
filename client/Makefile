@@ -15,6 +15,8 @@
 #   make apple2_text-po PRODOS=disk   build/apple2_text/syn-ack-wire-apple2.po: a ProDOS disk that boots it
 #   make msdos WATCOM=dir     build/msdos/SYNACK.EXE: the MS-DOS client (8088 and up, FUJINET.SYS)
 #   make msdos-img WATCOM=dir build/msdos/syn-ack-wire-msdos.img: a 360 KB floppy with SYNACK.EXE and its help pages
+#   make linux                build/linux/syn-ack-wire-linux: the Linux terminal client (ncursesw; LINUX_NET=nio, FUJINET_NIO_LIB)
+#   make linux-test           build/linux/synack-linux-auto: the autoplay build (test/linux_accept.sh)
 #   make msdos-wiremon WATCOM=dir     build/msdos/WIREMON.EXE, WMAUTO.EXE: the protocol monitor for MS-DOS
 #   make coco                 build/coco/synack.bin: the CoCo 1/2 client (make coco-dsk: its disk)
 #   make nes                  build/nes/syn-ack-wire-nes.nes: the NES client (the FujiNet NES cartridge)
@@ -716,6 +718,59 @@ pc-h89: $(HDRS) src/h89/screens.h
 	    -o build/pc/pc-h89 \
 	    src/common/main.c src/common/game.c src/common/proto.c src/h89/display_text.c test/autoplay.c test/pc_harness.c
 
+# --- linux: a colour terminal client (ncursesw), its own display (src/linux/display_ansi.c) over a cell array that
+# screen.c paints. The network backend is LINUX_NET, as the Atari's NIO=1 picks net_nio.c: src/linux/net_$(LINUX_NET).c,
+# today only nio: fujinet-nio-lib's linux target (a prebuilt build/fujinet-nio-linux.a in the fujinet-nio workspace, read
+# only: make -C $(FUJINET_NIO_LIB) linux), which reaches a POSIX fujinet-nio over its PTY ($FN_PORT). main.c's main
+# becomes game_main: src/linux/start.c has the real one.
+FUJINET_NIO_WS ?= $(HOME)/dev/fujinet-nio-workspace
+FUJINET_NIO_LIB ?= $(FUJINET_NIO_WS)/repos/fujinet-nio-lib
+LINUX_NET  ?= nio
+LI_B        = build/linux
+LI_HELP     = $(sort $(wildcard help/linux/HELP*.TXT))
+$(LI_B)/title_art.h: $(TITLE) tools/title_art.py            # the Atari's logo in Unicode box characters
+	mkdir -p $(LI_B)
+	python3 tools/title_art.py u 1 $< > $@
+$(LI_B)/help_tab.h: $(LI_HELP) tools/help_linux.py
+	mkdir -p $(LI_B)
+	python3 tools/help_linux.py $@ $(LI_HELP)
+LI_CC      ?= gcc
+ifeq ($(LINUX_NET),nio)
+LI_NETLIB   = $(FUJINET_NIO_LIB)/build/fujinet-nio-linux.a
+else
+$(error LINUX_NET=$(LINUX_NET): legacy backend: not implemented (only LINUX_NET=nio))
+endif
+LI_FLAGS    = -O2 -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -I$(FUJINET_NIO_LIB)/include -I$(LI_B)
+LI_DEFS     = -DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1 -DDISPLAY_IDLE=1 -DLOG_HISTORY=1 -DQUIT_TO_OS=1 -DQUIT_ASK='"QUIT? Y/N"' $(LI_XDEFS)
+LI_SRC      = src/common/game.c src/common/proto.c \
+              $(addprefix src/linux/,net_$(LINUX_NET).c display_ansi.c input.c keys.c screen.c sound.c start.c)
+LI_HDRS     = $(HDRS) $(wildcard src/linux/*.h) $(LI_B)/help_tab.h $(LI_B)/title_art.h
+
+$(LI_NETLIB):
+	@echo "$@ is missing: build it with  make -C $(FUJINET_NIO_LIB) linux  (or set FUJINET_NIO_LIB)" >&2; false
+
+$(LI_B):
+	mkdir -p $@
+
+$(LI_B)/main.o: src/common/main.c $(LI_HDRS) | $(LI_B)
+	$(LI_CC) $(LI_FLAGS) $(DEFS) $(LI_DEFS) -Dmain=game_main -c src/common/main.c -o $@
+
+$(LI_B)/syn-ack-wire-linux: $(LI_B)/main.o $(LI_SRC) $(LI_HDRS) $(LI_NETLIB) | $(LI_B)
+	$(LI_CC) $(LI_FLAGS) $(DEFS) $(LI_DEFS) $(LI_B)/main.o $(LI_SRC) $(LI_NETLIB) -lncursesw -o $@
+	@echo "$@: $$(stat -c %s $@) bytes"
+
+linux: $(LI_B)/syn-ack-wire-linux
+
+# the autoplay build: plays by itself, saves the screen (DUMPDIR/scrNNN.bin) at each new prompt; see test/linux_accept.sh
+$(LI_B)/main-auto.o: src/common/main.c test/autoplay.c $(LI_HDRS) | $(LI_B)
+	$(LI_CC) $(LI_FLAGS) $(DEFS) $(LI_DEFS) -DAUTOPLAY -Dmain=game_main -c src/common/main.c -o $@
+
+$(LI_B)/synack-linux-auto: $(LI_B)/main-auto.o test/autoplay.c test/linux_dump.c $(LI_SRC) $(LI_HDRS) $(LI_NETLIB) | $(LI_B)
+	$(LI_CC) $(LI_FLAGS) $(DEFS) $(LI_DEFS) -DAUTOPLAY -DAUTO_DELETE_REFUSED -DDUMP_TICKS=72 -DKEY_TICKS=6 -DAUTO_HANDLE='"PC"' \
+	    $(LI_B)/main-auto.o $(LI_SRC) test/autoplay.c test/linux_dump.c $(LI_NETLIB) -lncursesw -o $@
+
+linux-test: $(LI_B)/synack-linux-auto
+
 # --- Amiga (stock A500, Kickstart/Workbench 1.3): the common code with src/amiga/, and fujinet-nio-lib (a prebuilt
 # build/fujinet-nio-amiga.a in the fujinet-nio workspace, read only: make -C $(FUJINET_NIO_LIB) amiga). nix13, not
 # clib2: clib2's start-up opens utility.library, which Kickstart 1.3 doesn't have. tools/run-amiga.sh runs a program
@@ -804,6 +859,30 @@ test-amiga-ui: test/amiga_ui_test.c src/amiga/ui.c src/amiga/ui.h src/amiga/layo
 	    test/amiga_ui_test.c src/amiga/ui.c src/amiga/layout.c
 	build/test/amiga_ui_test
 
+test-linux-net: test/linux_net_test.c src/linux/net_nio.c src/platform.h test/linux_fake/fujinet-nio.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -Itest/linux_fake -o build/test/linux_net_test \
+	    test/linux_net_test.c src/linux/net_nio.c
+	build/test/linux_net_test
+
+test-linux-screen: test/linux_screen_test.c src/linux/screen.c src/linux/screen.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -o build/test/linux_screen_test \
+	    test/linux_screen_test.c src/linux/screen.c -lncursesw
+	build/test/linux_screen_test
+
+test-linux-display: build/linux/title_art.h build/linux/help_tab.h test/linux_display_test.c src/linux/display_ansi.c src/linux/screen.c src/linux/screen.h src/linux/layout.h $(HDRS)
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -DFANCY_TITLE=1 -DFANCY_PLAYFIELD=1 -DDISPLAY_IDLE=1 -DLOG_HISTORY=1 \
+	    -DQUIT_TO_OS=1 -Ibuild/linux -o build/test/linux_display_test test/linux_display_test.c src/linux/display_ansi.c src/linux/screen.c -lncursesw
+	build/test/linux_display_test
+
+test-linux-keys: test/linux_keys_test.c src/linux/keys.c src/linux/keys.h src/platform.h
+	mkdir -p build/test
+	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/linux_keys_test \
+	    test/linux_keys_test.c src/linux/keys.c -lncursesw
+	build/test/linux_keys_test
+
 test-amiga-keys: test/amiga_keys_test.c src/amiga/keys.c src/amiga/keys.h src/platform.h
 	mkdir -p build/test
 	gcc -g -std=gnu99 -Wall -Wno-main -funsigned-char -D__fastcall__= -o build/test/amiga_keys_test \
@@ -838,6 +917,6 @@ test-amiga-prefs: test/amiga_prefs_test.c src/amiga/prefs.c src/amiga/prefs.h
 clean:
 	rm -rf build
 
-.PHONY: FORCE all atr atrtest atari-nio test-atari-nio test-atari-nio-6502 test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto h89 h89-disk h89-wiremon adam adamtest adam-auto intv intvtest intv-auto geos geos-atr test-amiga-net test-amiga-keys test-amiga-sound test-amiga-prefs amiga amiga-test test-amiga-mock amiga-mock test-amiga-layout test-amiga-ui amiga-test-mouse test-amiga-help test-amiga-menus test-amiga-palcycle clean
+.PHONY: FORCE linux linux-test test-linux-net test-linux-screen test-linux-keys test-linux-display all atr atrtest atari-nio test-atari-nio test-atari-nio-6502 test pc pc-apple2 pc-msdos pc-coco pc-nes pc-adam pc-h89 apple2_text apple2_text-po msdos msdos-img msdos-test msdos-wiremon coco coco-dsk coco-auto nes nestest nes-auto h89 h89-disk h89-wiremon adam adamtest adam-auto intv intvtest intv-auto geos geos-atr test-amiga-net test-amiga-keys test-amiga-sound test-amiga-prefs amiga amiga-test test-amiga-mock amiga-mock test-amiga-layout test-amiga-ui amiga-test-mouse test-amiga-help test-amiga-menus test-amiga-palcycle clean
 .PRECIOUS: $(B)/%.s $(B)/%.o $(A2)/%.s $(A2)/%.o $(COCO)/%.o $(NES)/%.s $(NES)/%.o $(ADAM)/%.o
 .DELETE_ON_ERROR:

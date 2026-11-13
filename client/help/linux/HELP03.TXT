@@ -1,0 +1,16 @@
+KEYS
+
+ ?  F1        these pages
+ TAB  F2      show or hide the move hints
+ ^S  F3       sound on or off
+ 1-6          netrun an exploit from your kit
+ A-L, 0-8     name a node, then ENTER
+ ENTER        confirm
+ BACKSPACE    undo
+ UP  DOWN     step back through the log
+ < >  <- ->   turn these pages
+ ESC          close these pages; on the title,
+              quit (then Y)
+
+Colour needs a terminal with 256 colours and
+UTF-8, at least 80 columns by 24 rows.

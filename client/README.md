@@ -35,6 +35,12 @@ The 8-bit side. The server enforces every rule; the client draws what it is told
 | `src/msdos/input.c` | Keys from the BIOS (F1 help, F2 hints, F3 sound, F4 40/80 columns, F5 colour) and `ticks()` from the BIOS tick, 18 a second |
 | `src/msdos/sound.c` | Chords on an AdLib (OPL2 at 388h, also a Sound Blaster's) when one answers, else on the PC speaker |
 | `src/msdos/title_art.h` | The Atari's title logo in code page 437's box characters, **generated** by `tools/title_art.py d` |
+| `src/linux/display_ansi.c`, `layout.h` | linux: the whole display, in colour, drawn into the cell array (80×24: title bar, Grid, hive panel, seats, log, purple prompt strip; the title with its box-character logo; the framed instruction pages from `help/linux/`); `layout.h` holds every row and column |
+| `src/linux/screen.c`, `screen.h` | linux: the cell array (a code point, two palette colours, attributes a cell), the palette in one table (mapped to xterm's 256 colours, the nearest of 16 or 8 on a poorer terminal), the ncursesw painter; the pure parts are tested on the host |
+| `src/linux/net_nio.c` | Network calls for Linux: a POSIX FujiNet-NIO over its PTY, through fujinet-nio-lib's `linux` target (`FN_PORT`, the prebuilt `fujinet-nio-linux.a`); `LINUX_NET` picks it (`legacy` is not written yet) |
+| `src/linux/input.c`, `keys.c`, `sound.c` | linux: keys from curses (`?`/F1 help, Tab/F2 hints, Ctrl-S/F3 sound), `ticks()` at 50 a second and the painting, the terminal bell for your turn and the null-route |
+| `src/linux/start.c` | linux: the real `main` (`--port`, `--server`, terminal and PTY checks, curses on); `common/main.c`'s is built as `game_main` |
+| `tools/title_art.py u`, `tools/help_linux.py`, `tools/linux_render.py` | linux: the logo as Unicode box characters (`build/linux/title_art.h`), the instruction pages (`help/linux/`) as `build/linux/help_tab.h`, and a renderer of a screen dump (`DUMPDIR`) to a PNG |
 | `src/coco/text.c` | CoCo 1/2: the 40×24 cells drawn on the PMODE 4 screen, 4 cells at a time in 6809 code, and the inverse margins |
 | `src/coco/font.txt` | The CoCo's 6×8 font as `#`/`.` pictures; `font.h` is **generated** by `tools/font_coco.py` |
 | `src/coco/display_text.c` | CoCo text screens: the Apple's layout in `txt_cells`, normal/inverse, the last move flashed by `display_idle()` |
@@ -1284,3 +1290,63 @@ The screen's title bar is hidden (`ShowTitle`), or row 0 would lie under it on N
 - **Feedback fixes:** the buy window is the full width and short (PAL 120 px high, NTSC 90) so that the table of every netrunner stays in view under it, bright, whatever view the seats are in (NTSC grows the table upward, to six rows plus a header, where the grid's lower rows were; the log is never covered): the hive rows run down the left, the tally and the BUY, UNDO and NULL-ROUTE buttons stack at the right, and a click looks only among its own dialog's buttons since the column shares screen with the small windows'; the buy window shows what the netrunner already holds in each hive (HELD); Return answers Yes on a Y/N question (the lit button); when a game ends the next game's seat window waits for a key or a click, so the scores stay in view (a client that is not asked to start the next one waits two seconds); the table view's header uses the same hive letters as the grid, and the table repaints whole so a shorter amount cannot leave part of a longer one.
 - **Title and waiting:** the logo's colours turn on the title (palette entries, put back on jack-in), with a burst of static every few seconds; the pointer is an hourglass while the link opens or closes.
 - **Known gaps:** `void main` returns no exit code; the loop never waits, so it uses all the CPU a stock A500 has (deferred: `WaitTOF()` in `in_key`).
+
+## Linux terminal (linux)
+
+A colour text client for a terminal: its own display (`src/linux/display_ansi.c`, in the look of the Nitros-9 ANSI
+port: navy title bar, coloured hives, a purple prompt strip), drawn with ncursesw in the terminal's colours, and the
+network through a POSIX FujiNet-NIO. The client does not start `fujinet-nio`: you do, and it takes the PTY `fujinet-nio` makes.
+Like the Atari's `NIO=1`, only the network layer is a backend (`LINUX_NET=nio`, the default and the only one:
+`LINUX_NET=legacy` is a placeholder for the legacy FujiNet and stops with "not implemented"); the display is shared.
+
+**1. Build the client.** Needs gcc, ncursesw headers, Python 3 and the prebuilt fujinet-nio-lib for Linux
+(`make -C $FUJINET_NIO_LIB linux`; default `$HOME/dev/fujinet-nio-workspace/repos/fujinet-nio-lib`).
+```sh
+make linux              # build/linux/syn-ack-wire-linux
+```
+
+**2. Build and start fujinet-nio** (the POSIX FujiBus-over-PTY build; its own README has the build prerequisites).
+```sh
+cd fujinet-nio && ./build.sh -cp fujibus-pty-debug       # build/fujibus-pty-debug/fujinet-nio
+cd build/fujibus-pty-debug
+mkdir -p fujinet-data && cat > fujinet-data/fujinet.yaml <<'YAML'
+fujinet:
+  device_name: fuji-nio
+channel:
+  pty_path: /tmp/fujinet-pty
+YAML
+./run-fujinet-nio       # leave it running; it makes /tmp/fujinet-pty, a link to the PTY
+```
+`fujinet-nio` keeps `./fujinet-data` in the directory it is started from, so start it from the same one each time.
+(There is no `--help`: any argument starts it.) A different PTY path in `pty_path` is fine, then tell the client.
+
+**3. Play.**
+```sh
+build/linux/syn-ack-wire-linux                       # the PTY at /tmp/fujinet-pty, the public server
+build/linux/syn-ack-wire-linux --port /tmp/my-pty    # or FN_PORT=/tmp/my-pty
+build/linux/syn-ack-wire-linux --server 127.0.0.1:6502   # a server of your own (or SYNACK_URL)
+```
+- **Keys:** **?** or **F1** the instructions (**<** **>** or **Left**/**Right** turn the pages, **Esc** closes),
+  **Tab** or **F2** move hints, **Ctrl-S** or **F3** sound (flow control is off, so Ctrl-S reaches the game),
+  **Backspace** undoes a letter, **Enter** confirms, **Esc** on the title asks `QUIT? Y/N`, **Up**/**Down** step back
+  through the log. Ctrl-C and `kill` leave the terminal as it was.
+- **Terminal:** UTF-8 and 256 colours look as intended (with fewer colours the nearest of 16 or 8 are used; without
+  UTF-8 the box characters are ASCII). It needs 80×24 or larger, centred if larger; smaller says
+  `TERMINAL TOO SMALL` and waits (resizing redraws).
+- **Sound:** the terminal bell, on your turn and at the null-route (Ctrl-S silences it).
+- **Lobby:** a PC has no FujiNet lobby, so the handle starts empty and the server is the built-in one unless you give
+  `--server`.
+- **If it won't start:** `cannot open PTY ...: start fujinet-nio first` means nothing is at that path; a PTY left
+  from a `fujinet-nio` that has stopped fails the same way: start it again; a `--port` that is not a terminal is
+  refused. `needs a terminal` means standard input or output is not one.
+- **Tests:** `make test-linux-net test-linux-screen test-linux-keys test-linux-display` (host; the display test reads
+  the cell array back as text), `python3 -m unittest discover -s test -p test_linux_render.py`,
+  `test/linux_start_test.sh` (start-up messages, after `make linux`), `test/linux_accept.sh` (a whole autoplay game
+  through a scratch `fujinet-nio` and server on port 6599, then a resize and a signal, which must leave the terminal
+  restored; `FUJINET_NIO=` names the `fujinet-nio` binary). To see a screen: `make linux-test`, run it with
+  `DUMPDIR=dir` against a staged game (`server/stage.py`), then `tools/linux_render.py dir/scrNNN.bin out.png`.
+- **Quitting:** Esc-Y on the title, Ctrl-C or `kill` all close the connection first (fujinet-nio keeps four sessions,
+  and an abandoned one stays until it times out). While curses has the screen, fujinet-nio-lib's messages on standard
+  error are discarded.
+- **Size:** about 165 KB, dynamically linked with ncursesw and libc.
+

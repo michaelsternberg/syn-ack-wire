@@ -1,0 +1,18 @@
+YOUR TURN
+
+ 1. Spike a node: press 1-6 to netrun the
+    corresponding exploit in your kit. The
+    kit's nodes light up on the Grid when
+    hints are on (TAB).
+ 2. Buy up to 3 crypto (optional), from
+    syndicates with a hive.
+ 3. Draw a new exploit (automatic).
+
+Two spiked nodes side by side create a new
+hive for a syndicate you pick. A hive of 11
+nodes gets BLACK ICE and is safe from takeover.
+
+A hive of 41 nodes null-routes the region and
+the gig is over: the richest netrunner wins.
+
+You have 60 secs, or your bot moves for you.
