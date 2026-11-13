@@ -96,7 +96,7 @@ static void push(unsigned char k)
  * here and never reach it; the rest are queued for it. */
 static void act(unsigned char k)
 {
-    if (dialog_holding() && k != AK_SOUND && k != AK_TABLE && ak_region(k) < 0) {
+    if (dialog_holding() && k != AK_SOUND && k != AK_TABLE && k != AK_BACK && ak_region(k) < 0) {
         amiga_over_release();           /* the scores were looked at: this key only ends the wait */
         return;
     }
@@ -104,6 +104,8 @@ static void act(unsigned char k)
         snd_toggle();
     else if (k == AK_TABLE)
         amiga_toggle_table();
+    else if (k == AK_BACK)
+        gfx_to_back();
     else if (ak_region(k) >= 0)
         menus_region(ak_region(k));
     else {

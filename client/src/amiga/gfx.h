@@ -9,6 +9,7 @@
 extern struct layout amiga_layout;      /* filled by gfx_open for the screen it got */
 
 unsigned char gfx_open(unsigned short *width, unsigned short *height);   /* 0 on failure, with nothing left open */
+void gfx_to_back(void);                 /* the game screen behind Workbench and the other screens */
 void gfx_close(void);                   /* the window, then the screen; safe if never opened */
 struct Screen *gfx_screen(void);        /* the game's screen, or 0: for the autoplay build's dumps (test/amiga_dump.c) */
 
