@@ -5,6 +5,7 @@
 
 static const struct menu_item project[] = {
     { "INSTRUCTIONS", 'I', K_HELP },
+    { "WORKBENCH", 'W', AK_BACK },    /* the screen to the back: the game runs on, and Amiga-M or the screen's depth gadget on Workbench brings it back */
     { "QUIT", 'Q', K_ESC },             /* as Esc: the title and the game both ask first */
 };
 static const struct menu_item game[] = {

@@ -19,7 +19,8 @@ static void test_three_menus_in_order(void)
 static void test_project_and_game_picks_are_the_keys_they_stand_for(void)
 {
     CHECK(menu_item_key(0, 0) == K_HELP);               /* Instructions */
-    CHECK(menu_item_key(0, 1) == K_ESC);                /* Quit: as Esc, which asks first */
+    CHECK(menu_item_key(0, 1) == AK_BACK);              /* Workbench: the screen to the back */
+    CHECK(menu_item_key(0, 2) == K_ESC);                /* Quit: as Esc, which asks first */
     CHECK(menu_item_key(1, 0) == K_OPTION);             /* Move hints */
     CHECK(menu_item_key(1, 1) == AK_SOUND);
     CHECK(menu_item_key(1, 2) == AK_TABLE);
@@ -48,7 +49,7 @@ static void test_no_region_pick_is_a_game_key(void)
 }
 static void test_nothing_past_the_ends(void)
 {
-    CHECK(menu_item_key(0, 2) == 0 && menu_item_key(1, 3) == 0 && menu_item_key(2, NREGIONS) == 0);
+    CHECK(menu_item_key(0, 3) == 0 && menu_item_key(1, 3) == 0 && menu_item_key(2, NREGIONS) == 0);
     CHECK(menu_item_key(3, 0) == 0 && menu_item_key(31, 63) == 0);
 }
 static void test_keys_do_not_collide(void)

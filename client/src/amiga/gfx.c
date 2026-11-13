@@ -169,6 +169,12 @@ void gfx_art(const unsigned char *packed, unsigned short len, const unsigned sho
     LoadRGB4(&scr->ViewPort, (UWORD *)palette, 32);
 }
 
+void gfx_to_back(void)
+{
+    if (scr)
+        ScreenToBack(scr);
+}
+
 void gfx_close(void)
 {
     gfx_restore();

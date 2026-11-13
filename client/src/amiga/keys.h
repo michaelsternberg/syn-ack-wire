@@ -4,6 +4,7 @@
 
 #define AK_SOUND 0x03                   /* F3: handled by in_key, never reaches the game */
 #define AK_TABLE 0x04                   /* F4, or a click on the seats: cards or table, done by in_key */
+#define AK_BACK 0x05                    /* the WORKBENCH menu item: the game screen goes behind Workbench, done by in_key */
 #define AK_REGION 0x80                  /* + n: the Region menu's n-th server, chosen on the title */
 #define AK_REGION_MAX 16
 /* which Region pick k is, or -1 if it is a key for the game */
