@@ -101,7 +101,7 @@ static unsigned char pick(unsigned char r)
     case 'K':
         return syn_letter[r % NSYN];
     case 'D':
-#ifdef __AMIGA__
+#if defined(__AMIGA__) || defined(AUTO_DELETE_REFUSED)
         if (complaint)                              /* refused: clear the count, or wait out the server's minute */
             return K_DELETE;
 #endif
